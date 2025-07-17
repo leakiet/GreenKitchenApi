@@ -10,5 +10,6 @@ public class ConversationResponse {
 	private String customerName; // hoặc ẩn danh nếu guest
 	private String status;
 	private String lastMessage;
+	private String lastMessageTime;
 	private int unreadCount;
 }

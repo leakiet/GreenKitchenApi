@@ -6,6 +6,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 public class ChatServiceImpl implements ChatService {
 
 	private final ChatClient chatClient;
+	private static final Logger log = LoggerFactory.getLogger(ChatServiceImpl.class);
 	private final ChatMessageRepository chatMessageRepo;
 	private final ConversationRepository conversationRepo;
 	private final CustomerRepository customerRepo;
@@ -65,21 +68,22 @@ public class ChatServiceImpl implements ChatService {
 
 		// 1. Xử lý lệnh đặc biệt trước
 		if ("/meet_emp".equals(content)) {
-			conv.setStatus(ConversationStatus.WAITING_EMP);
-			conversationRepo.save(conv);
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-			return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Yêu cầu đã gửi, vui lòng chờ nhân viên.",
-					LocalDateTime.now());
+		    conv.setStatus(ConversationStatus.WAITING_EMP);
+		    conversationRepo.saveAndFlush(conv);
+		    log.info("Đã cập nhật trạng thái WAITING_EMP, sẽ gửi notify!");
+		    messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+		    return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Yêu cầu đã gửi, vui lòng chờ nhân viên.", LocalDateTime.now());
 		}
 
 		if ("/backtoAI".equals(content)) {
-			conv.setStatus(ConversationStatus.AI);
-			conversationRepo.save(conv);
-			// Thêm dòng này để EMP luôn update đúng trạng thái ở FE
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-			return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Chuyển về AI thành công.",
-					LocalDateTime.now());
+		    conv.setStatus(ConversationStatus.AI);
+		    conversationRepo.saveAndFlush(conv);
+		    log.info("Đã cập nhật trạng thái AI, sẽ gửi notify!");
+		    messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+		    return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Chuyển về AI thành công.", LocalDateTime.now());
 		}
+
+
 
 		// 2. Còn lại xử lý tin nhắn bình thường như code của bạn
 		if (conv.getStatus() != ConversationStatus.AI) {
@@ -122,9 +126,10 @@ public class ChatServiceImpl implements ChatService {
 			throw new IllegalStateException("Không thể gửi tin nhắn khi conversation đang ở chế độ AI.");
 		}
 		if (conv.getStatus() != ConversationStatus.EMP) {
-			conv.setStatus(ConversationStatus.EMP);
-			conv.setEmployee(emp);
-			conversationRepo.save(conv);
+		    conv.setStatus(ConversationStatus.EMP);
+		    conv.setEmployee(emp);
+		    conversationRepo.saveAndFlush(conv); // <--- Đảm bảo commit trước
+		    messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId()); // <--- Thông báo cho sidebar EMP realtime
 		}
 
 		ChatMessage empMsg = buildMessage(null, emp, conv, emp.getFirstName(), SenderType.EMP, false,
@@ -233,19 +238,23 @@ public class ChatServiceImpl implements ChatService {
 
 	@Override
 	public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses) {
-		List<Conversation> convs = conversationRepo.findByStatusInOrderByUpdatedAtDesc(statuses);
+	    List<Conversation> convs = conversationRepo.findByStatusInOrderByUpdatedAtDesc(statuses);
 
-		return convs.stream().map(conv -> {
-			String customerName = (conv.getCustomer() != null) ? conv.getCustomer().getFirstName() : "Khách vãng lai";
-			String lastMsg = (conv.getMessages() != null && !conv.getMessages().isEmpty())
-					? conv.getMessages().get(conv.getMessages().size() - 1).getContent()
-					: "";
-			// Đếm số tin nhắn chưa đọc từ Customer (ví dụ là isRead = false và sender là
-			// CUSTOMER)
-			int unreadCount = chatMessageRepo.countByConversationAndSenderTypeAndIsReadFalse(conv, SenderType.CUSTOMER);
-			return new ConversationResponse(conv.getId(), customerName, conv.getStatus().name(), lastMsg, unreadCount);
-		}).toList();
+	    return convs.stream().map(conv -> {
+	        String customerName = (conv.getCustomer() != null) ? conv.getCustomer().getFirstName() : "Khách vãng lai";
+	        String lastMsg = "";
+	        String lastMsgTime = "";
+	        if (conv.getMessages() != null && !conv.getMessages().isEmpty()) {
+	            ChatMessage latest = conv.getMessages().get(conv.getMessages().size() - 1);
+	            lastMsg = latest.getContent();
+	            // Format về String, ví dụ "12:30 17/07"
+	            lastMsgTime = latest.getTimestamp().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM"));
+	        }
+	        int unreadCount = chatMessageRepo.countByConversationAndSenderTypeAndIsReadFalse(conv, SenderType.CUSTOMER);
+	        return new ConversationResponse(conv.getId(), customerName, conv.getStatus().name(), lastMsg, lastMsgTime, unreadCount);
+	    }).toList();
 	}
+
 
 	private String callAi(String prompt, String lang) {
 		return chatClient.prompt().system(
