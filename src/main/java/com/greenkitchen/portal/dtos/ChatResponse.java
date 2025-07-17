@@ -1,12 +1,25 @@
-// ChatResponse.java
 package com.greenkitchen.portal.dtos;
 
-import lombok.*;
+import java.time.LocalDateTime;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * Phản hồi sau khi gửi hoặc nhận tin nhắn.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatResponse {
-    private Long    conversationId;  // null nếu guest
-    private String  sender;
-    private String  message;
-    private Boolean isFromAI;
+    private Long id;                  // id tin nhắn
+    private Long conversationId;      // id cuộc hội thoại
+    private String senderRole;        // "CUSTOMER", "EMP", "AI"
+    private String senderName;        // tên hiển thị người gửi hoặc AI
+    private String content;           // nội dung tin nhắn
+    private LocalDateTime timestamp;  // thời điểm
+    
 }
