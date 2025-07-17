@@ -164,6 +164,14 @@ public class CustomerServiceImpl implements CustomerService {
       throw new IllegalArgumentException("Account is deleted. Please contact support.");
     }
 
+    // Check if there's already a recent OTP request within 5 minutes
+    LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+    OtpRecords recentOtpRecord = otpRecordsRepository.findRecentOtpByEmailAndTime(email, fiveMinutesAgo);
+    
+    if (recentOtpRecord != null) {
+      throw new IllegalArgumentException("You have requested OTP too frequently. Please try again later.");
+    }
+
     // Generate 6-digit random OTP
     String otpCode = generateRandomOtp();
     // Set expiration time (5 minutes from now)

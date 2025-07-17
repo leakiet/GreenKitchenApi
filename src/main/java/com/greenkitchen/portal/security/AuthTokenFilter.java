@@ -15,6 +15,7 @@ import com.greenkitchen.portal.utils.JwtUtils;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -67,6 +68,16 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
 		if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
 			return headerAuth.substring(7);
+		}
+
+		// Nếu không có trong header, thử tìm trong cookie
+		Cookie[] cookies = request.getCookies();
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				if ("access_token".equals(cookie.getName())) {
+					return cookie.getValue();
+				}
+			}
 		}
 
 		return null;

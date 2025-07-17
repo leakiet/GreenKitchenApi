@@ -4,6 +4,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ import com.greenkitchen.portal.dtos.ResetPasswordRequest;
 import com.greenkitchen.portal.dtos.VerifyRequest;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.security.MyUserDetails;
+import com.greenkitchen.portal.security.MyUserDetailService;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.services.EmployeeService;
 import com.greenkitchen.portal.services.GoogleAuthService;
@@ -27,10 +29,13 @@ import com.greenkitchen.portal.utils.JwtUtils;
 import jakarta.validation.Valid;
 
 import com.greenkitchen.portal.entities.Employee;
-
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/apis/v1")
@@ -48,13 +53,16 @@ public class AuthController {
   private JwtUtils jwtUtils;
 
   @Autowired
+  private MyUserDetailService userDetailService;
+
+  @Autowired
   private ModelMapper mapper;
 
   @Autowired
   private AuthenticationManager authenticationManager;
 
   @PostMapping("/login")
-  public ResponseEntity<LoginResponse> loginCustomer(@RequestBody LoginRequest request) {
+  public ResponseEntity<LoginResponse> loginCustomer(@RequestBody LoginRequest request, HttpServletResponse httpResponse) {
     Authentication authentication;
     try {
       authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -65,9 +73,44 @@ public class AuthController {
     LoginResponse response = mapper.map(customer, LoginResponse.class);
     response.setRole("USER");
     response.setToken(jwtUtils.generateJwtToken(authentication));
+    response.setRefreshToken(jwtUtils.generateRefreshToken(authentication)); // Thêm refresh token
     response.setTokenType("Bearer");
+
+    // Lưu access token vào cookie
+    Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+    accessTokenCookie.setHttpOnly(true);
+    accessTokenCookie.setPath("/");
+    accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+    httpResponse.addCookie(accessTokenCookie);
+
+    // Lưu refresh token vào cookie
+    Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+    refreshTokenCookie.setHttpOnly(true);
+    refreshTokenCookie.setPath("/");
+    refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days (lâu hơn access token)
+    httpResponse.addCookie(refreshTokenCookie);
+
     return ResponseEntity.ok(response);
 
+  }
+
+  @DeleteMapping("/logout")
+  public ResponseEntity<String> logoutCustomer(HttpServletResponse httpResponse) {
+    // Xóa cookie access_token
+    Cookie accessTokenCookie = new Cookie("access_token", null);
+    accessTokenCookie.setHttpOnly(true);
+    accessTokenCookie.setPath("/");
+    accessTokenCookie.setMaxAge(0);
+    httpResponse.addCookie(accessTokenCookie);
+
+    // Xóa cookie refresh_token
+    Cookie refreshTokenCookie = new Cookie("refresh_token", null);
+    refreshTokenCookie.setHttpOnly(true);
+    refreshTokenCookie.setPath("/");
+    refreshTokenCookie.setMaxAge(0);
+    httpResponse.addCookie(refreshTokenCookie);
+
+    return ResponseEntity.ok("Logout successful");
   }
 
   @PostMapping("/employee/login")
@@ -81,6 +124,7 @@ public class AuthController {
       }
       LoginResponse response = mapper.map(employee, LoginResponse.class);
       response.setToken(jwtUtils.generateJwtToken(authentication));
+      response.setRefreshToken(jwtUtils.generateRefreshToken(authentication)); // Thêm refresh token cho employee
       response.setTokenType("Bearer");
       return ResponseEntity.ok(response);
     } catch (Exception e) {
@@ -157,11 +201,77 @@ public class AuthController {
       LoginResponse response = mapper.map(customer, LoginResponse.class);
       response.setRole("USER");
       response.setToken(jwt);
+      response.setRefreshToken(jwtUtils.generateRefreshToken(authentication)); // Thêm refresh token
       response.setTokenType("Bearer");
       
       return ResponseEntity.ok(response);
     } catch (Exception e) {
       throw new IllegalArgumentException("Google login failed: " + e.getMessage());
+    }
+  }
+
+  @PostMapping("/refresh-token")
+  public ResponseEntity<LoginResponse> refreshToken(HttpServletRequest request, HttpServletResponse httpResponse) {
+    try {
+      // Lấy refresh token từ cookie
+      String refreshToken = null;
+      if (request.getCookies() != null) {
+        for (Cookie cookie : request.getCookies()) {
+          if ("refresh_token".equals(cookie.getName())) {
+            refreshToken = cookie.getValue();
+            break;
+          }
+        }
+      }
+      
+      if (refreshToken == null || refreshToken.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      }
+      
+      // Validate refresh token
+      if (!jwtUtils.validateRefreshToken(refreshToken)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      }
+      
+      // Lấy username từ refresh token
+      String username = jwtUtils.getUserNameFromRefreshToken(refreshToken);
+      
+      // Load user details
+      MyUserDetails userDetails = (MyUserDetails) userDetailService.loadUserByUsername(username);
+      
+      // Tạo authentication object
+      Authentication authentication = new UsernamePasswordAuthenticationToken(
+          userDetails, null, userDetails.getAuthorities());
+      
+      // Generate new tokens
+      String newAccessToken = jwtUtils.generateJwtToken(authentication);
+      // Refresh token giữ nguyên, không tạo mới
+      
+      // Tạo response
+      LoginResponse response = new LoginResponse();
+      if (userDetails.getEmployee() != null) {
+        response = mapper.map(userDetails.getEmployee(), LoginResponse.class);
+      } else if (userDetails.getCustomer() != null) {
+        response = mapper.map(userDetails.getCustomer(), LoginResponse.class);
+        response.setRole("USER");
+      }
+      
+      response.setToken(newAccessToken);
+      response.setRefreshToken(refreshToken); // Giữ nguyên refresh token cũ
+      response.setTokenType("Bearer");
+      
+      // Chỉ cập nhật access token cookie, refresh token giữ nguyên
+      Cookie accessTokenCookie = new Cookie("access_token", newAccessToken);
+      accessTokenCookie.setHttpOnly(true);
+      accessTokenCookie.setPath("/");
+      accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+      httpResponse.addCookie(accessTokenCookie);
+      // Không cập nhật refresh token cookie
+      
+      return ResponseEntity.ok(response);
+      
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
   }
 

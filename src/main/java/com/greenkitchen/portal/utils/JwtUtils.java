@@ -20,57 +20,91 @@ import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
-
 @Component
 public class JwtUtils {
 	private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-	@Value("${app.tokenSecret}")
-	private String jwtSecret;
+	@Value("${app.accessTokenSecret}")
+	private String accessTokenSecret;
 
-	@Value("${app.tokenExpirationMs}")
-	private int jwtExpirationMs;
+	@Value("${app.accessTokenExpirationMs}")
+	private int accessTokenExpirationMs;
+
+	@Value("${app.refreshTokenSecret}")
+	private String refreshTokenSecret;
+
+	@Value("${app.refreshTokenExpirationMs}")
+	private int refreshTokenExpirationMs;
 
 	public String generateJwtToken(Authentication authentication) {
-
-		MyUserDetails userPrincipal = (MyUserDetails) authentication.getPrincipal();
-
-		return Jwts.builder().setSubject((userPrincipal.getUsername()))
-				.setIssuedAt(new Date())
-				.setIssuer("The Green Kitchen")
-				.claim("roles", userPrincipal.getRoles())
-				.setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-				.signWith(key(), SignatureAlgorithm.HS256).compact();
+		return generateToken(authentication, "access", accessTokenSecret, accessTokenExpirationMs);
 	}
 
-	private Key key() {
-		return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+	public String generateRefreshToken(Authentication authentication) {
+		return generateToken(authentication, "refresh", refreshTokenSecret, refreshTokenExpirationMs);
+	}
+
+	// Method chung để generate token
+	private String generateToken(Authentication authentication, String tokenType, String secret, int expirationMs) {
+		MyUserDetails userPrincipal = (MyUserDetails) authentication.getPrincipal();
+
+		return Jwts.builder()
+				.setSubject(userPrincipal.getUsername())
+				.setIssuedAt(new Date())
+				.setIssuer("The Green Kitchen")
+				.claim("type", tokenType)
+				.claim("roles", userPrincipal.getRoles())
+				.setExpiration(new Date((new Date()).getTime() + expirationMs))
+				.signWith(getKey(secret), SignatureAlgorithm.HS256)
+				.compact();
+	}
+
+	private Key getKey(String secret) {
+		return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
 	}
 
 	public String getUserNameFromJwtToken(String token) {
-		return Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(token).getBody().getSubject();
+		return Jwts.parserBuilder().setSigningKey(getKey(accessTokenSecret)).build().parseClaimsJws(token).getBody().getSubject();
 	}
 	
 	public Claims getClaimsFromJwtToken(String token) {
-		return Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(token).getBody();
+		return Jwts.parserBuilder().setSigningKey(getKey(accessTokenSecret)).build().parseClaimsJws(token).getBody();
 	}
 
 	public boolean validateJwtToken(String authToken) {
+		return validateToken(authToken, accessTokenSecret, "access");
+	}
+
+	public boolean validateRefreshToken(String refreshToken) {
+		return validateToken(refreshToken, refreshTokenSecret, "refresh");
+	}
+
+	// Method chung để validate token
+	private boolean validateToken(String token, String secret, String expectedType) {
 		try {
-			Jwts.parserBuilder().setSigningKey(key()).build().parse(authToken);
+			Claims claims = Jwts.parserBuilder().setSigningKey(getKey(secret)).build().parseClaimsJws(token).getBody();
+			String tokenType = (String) claims.get("type");
+			
+			// Nếu expectedType là null thì không cần check type (backward compatibility)
+			if (expectedType != null && !expectedType.equals(tokenType)) {
+				logger.error("Invalid token type. Expected: {}, Found: {}", expectedType, tokenType);
+				return false;
+			}
+			
 			return true;
 		} catch (MalformedJwtException e) {
-			logger.error("Invalid JWT token: {}", e.getMessage());
+			logger.error("Invalid {} token: {}", expectedType, e.getMessage());
 		} catch (ExpiredJwtException e) {
-			logger.error("JWT token is expired: {}", e.getMessage());
+			logger.error("{} token is expired: {}", expectedType, e.getMessage());
 		} catch (UnsupportedJwtException e) {
-			logger.error("JWT token is unsupported: {}", e.getMessage());
+			logger.error("{} token is unsupported: {}", expectedType, e.getMessage());
 		} catch (IllegalArgumentException e) {
-			logger.error("JWT claims string is empty: {}", e.getMessage());
+			logger.error("{} token claims string is empty: {}", expectedType, e.getMessage());
 		}
-
 		return false;
 	}
 
-	
+	public String getUserNameFromRefreshToken(String refreshToken) {
+		return Jwts.parserBuilder().setSigningKey(getKey(refreshTokenSecret)).build().parseClaimsJws(refreshToken).getBody().getSubject();
+	}
 }

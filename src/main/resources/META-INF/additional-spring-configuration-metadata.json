@@ -1,15 +1,5 @@
 {"properties": [
   {
-    "name": "app.tokenSecret",
-    "type": "java.lang.String",
-    "description": "A description for 'app.tokenSecret'"
-  },
-  {
-    "name": "app.tokenExpirationMs",
-    "type": "java.lang.String",
-    "description": "A description for 'app.tokenExpirationMs'"
-  },
-  {
     "name": "app.frontend.url",
     "type": "java.lang.String",
     "description": "A description for 'app.frontend.url'"
@@ -23,5 +13,25 @@
     "name": "spring.ai.openai.chat.model",
     "type": "java.lang.String",
     "description": "A description for 'spring.ai.openai.chat.model'"
+  },
+  {
+    "name": "app.accessTokenSecret",
+    "type": "java.lang.String",
+    "description": "Secret key for signing access tokens"
+  },
+  {
+    "name": "app.accessTokenExpirationMs",
+    "type": "java.lang.Integer",
+    "description": "Expiration time for access tokens in milliseconds"
+  },
+  {
+    "name": "app.refreshTokenSecret",
+    "type": "java.lang.String",
+    "description": "Secret key for signing refresh tokens"
+  },
+  {
+    "name": "app.refreshTokenExpirationMs",
+    "type": "java.lang.Integer",
+    "description": "Expiration time for refresh tokens in milliseconds"
   }
 ]}
