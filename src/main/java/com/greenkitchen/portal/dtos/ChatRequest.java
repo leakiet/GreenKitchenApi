@@ -1,10 +1,24 @@
-// ChatRequest.java
 package com.greenkitchen.portal.dtos;
 
-import lombok.*;
+import java.time.LocalDateTime;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * Yêu cầu gửi tin nhắn trong conversation.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatRequest {
-    private Long   conversationId;   // null nếu guest
-    private String message;
+    private Long conversationId;      // id cuộc hội thoại (tạo mới nếu guest lần đầu)
+    private String senderRole;        // "CUSTOMER", "EMP", "AI"
+    private String content;           // nội dung tin nhắn
+    private String lang;              // ngôn ngữ ("vi", "en", ...)
+    private String idempotencyKey;    // khóa chống gửi trùng
 }
+	
