@@ -12,5 +12,4 @@ public class TheGreenKitchenApplication {
 		dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 		SpringApplication.run(TheGreenKitchenApplication.class, args);
 	}
-
 }

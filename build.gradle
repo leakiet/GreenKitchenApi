@@ -43,6 +43,8 @@ implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// https://mvnrepository.com/artifact/com.cloudinary/cloudinary-http44
+	implementation("com.cloudinary:cloudinary-http44:1.39.0")
 	// https://mvnrepository.com/artifact/org.springframework.security/spring-security-config
 	implementation group: 'org.springframework.security', name: 'spring-security-config', version: '6.2.1'
 // https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-api
