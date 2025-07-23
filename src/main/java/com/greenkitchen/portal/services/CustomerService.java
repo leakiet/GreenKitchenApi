@@ -18,4 +18,7 @@ public interface CustomerService {
   void sendOtpCode(String email);
   boolean verifyOtpCode(String email, String otpCode);
   void resetPassword(String email, String newPassword);
+  void changePassword(String email, String oldPassword, String newPassword);
+  void unlinkGoogle(String email);
+  void linkGoogle(String email, String idToken);
 }

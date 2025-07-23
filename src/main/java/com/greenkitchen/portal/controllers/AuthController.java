@@ -38,7 +38,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@RequestMapping("/apis/v1")
+@RequestMapping("/apis/v1/auth")
 public class AuthController {
   @Autowired
   private CustomerService customerService;
@@ -136,10 +136,12 @@ public class AuthController {
   public ResponseEntity<RegisterResponse> registerCustomer(@Valid @RequestBody RegisterRequest registerRequest) {
     Customer customer = mapper.map(registerRequest, Customer.class);
 
-    Customer registereddCustomer = customerService.registerCustomer(customer);
+    Customer registeredCustomer = customerService.registerCustomer(customer);
 
     RegisterResponse response = new RegisterResponse();
-    response.setEmail(registereddCustomer.getEmail());
+    response.setEmail(registeredCustomer.getEmail());
+    response.setFirstName(registeredCustomer.getFirstName());
+    response.setLastName(registeredCustomer.getLastName());
     response.setMessage("Register successfully");
 
     return ResponseEntity.ok(response);
@@ -153,7 +155,7 @@ public class AuthController {
     return ResponseEntity.ok("Email verified successfully");
   }
 
-  @PutMapping("/resend-verifyEmail")
+  @PutMapping("/resendVerifyEmail")
   public ResponseEntity<String> resendVerifyEmail(@RequestBody EmailRequest request) {
     customerService.resendVerifyEmail(request.getEmail());
     return ResponseEntity.ok("Verification email resent!");
@@ -184,7 +186,7 @@ public class AuthController {
   }
 
   @PostMapping("/google-login")
-  public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+  public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request, HttpServletResponse httpResponse) {
     try {
       // Authenticate user với Google
       Customer customer = googleAuthService.authenticateGoogleUser(request.getIdToken());
@@ -196,13 +198,28 @@ public class AuthController {
       Authentication authentication = new UsernamePasswordAuthenticationToken(
         userDetails, null, userDetails.getAuthorities());
       String jwt = jwtUtils.generateJwtToken(authentication);
+      String refreshToken = jwtUtils.generateRefreshToken(authentication);
       
       // Return response giống như login thường
       LoginResponse response = mapper.map(customer, LoginResponse.class);
       response.setRole("USER");
       response.setToken(jwt);
-      response.setRefreshToken(jwtUtils.generateRefreshToken(authentication)); // Thêm refresh token
+      response.setRefreshToken(refreshToken);
       response.setTokenType("Bearer");
+
+      // Lưu access token vào cookie
+      Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+      accessTokenCookie.setHttpOnly(true);
+      accessTokenCookie.setPath("/");
+      accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+      httpResponse.addCookie(accessTokenCookie);
+
+      // Lưu refresh token vào cookie
+      Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+      refreshTokenCookie.setHttpOnly(true);
+      refreshTokenCookie.setPath("/");
+      refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days (lâu hơn access token)
+      httpResponse.addCookie(refreshTokenCookie);
       
       return ResponseEntity.ok(response);
     } catch (Exception e) {

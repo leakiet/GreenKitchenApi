@@ -8,10 +8,13 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.greenkitchen.portal.security.AuthTokenFilter;
 import com.greenkitchen.portal.security.MyUserDetailService;
 
 @Configuration
@@ -19,14 +22,36 @@ import com.greenkitchen.portal.security.MyUserDetailService;
 public class SecurityConfiguration {
   @Autowired
   private MyUserDetailService myDetailsService;
+  
+  @Bean
+  public AuthTokenFilter authenticationJwtTokenFilter() {
+    return new AuthTokenFilter();
+  }
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable());
-    http.authorizeHttpRequests(auth -> auth
-        .anyRequest().permitAll()
-    );
-    http.formLogin(form -> form.disable());
+    http.csrf(csrf -> csrf.disable())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            // Public endpoints - không cần authentication
+            .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
+            .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
+            .requestMatchers("/apis/v1/customers/**").permitAll()     // TEMP: Allow public access for testing
+            .requestMatchers("/apis/v1/addresses/**").permitAll() // User addresses
+
+            // Protected endpoints - cần authentication
+            
+            // Admin endpoints
+            .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
+            
+            // Default: require authentication for everything else
+            .anyRequest().authenticated()
+        )
+        .formLogin(form -> form.disable());
+        
+    // Add JWT filter before UsernamePasswordAuthenticationFilter
+    http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+    
     return http.build();
   }
 
