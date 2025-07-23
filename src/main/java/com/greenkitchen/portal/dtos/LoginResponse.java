@@ -10,10 +10,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class LoginResponse {
-    private String id;
+    private long id;
+    private String fullName;
     private String email;
     private String role;
     private String token;
-    private String tokenType;
     private String refreshToken;
+    private String tokenType;
 }

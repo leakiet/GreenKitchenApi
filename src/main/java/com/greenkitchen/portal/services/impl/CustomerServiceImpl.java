@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.greenkitchen.portal.services.EmailService;
+import com.greenkitchen.portal.services.GoogleAuthService;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
@@ -29,6 +30,9 @@ public class CustomerServiceImpl implements CustomerService {
 
   @Autowired
   private EmailService emailService;
+
+  @Autowired
+  private GoogleAuthService googleAuthService;
 
   private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -56,17 +60,15 @@ public class CustomerServiceImpl implements CustomerService {
 
   @Override
   public Customer update(Customer customer) {
-    Customer existingCustomer = findById(customer.getId());
+    Customer existingCustomer = findByEmail(customer.getEmail());
     if (existingCustomer == null) {
-      throw new IllegalArgumentException("Customer not found with id: " + customer.getId());
+      throw new IllegalArgumentException("Customer not found with email: " + customer.getEmail());
     }
     existingCustomer.setFirstName(customer.getFirstName());
     existingCustomer.setLastName(customer.getLastName());
-    existingCustomer.setEmail(customer.getEmail());
     existingCustomer.setBirthDate(customer.getBirthDate());
     existingCustomer.setGender(customer.getGender());
     existingCustomer.setPhone(customer.getPhone());
-    existingCustomer.setAddress(customer.getAddress());
 
     return customerRepository.save(existingCustomer);
   }
@@ -225,6 +227,98 @@ public class CustomerServiceImpl implements CustomerService {
     
     // Mark all other OTPs as used for security
     otpRecordsRepository.markAllOtpAsUsedByEmail(email);
+  }
+
+  @Override
+  public void changePassword(String email, String oldPassword, String newPassword) {
+    // Find customer
+    Customer customer = customerRepository.findByEmail(email);
+    if (customer == null) {
+      throw new IllegalArgumentException("Customer not found with email: " + email);
+    }
+    
+    if (!customer.getIsActive()) {
+      throw new IllegalArgumentException("Account is not active. Please verify your email first.");
+    }
+
+    if (customer.getIsDeleted()) {
+      throw new IllegalArgumentException("Account is deleted. Please contact support.");
+    }
+    
+    // Verify old password
+    if (!encoder.matches(oldPassword, customer.getPassword())) {
+      throw new IllegalArgumentException("Current password is incorrect");
+    }
+    
+    // Update password
+    String hashedNewPassword = encoder.encode(newPassword);
+    customer.setPassword(hashedNewPassword);
+    customerRepository.save(customer);
+  }
+
+  @Override
+  public void unlinkGoogle(String email) {
+    // Find customer
+    Customer customer = customerRepository.findByEmail(email);
+    if (customer == null) {
+      throw new IllegalArgumentException("Customer not found with email: " + email);
+    }
+    
+    if (!customer.getIsActive()) {
+      throw new IllegalArgumentException("Account is not active. Please verify your email first.");
+    }
+
+    if (customer.getIsDeleted()) {
+      throw new IllegalArgumentException("Account is deleted. Please contact support.");
+    }
+    
+    // Check if account is linked with Google
+    if (!customer.getIsOauthUser() || !"google".equals(customer.getOauthProvider())) {
+      throw new IllegalArgumentException("Account is not linked with Google");
+    }
+    
+    // Unlink Google account
+    customer.setOauthProvider(null);
+    customer.setOauthProviderId(null);
+    customer.setIsOauthUser(false);
+    
+    customerRepository.save(customer);
+  }
+
+  @Override
+  public void linkGoogle(String email, String idToken) {
+    // Find customer
+    Customer customer = customerRepository.findByEmail(email);
+    if (customer == null) {
+      throw new IllegalArgumentException("Customer not found with email: " + email);
+    }
+    
+    if (!customer.getIsActive()) {
+      throw new IllegalArgumentException("Account is not active. Please verify your email first.");
+    }
+
+    if (customer.getIsDeleted()) {
+      throw new IllegalArgumentException("Account is deleted. Please contact support.");
+    }
+    
+    // Check if account is already linked with Google
+    if (customer.getIsOauthUser() && "google".equals(customer.getOauthProvider())) {
+      throw new IllegalArgumentException("Account is already linked with Google");
+    }
+    
+    try {
+      // Verify Google token and get Google user info
+      Customer googleUser = googleAuthService.authenticateGoogleUser(idToken);
+      
+      // Link Google account to existing customer
+      customer.setOauthProvider("google");
+      customer.setOauthProviderId(googleUser.getOauthProviderId());
+      customer.setIsOauthUser(true);
+      
+      customerRepository.save(customer);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to link Google account: " + e.getMessage());
+    }
   }
 
   private String generateRandomOtp() {

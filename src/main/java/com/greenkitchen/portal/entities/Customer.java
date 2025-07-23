@@ -2,16 +2,20 @@ package com.greenkitchen.portal.entities;
 
 import java.sql.Date;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.greenkitchen.portal.enums.Gender;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Table;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -62,7 +66,11 @@ public class Customer extends AbstractEntity {
 
 	private Boolean isOauthUser = false; // false cho traditional users
 
-	@Embedded
-	private Address address;
+	@OneToMany(mappedBy = "customer", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+	private List<Address> addresses;
+
+	public String getFullName() {
+		return lastName + " " + firstName;
+	}
 
 }
