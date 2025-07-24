@@ -44,7 +44,7 @@ public class Address implements Serializable {
     private Boolean isDefault = false;
     
     @ManyToOne
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id", referencedColumnName = "id", nullable = false)
     @JsonBackReference
     private Customer customer;
 

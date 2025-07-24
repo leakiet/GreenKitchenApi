@@ -2,6 +2,9 @@ package com.greenkitchen.portal.services;
 
 import java.util.List;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import com.greenkitchen.portal.dtos.UpdateAvatarResponse;
 import com.greenkitchen.portal.entities.Customer;
 
 public interface CustomerService {
@@ -21,4 +24,5 @@ public interface CustomerService {
   void changePassword(String email, String oldPassword, String newPassword);
   void unlinkGoogle(String email);
   void linkGoogle(String email, String idToken);
+  UpdateAvatarResponse updateAvatar(String email, MultipartFile file);
 }
