@@ -1,12 +1,15 @@
 package com.greenkitchen.portal.services.impl;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.OtpRecords;
+import com.greenkitchen.portal.dtos.UpdateAvatarResponse;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.OtpRecordsRepository;
+import com.greenkitchen.portal.utils.ImageUtils;
 
 import java.util.List;
 import java.util.Random;
@@ -33,6 +36,9 @@ public class CustomerServiceImpl implements CustomerService {
 
   @Autowired
   private GoogleAuthService googleAuthService;
+
+  @Autowired
+  private ImageUtils imageUtils;
 
   private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -253,6 +259,7 @@ public class CustomerServiceImpl implements CustomerService {
     // Update password
     String hashedNewPassword = encoder.encode(newPassword);
     customer.setPassword(hashedNewPassword);
+    customer.setPasswordUpdatedAt(LocalDateTime.now());
     customerRepository.save(customer);
   }
 
@@ -318,6 +325,40 @@ public class CustomerServiceImpl implements CustomerService {
       customerRepository.save(customer);
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to link Google account: " + e.getMessage());
+    }
+  }
+
+  @Override
+  public UpdateAvatarResponse updateAvatar(String email, MultipartFile file) {
+    try {
+      // Kiểm tra file có tồn tại không
+      if (file == null || file.isEmpty()) {
+        throw new IllegalArgumentException("Image file is required");
+      }
+
+      // Tìm customer theo email
+      Customer customer = findByEmail(email);
+      if (customer == null) {
+        throw new IllegalArgumentException("Customer not found with email: " + email);
+      }
+
+      // Xóa ảnh cũ nếu có
+      if (customer.getAvatar() != null && !customer.getAvatar().isEmpty()) {
+        imageUtils.deleteImage(customer.getAvatar());
+      }
+
+      // Upload ảnh mới
+      String imageUrl = imageUtils.uploadImage(file);
+      
+      // Cập nhật avatar
+      customer.setAvatar(imageUrl);
+      customerRepository.save(customer);
+
+      // Trả về response
+      return new UpdateAvatarResponse(email, imageUrl);
+
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to update avatar: " + e.getMessage());
     }
   }
 
