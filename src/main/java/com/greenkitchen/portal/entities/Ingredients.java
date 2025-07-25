@@ -22,6 +22,7 @@ import lombok.Setter;
 public class Ingredients extends AbstractEntity {
     private static final long serialVersionUID = 1L;
     private String title;
+    private String description;
     @Enumerated(EnumType.STRING)
     private IngredientType type;
     private Double calories;

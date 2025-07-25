@@ -1,14 +1,28 @@
 package com.greenkitchen.portal.repositories;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.greenkitchen.portal.entities.MenuMealReview;
 
 public interface MenuMealReviewRepository extends JpaRepository<MenuMealReview, Long> {
-    // Define methods for CRUD operations on MenuMeal entities
-    // For example:
-    // List<MenuMeal> findByType(MenuMealType type);
-    // Optional<MenuMeal> findById(Long id);
-    // void deleteById(Long id);
-  
+
+    // Tìm tất cả review theo MenuMeal ID
+    List<MenuMealReview> findByMenuMealId(Long menuMealId);
+
+    // Tìm tất cả review theo Customer ID
+    List<MenuMealReview> findByCustomerId(Long customerId);
+
+    // Kiểm tra customer đã review menu meal này chưa
+    boolean existsByMenuMealIdAndCustomerId(Long menuMealId, Long customerId);
+
+    // Tính average rating cho menu meal
+    @Query("SELECT AVG(r.rating) FROM MenuMealReview r WHERE r.menuMeal.id = :menuMealId")
+    Double getAverageRatingByMenuMealId(@Param("menuMealId") Long menuMealId);
+
+    // Đếm số review cho menu meal
+    Long countByMenuMealId(Long menuMealId);
 }

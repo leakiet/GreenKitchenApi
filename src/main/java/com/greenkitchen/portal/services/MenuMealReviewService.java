@@ -1,13 +1,15 @@
 package com.greenkitchen.portal.services;
 
+import java.util.List;
 
-import com.greenkitchen.portal.dtos.RequestMenuMeal;
-import com.greenkitchen.portal.entities.MenuMeal;
-
+import com.greenkitchen.portal.dtos.MenuMealReviewRequest;
+import com.greenkitchen.portal.entities.MenuMealReview;
 
 public interface MenuMealReviewService {
-  MenuMeal getMenuMealById(Long id);
-  MenuMeal createMenuMeal(RequestMenuMeal dto);
-  MenuMeal updateMenuMeal(Long id, RequestMenuMeal dto);
-  void deleteMenuMeal(Long id);
+    MenuMealReview getMenuMealReviewById(Long id);
+    MenuMealReview createMenuMealReview(MenuMealReviewRequest dto);
+    MenuMealReview updateMenuMealReview(Long id, MenuMealReviewRequest dto);
+    void deleteMenuMealReview(Long id);
+    List<MenuMealReview> getAllReviewsByMenuMealId(Long menuMealId);
+    List<MenuMealReview> getAllReviewsByCustomerId(Long customerId);
 }

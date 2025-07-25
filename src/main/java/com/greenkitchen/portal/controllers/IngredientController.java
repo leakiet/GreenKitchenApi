@@ -24,7 +24,7 @@ import com.greenkitchen.portal.services.IngredientService;
 import com.greenkitchen.portal.utils.ImageUtils;
 
 @RestController
-@RequestMapping("/apis/v1/ingredients")
+@RequestMapping("/apis/v1/customers/ingredients")
 public class IngredientController {
     @Autowired
     private IngredientService ingredientService;

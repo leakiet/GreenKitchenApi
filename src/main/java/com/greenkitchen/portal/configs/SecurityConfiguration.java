@@ -39,6 +39,9 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/customers/**").permitAll()     // TEMP: Allow public access for testing
             .requestMatchers("/apis/v1/addresses/**").permitAll() // User addresses
 
+
+            .requestMatchers("/apis/v1/menu-meals/**").permitAll()        // MenuMeal endpoints
+            .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll() // MenuMealReview endpoints
             // Protected endpoints - cần authentication
             
             // Admin endpoints

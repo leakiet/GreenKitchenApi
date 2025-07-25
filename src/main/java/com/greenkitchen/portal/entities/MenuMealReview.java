@@ -1,5 +1,7 @@
 package com.greenkitchen.portal.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -22,6 +24,7 @@ public class MenuMealReview extends AbstractEntity {
 
     @ManyToOne
     @JoinColumn(name = "menu_meal_id")
+    @JsonIgnore
     private MenuMeal menuMeal;
 
     @ManyToOne
@@ -30,6 +33,6 @@ public class MenuMealReview extends AbstractEntity {
 
     @Min(1)
     @Max(5)
-    private Integer rating; 
+    private Integer rating;
     private String comment;
 }
