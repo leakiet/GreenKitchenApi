@@ -5,6 +5,9 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
@@ -25,5 +28,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
 	// (optionally) lấy list chưa đọc để đánh dấu đã đọc
 	List<ChatMessage> findByConversationAndSenderTypeAndIsReadFalse(Conversation conversation, SenderType senderType);
+
+	@Modifying
+	@Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.conversation = :conv AND m.senderType = :senderType AND m.isRead = false")
+	void markMessagesAsRead(@Param("conv") Conversation conv, @Param("senderType") SenderType senderType);
 
 }

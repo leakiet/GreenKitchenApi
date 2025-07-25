@@ -3,6 +3,8 @@ package com.greenkitchen.portal.entities;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -27,9 +29,13 @@ public abstract class AbstractEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
 
+    @JsonIgnore
     protected LocalDateTime createdAt;
+
+    @JsonIgnore
     protected LocalDateTime updatedAt;
 
+    @JsonIgnore
     protected Boolean isDeleted = false;
 
     @PrePersist
@@ -41,4 +47,6 @@ public abstract class AbstractEntity implements Serializable {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+
 }

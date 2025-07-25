@@ -120,5 +120,10 @@ public class ChatController {
 				.orElseThrow(() -> new EntityNotFoundException("Không tồn tại"));
 		return ResponseEntity.ok(conv.getStatus().name()); // Trả về "AI", "EMP", "WAITING_EMP"
 	}
+	@PostMapping("/mark-read")
+	public ResponseEntity<Void> markRead(@RequestParam("conversationId") Long conversationId) {
+	    chatService.markCustomerMessagesAsRead(conversationId);
+	    return ResponseEntity.ok().build();
+	}
 
 }
