@@ -12,9 +12,17 @@ public interface MenuMealReviewRepository extends JpaRepository<MenuMealReview, 
 
     // Tìm tất cả review theo MenuMeal ID
     List<MenuMealReview> findByMenuMealId(Long menuMealId);
+    
+    // Tìm tất cả review theo MenuMeal ID với eager loading
+    @Query("SELECT r FROM MenuMealReview r JOIN FETCH r.customer JOIN FETCH r.menuMeal WHERE r.menuMeal.id = :menuMealId")
+    List<MenuMealReview> findByMenuMealIdWithCustomerAndMenuMeal(@Param("menuMealId") Long menuMealId);
 
     // Tìm tất cả review theo Customer ID
     List<MenuMealReview> findByCustomerId(Long customerId);
+    
+    // Tìm tất cả review theo Customer ID với eager loading
+    @Query("SELECT r FROM MenuMealReview r JOIN FETCH r.customer JOIN FETCH r.menuMeal WHERE r.customer.id = :customerId")
+    List<MenuMealReview> findByCustomerIdWithCustomerAndMenuMeal(@Param("customerId") Long customerId);
 
     // Kiểm tra customer đã review menu meal này chưa
     boolean existsByMenuMealIdAndCustomerId(Long menuMealId, Long customerId);

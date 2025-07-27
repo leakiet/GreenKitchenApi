@@ -12,7 +12,7 @@ import com.cloudinary.Cloudinary;
 @Configuration
 public class CloudinaryProvider {
 
-    @Value("${COULDINARY_CLOUD_NAME}")
+    @Value("${CLOUDINARY_CLOUD_NAME}")
     private String cloudName;
 
     @Value("${CLOUDINARY_API_KEY}")

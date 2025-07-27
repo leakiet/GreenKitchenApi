@@ -2,6 +2,7 @@ package com.greenkitchen.portal.entities;
 
 import com.greenkitchen.portal.enums.IngredientType;
 
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,9 +26,7 @@ public class Ingredients extends AbstractEntity {
     private String description;
     @Enumerated(EnumType.STRING)
     private IngredientType type;
-    private Double calories;
-    private Double protein;
-    private Double carbs;
-    private Double fat;
+    @Embedded
+    private NutritionInfo nutrition;
     private String image;
 }
