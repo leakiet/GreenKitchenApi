@@ -15,13 +15,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.greenkitchen.portal.dtos.MenuMealRequest;
+import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.services.MenuMealService;
 import com.greenkitchen.portal.utils.ImageUtils;
 import com.greenkitchen.portal.utils.SlugUtils;
 
 @RestController
-@RequestMapping("/apis/v1/menu-meals")
+@RequestMapping("/apis/v1")
 public class MenuMealController {
   @Autowired
   private ImageUtils imageUtils;
@@ -34,13 +35,13 @@ public class MenuMealController {
   // this.ImageUtils = ImageUtils;
   // }
 
-  @GetMapping
-  public ResponseEntity<List<MenuMeal>> getAllMenuMeals() {
-    List<MenuMeal> menuMeals = menuMealService.getAllMenuMeals();
+  @GetMapping("/customers/menu-meals")
+  public ResponseEntity<List<MenuMealResponse>> getAllMenuMeals() {
+    List<MenuMealResponse> menuMeals = menuMealService.getAllMenuMeals();
     return ResponseEntity.ok(menuMeals);
   }
 
-  @PostMapping
+  @PostMapping("/customers/menu-meals")
   public ResponseEntity<MenuMeal> createMenuMeal(@ModelAttribute MenuMealRequest request,
       @RequestParam("imageFile") MultipartFile file) {
     String baseSlug = SlugUtils.toSlug(request.getTitle());
@@ -62,7 +63,7 @@ public class MenuMealController {
   public ResponseEntity<MenuMeal> updateMenuMeal(@PathVariable("id") Long id, @ModelAttribute MenuMealRequest request,
       @RequestParam("imageFile") MultipartFile file) {
 
-    MenuMeal existingMenuMeal = menuMealService.getMenuMealById(id);
+    MenuMealResponse existingMenuMeal = menuMealService.getMenuMealById(id);
     if (existingMenuMeal == null) {
       return ResponseEntity.notFound().build();
     }
@@ -85,18 +86,18 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/{id}")
-  public ResponseEntity<MenuMeal> getMenuMealById(@PathVariable("id") Long id) {
-    MenuMeal menuMeal = menuMealService.getMenuMealById(id);
+  @GetMapping("/customers/menu-meals/{id}")
+  public ResponseEntity<MenuMealResponse> getMenuMealById(@PathVariable("id") Long id) {
+    MenuMealResponse menuMeal = menuMealService.getMenuMealById(id);
     if (menuMeal == null) {
       return ResponseEntity.notFound().build();
     }
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/slug/{slug}")
-  public ResponseEntity<MenuMeal> getMenuMealBySlug(@PathVariable("slug") String slug) {
-    MenuMeal menuMeal = menuMealService.getMenuMealBySlug(slug);
+  @GetMapping("/customers/menu-meals/slug/{slug}")
+  public ResponseEntity<MenuMealResponse> getMenuMealBySlug(@PathVariable("slug") String slug) {
+    MenuMealResponse menuMeal = menuMealService.getMenuMealBySlug(slug);
     if (menuMeal == null) {
       return ResponseEntity.notFound().build();
     }

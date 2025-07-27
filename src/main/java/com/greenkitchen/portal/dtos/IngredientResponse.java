@@ -1,5 +1,6 @@
 package com.greenkitchen.portal.dtos;
 
+import com.greenkitchen.portal.entities.NutritionInfo;
 import com.greenkitchen.portal.enums.IngredientType;
 
 import lombok.AllArgsConstructor;
@@ -19,5 +20,6 @@ public class IngredientResponse {
     private Double protein;
     private Double carbs;
     private Double fat;
+    private String description;
     private String image;
 }

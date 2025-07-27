@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.dtos;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import com.greenkitchen.portal.enums.MenuMealType;
@@ -22,15 +21,9 @@ public class MenuMealResponse {
   private Double protein;
   private Double carbs;
   private Double fat;
-  private MenuMealType type;
   private String image;
   private Double price;
   private String slug;
-  private LocalDateTime createdAt;
-  private LocalDateTime updatedAt;
-
-  // Thông tin tổng hợp từ reviews
-  private Double averageRating;
-  private Integer totalReviews;
+  private MenuMealType type;
   private List<MenuMealReviewResponse> reviews;
 }

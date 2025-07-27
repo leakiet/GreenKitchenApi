@@ -21,4 +21,6 @@ public class IngredientRequest {
     private Double protein;
     private Double carbs;
     private Double fat;
+    private String description;
+    private String image;
 }

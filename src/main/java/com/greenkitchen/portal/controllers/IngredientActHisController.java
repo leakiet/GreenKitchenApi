@@ -23,7 +23,7 @@ import com.greenkitchen.portal.services.IngredientService;
 
 
 @RestController
-@RequestMapping("/apis/v1/ingredient-act-his")
+@RequestMapping("/apis/v1")
 public class IngredientActHisController {
   @Autowired
     private IngredientActHisService ingredientActHisService;
@@ -51,7 +51,7 @@ public class IngredientActHisController {
     return ResponseEntity.ok(actions);
   }
 
-  @PostMapping
+  @PostMapping("/customers/ingredient-act-his")
   public ResponseEntity<IngredientActHis> addIngredientAction(@RequestBody IngredientActHisRequest req) {
     Customer customer = customerService.findById(req.getCustomerId());
     if (customer == null) {
