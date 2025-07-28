@@ -33,5 +33,20 @@
     "name": "app.refreshTokenExpirationMs",
     "type": "java.lang.Integer",
     "description": "Expiration time for refresh tokens in milliseconds"
+  },
+  {
+    "name": "CLOUDINARY_API_SECRET",
+    "type": "java.lang.String",
+    "description": "A description for 'CLOUDINARY_API_SECRET'"
+  },
+  {
+    "name": "CLOUDINARY_API_KEY",
+    "type": "java.lang.String",
+    "description": "A description for 'CLOUDINARY_API_KEY'"
+  },
+  {
+    "name": "CLOUDINARY_CLOUD_NAME",
+    "type": "java.lang.String",
+    "description": "A description for 'CLOUDINARY_CLOUD_NAME'"
   }
 ]}

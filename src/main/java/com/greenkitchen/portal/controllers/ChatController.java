@@ -32,7 +32,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@CrossOrigin(origins = "${app.frontend.url}")
 @RequestMapping("/apis/v1/chat")
 @RequiredArgsConstructor
 public class ChatController {

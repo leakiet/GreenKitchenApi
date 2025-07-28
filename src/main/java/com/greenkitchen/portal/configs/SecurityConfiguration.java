@@ -34,6 +34,7 @@ public class SecurityConfiguration {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             // Public endpoints - không cần authentication
+        		.requestMatchers("/apis/v1/ws/**").permitAll()
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
             .requestMatchers("/apis/v1/membership-test/**").permitAll() // Membership test endpoints
