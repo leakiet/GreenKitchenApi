@@ -23,7 +23,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @Entity
 @Getter
 @Setter
@@ -36,8 +35,12 @@ public class Customer extends AbstractEntity {
 
 	private String lastName;
 
+	private String avatar;
+
 	@JsonIgnore
 	private String password;
+
+	private LocalDateTime passwordUpdatedAt;
 
 	@Email
 	@NotBlank(message = "Email is required")
@@ -66,8 +69,11 @@ public class Customer extends AbstractEntity {
 
 	private Boolean isOauthUser = false; // false cho traditional users
 
-	@OneToMany(mappedBy = "customer", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "customer", cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
 	private List<Address> addresses;
+
+	@OneToMany(mappedBy = "customer", cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
+	private List<CustomerTDEE> customerTDEEs;
 
 	public String getFullName() {
 		return lastName + " " + firstName;
