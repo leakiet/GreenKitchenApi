@@ -20,10 +20,10 @@ import com.greenkitchen.portal.dtos.ChatResponse;
 import com.greenkitchen.portal.dtos.ConversationResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
-import com.greenkitchen.portal.entities.ConversationStatus;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.Employee;
-import com.greenkitchen.portal.entities.SenderType;
+import com.greenkitchen.portal.enums.ConversationStatus;
+import com.greenkitchen.portal.enums.SenderType;
 import com.greenkitchen.portal.repositories.ChatMessageRepository;
 import com.greenkitchen.portal.repositories.ConversationRepository;
 import com.greenkitchen.portal.repositories.CustomerRepository;
@@ -223,21 +223,28 @@ public class ChatServiceImpl implements ChatService {
 
 	@Override
 	public Page<ChatResponse> getMessagesByConversationPaged(Long conversationId, int page, int size) {
-		Page<ChatMessage> msgPage = chatMessageRepo.findByConversationIdOrderByTimestampDesc(conversationId,
-				PageRequest.of(page, size));
-		return msgPage.map(m -> {
-			ChatResponse resp = mapper.map(m, ChatResponse.class);
-			// Dynamic sender name
-			if (m.getSenderType() == SenderType.CUSTOMER && m.getCustomer() != null) {
-				resp.setSenderName(m.getCustomer().getFirstName());
-			}
-			if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
-				resp.setSenderName(m.getEmployee().getFirstName());
-			}
+	    Page<ChatMessage> msgPage = chatMessageRepo.findByConversationIdOrderByTimestampDesc(
+	        conversationId,
+	        PageRequest.of(page, size)
+	    );
 
-			return resp;
-		});
+	    return msgPage.map(m -> {
+	        ChatResponse resp = mapper.map(m, ChatResponse.class);
+
+	        // ✅ FIX: set senderRole thủ công
+	        resp.setSenderRole(m.getSenderType() != null ? m.getSenderType().name() : null);
+
+	        // Dynamic sender name
+	        if (m.getSenderType() == SenderType.CUSTOMER && m.getCustomer() != null) {
+	            resp.setSenderName(m.getCustomer().getFirstName());
+	        } else if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
+	            resp.setSenderName(m.getEmployee().getFirstName());
+	        }
+
+	        return resp;
+	    });
 	}
+
 
 	@Override
 	public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses) {
@@ -271,6 +278,5 @@ public class ChatServiceImpl implements ChatService {
 		return chatClient.prompt().system(
 				"Bạn là chuyên gia tư vấn về ăn uống lành mạnh và thực phẩm sạch của Green Kitchen. Luôn ưu tiên trả lời theo hướng dinh dưỡng, sức khỏe, hạn chế dầu mỡ, ưu tiên món ăn tốt cho người ăn kiêng, người già, trẻ em.")
 				.user(prompt).call().content();
-
 	}
 }
