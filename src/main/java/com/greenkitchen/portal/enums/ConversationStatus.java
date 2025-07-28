@@ -1,4 +1,4 @@
-package com.greenkitchen.portal.entities;
+package com.greenkitchen.portal.enums;
 
 public enum ConversationStatus {
     AI,            // Đang chat với AI

@@ -3,6 +3,8 @@ package com.greenkitchen.portal.entities;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.greenkitchen.portal.enums.ConversationStatus;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -1,5 +1,6 @@
 package com.greenkitchen.portal.controllers;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -21,8 +22,8 @@ import com.greenkitchen.portal.dtos.ConversationResponse;
 import com.greenkitchen.portal.dtos.ConversationResquest;
 import com.greenkitchen.portal.dtos.ChatPagingResponse;
 import com.greenkitchen.portal.entities.Conversation;
-import com.greenkitchen.portal.entities.ConversationStatus;
-import com.greenkitchen.portal.entities.SenderType;
+import com.greenkitchen.portal.enums.ConversationStatus;
+import com.greenkitchen.portal.enums.SenderType;
 import com.greenkitchen.portal.repositories.ConversationRepository;
 import com.greenkitchen.portal.services.ChatService;
 
@@ -125,5 +126,16 @@ public class ChatController {
 	    chatService.markCustomerMessagesAsRead(conversationId);
 	    return ResponseEntity.ok().build();
 	}
+	
+	@PostMapping("/init-guest")
+	public ResponseEntity<Long> initGuestConversation() {
+	    // Tạo conversation mới, không gắn customer, status = AI
+	    Conversation conv = new Conversation();
+	    conv.setStartTime(LocalDateTime.now());
+	    conv.setStatus(ConversationStatus.AI);
+	    Conversation saved = conversationRepo.save(conv);
+	    return ResponseEntity.ok(saved.getId());
+	}
+
 
 }

@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
 import com.greenkitchen.portal.dtos.ConversationResponse;
-import com.greenkitchen.portal.entities.ConversationStatus;
+import com.greenkitchen.portal.enums.ConversationStatus;
 
 public interface ChatService {
     ChatResponse sendMessage(Long actorId, ChatRequest request);
