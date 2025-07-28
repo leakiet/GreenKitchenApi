@@ -37,10 +37,12 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
 
+
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").permitAll()
             .requestMatchers("/apis/v1/addresses/**").permitAll()
             .requestMatchers("/apis/v1/customer-tdees/**").permitAll()
+             .requestMatchers("/apis/v1/custom-meals/**").permitAll()
 
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")

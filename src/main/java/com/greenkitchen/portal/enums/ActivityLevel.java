@@ -1,9 +1,9 @@
 package com.greenkitchen.portal.enums;
 
 public enum ActivityLevel {
-    SEDENTARY,
-    LIGHTLY_ACTIVE,
-    MODERATELY_ACTIVE,
-    VERY_ACTIVE,
-    EXTREMELY_ACTIVE
+    SEDENTARY,      // Ít vận động
+    LIGHT,          // Vận động nhẹ  
+    MODERATE,       // Vận động vừa
+    ACTIVE,         // Vận động nhiều
+    VERY_ACTIVE     // Vận động rất nhiều
 }

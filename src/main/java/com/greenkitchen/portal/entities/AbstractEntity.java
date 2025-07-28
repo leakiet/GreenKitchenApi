@@ -47,4 +47,6 @@ public abstract class AbstractEntity implements Serializable {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+
 }
