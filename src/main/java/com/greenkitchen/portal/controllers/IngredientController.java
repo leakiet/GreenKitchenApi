@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,12 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.greenkitchen.portal.dtos.IngredientRequest;
+import com.greenkitchen.portal.dtos.IngredientResponse;
 import com.greenkitchen.portal.entities.Ingredients;
 import com.greenkitchen.portal.services.IngredientService;
 import com.greenkitchen.portal.utils.ImageUtils;
 
 @RestController
-@RequestMapping("/apis/v1/ingredients")
+@RequestMapping("/apis/v1")
 public class IngredientController {
     @Autowired
     private IngredientService ingredientService;
@@ -41,15 +41,33 @@ public class IngredientController {
         this.ImageUtils = ImageUtils;
     }
 
-    @GetMapping
-    public ResponseEntity<Map<String, List<Ingredients>>> getAllIngredientsGrouped() {
+    @GetMapping("/customers/ingredients")
+    public ResponseEntity<Map<String, List<IngredientResponse>>> getAllIngredientsGrouped() {
         List<Ingredients> all = ingredientService.findAll();
-        Map<String, List<Ingredients>> grouped = all.stream()
-                .collect(Collectors.groupingBy(i -> i.getType().name().toLowerCase()));
+        List<IngredientResponse> responses = all.stream().map(ingredient -> {
+            IngredientResponse response = new IngredientResponse();
+            modelMapper.map(ingredient, response);
+            if (ingredient.getNutrition() != null) {
+                modelMapper.map(ingredient.getNutrition(), response);
+            } else {
+                response.setCalories(0.0);
+                response.setProtein(0.0);
+                response.setCarbs(0.0);
+                response.setFat(0.0);
+            }
+            return response;
+        }).toList();
+
+        Map<String, List<IngredientResponse>> grouped = responses.stream()
+                .collect(Collectors.groupingBy(r -> {
+                    String type = r.getType().toString();
+                    return type == null ? "unknown" : type.toLowerCase();
+                }));
+
         return ResponseEntity.ok(grouped);
     }
 
-    @PostMapping
+    @PostMapping("/ingredients")
     public ResponseEntity<Ingredients> addIngredient(@ModelAttribute IngredientRequest ingredientRequest,
             @RequestParam("imageFile") MultipartFile file) {
 
@@ -62,7 +80,7 @@ public class IngredientController {
         return ResponseEntity.status(201).body(saved);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/ingredients/{id}")
     public ResponseEntity<Ingredients> updateIngredient(
             @PathVariable("id") Long id,
             @ModelAttribute IngredientRequest ingredientRequest,
@@ -75,10 +93,10 @@ public class IngredientController {
 
         boolean isSame = existing.getTitle().equals(ingredientRequest.getTitle()) &&
                 existing.getType() == ingredientRequest.getType() &&
-                existing.getCalories().equals(ingredientRequest.getCalories()) &&
-                existing.getProtein().equals(ingredientRequest.getProtein()) &&
-                existing.getCarbs().equals(ingredientRequest.getCarbs()) &&
-                existing.getFat().equals(ingredientRequest.getFat()) &&
+                existing.getNutrition().getCalories().equals(ingredientRequest.getCalories()) &&
+                existing.getNutrition().getProtein().equals(ingredientRequest.getProtein()) &&
+                existing.getNutrition().getCarbs().equals(ingredientRequest.getCarbs()) &&
+                existing.getNutrition().getFat().equals(ingredientRequest.getFat()) &&
                 (file == null || file.isEmpty());
 
         if (isSame) {
@@ -99,13 +117,22 @@ public class IngredientController {
         return ResponseEntity.ok(updated);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Ingredients> findById(@PathVariable("id") Long id) {
+    @GetMapping("/customers/ingredients/{id}")
+    public ResponseEntity<IngredientResponse> findById(@PathVariable("id") Long id) {
         Ingredients ingredient = ingredientService.findById(id);
-        return ResponseEntity.ok(ingredient);
+        if (ingredient == null) {
+            return ResponseEntity.notFound().build();
+        }
+        IngredientResponse response = new IngredientResponse();
+        modelMapper.map(ingredient, response);
+
+        if (ingredient.getNutrition() != null) {
+            modelMapper.map(ingredient.getNutrition(), response);
+        }
+        return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/ingredients/{id}")
     public ResponseEntity<String> deleteById(@PathVariable("id") Long id) {
         ingredientService.deleteById(id);
         return ResponseEntity.ok("Ingredient deleted successfully");

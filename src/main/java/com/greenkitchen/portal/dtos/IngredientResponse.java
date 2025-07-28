@@ -1,9 +1,8 @@
 package com.greenkitchen.portal.dtos;
 
+import com.greenkitchen.portal.entities.NutritionInfo;
 import com.greenkitchen.portal.enums.IngredientType;
 
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,9 +12,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class IngredientRequest {
+public class IngredientResponse {
+    private Long id;
     private String title;
-    @Enumerated(EnumType.STRING)
     private IngredientType type;
     private Double calories;
     private Double protein;

@@ -1,6 +1,6 @@
 package com.greenkitchen.portal.dtos;
 
-import com.greenkitchen.portal.enums.IngredientType;
+import com.greenkitchen.portal.enums.MenuMealType;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -11,16 +11,18 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-public class IngredientRequest {
+@AllArgsConstructor
+public class MenuMealRequest {
     private String title;
-    @Enumerated(EnumType.STRING)
-    private IngredientType type;
+    private String description;
     private Double calories;
     private Double protein;
     private Double carbs;
     private Double fat;
-    private String description;
+    @Enumerated(EnumType.STRING)
+    private MenuMealType type;
     private String image;
+    private Double price;
+    private String slug;
 }
