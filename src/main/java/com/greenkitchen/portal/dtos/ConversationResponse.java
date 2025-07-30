@@ -6,8 +6,9 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class ConversationResponse {
-	private Long id;
+	private Long conversationId;
 	private String customerName; // hoặc ẩn danh nếu guest
+	
 	private String status;
 	private String lastMessage;
 	private String lastMessageTime;

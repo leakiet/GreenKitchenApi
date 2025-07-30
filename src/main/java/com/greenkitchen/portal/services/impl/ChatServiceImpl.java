@@ -95,8 +95,8 @@ public class ChatServiceImpl implements ChatService {
 			ChatResponse resp = mapper.map(msg, ChatResponse.class);
 			resp.setSenderRole(SenderType.CUSTOMER.name());
 			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
-			 // Thêm dòng này: Gửi notify để sidebar (badge) cập nhật
-		    messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+			// Thêm dòng này: Gửi notify để sidebar (badge) cập nhật
+			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
 			return resp;
 		}
 
@@ -124,16 +124,12 @@ public class ChatServiceImpl implements ChatService {
 	private ChatResponse handleEmployeeMessage(Long actorId, ChatRequest request, Conversation conv) {
 		Employee emp = employeeRepo.findById(actorId)
 				.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
-		if (conv.getStatus() == ConversationStatus.AI) {
-			throw new IllegalStateException("Không thể gửi tin nhắn khi conversation đang ở chế độ AI.");
-		}
-		if (conv.getStatus() != ConversationStatus.EMP) {
-			conv.setStatus(ConversationStatus.EMP);
-			conv.setEmployee(emp);
-			conversationRepo.saveAndFlush(conv); // <--- Đảm bảo commit trước
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId()); // <--- Thông báo cho sidebar EMP
-																					// realtime
-		}
+
+		conv.setStatus(ConversationStatus.EMP);
+		conv.setEmployee(emp);
+		conversationRepo.saveAndFlush(conv); // <--- Đảm bảo commit trước
+		messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId()); // <--- Thông báo cho sidebar EMP
+																				// realtime
 
 		ChatMessage empMsg = buildMessage(null, emp, conv, emp.getFirstName(), SenderType.EMP, false,
 				request.getContent());
@@ -223,31 +219,40 @@ public class ChatServiceImpl implements ChatService {
 
 	@Override
 	public Page<ChatResponse> getMessagesByConversationPaged(Long conversationId, int page, int size) {
-	    Page<ChatMessage> msgPage = chatMessageRepo.findByConversationIdOrderByTimestampDesc(
-	        conversationId,
-	        PageRequest.of(page, size)
-	    );
+		log.info("getMessagesByConversationPaged called with conversationId={}, page={}, size={}", conversationId, page,
+				size);
 
-	    return msgPage.map(m -> {
-	        ChatResponse resp = mapper.map(m, ChatResponse.class);
+		Page<ChatMessage> msgPage = chatMessageRepo.findByConversationIdOrderByTimestampDesc(conversationId,
+				PageRequest.of(page, size));
+		log.info("Found {} messages in conversationId={}", msgPage.getTotalElements(), conversationId);
 
-	        // ✅ FIX: set senderRole thủ công
-	        resp.setSenderRole(m.getSenderType() != null ? m.getSenderType().name() : null);
+		return msgPage.map(m -> {
+			log.debug("Mapping messageId={}, senderType={}, customer={}, employee={}", m.getId(), m.getSenderType(),
+					m.getCustomer() != null ? m.getCustomer().getFirstName() : null,
+					m.getEmployee() != null ? m.getEmployee().getFirstName() : null);
 
-	        // Dynamic sender name
-	        if (m.getSenderType() == SenderType.CUSTOMER && m.getCustomer() != null) {
-	            resp.setSenderName(m.getCustomer().getFirstName());
-	        } else if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
-	            resp.setSenderName(m.getEmployee().getFirstName());
-	        }
+			ChatResponse resp = mapper.map(m, ChatResponse.class);
 
-	        return resp;
-	    });
+			resp.setSenderRole(m.getSenderType() != null ? m.getSenderType().name() : null);
+
+			if (m.getSenderType() == SenderType.CUSTOMER && m.getCustomer() != null) {
+				resp.setSenderName(m.getCustomer().getFirstName());
+			} else if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
+				resp.setSenderName(m.getEmployee().getFirstName());
+			}
+
+			log.debug("ChatResponse mapped: id={}, senderRole={}, senderName={}", resp.getId(), resp.getSenderRole(),
+					resp.getSenderName());
+
+			return resp;
+		});
 	}
-
 
 	@Override
 	public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses) {
+		if (statuses == null || statuses.isEmpty()) {
+			throw new IllegalArgumentException("Danh sách trạng thái không được để trống");
+		}
 		List<Conversation> convs = conversationRepo.findByStatusInOrderByUpdatedAtDesc(statuses);
 
 		return convs.stream().map(conv -> {
@@ -269,8 +274,20 @@ public class ChatServiceImpl implements ChatService {
 	@Transactional
 	@Override
 	public void markCustomerMessagesAsRead(Long conversationId) {
-		Conversation conv = conversationRepo.findById(conversationId)
-				.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+		log.info("[mark-read] conversationId: {}", conversationId);
+
+		if (conversationId == null) {
+			log.error("conversationId null!");
+			throw new IllegalArgumentException("conversationId không được null");
+		}
+		Conversation conv = conversationRepo.findById(conversationId).orElseThrow(() -> {
+			log.error("Conversation {} không tồn tại", conversationId);
+			return new EntityNotFoundException("Conversation không tồn tại");
+		});
+
+		// LOG ĐỂ XEM CONVERSATION VÀ SENDER TYPE ĐƯỢC TRUYỀN VÀO
+		log.info("Marking as read for conversation: {}, senderType: CUSTOMER", conv.getId());
+
 		chatMessageRepo.markMessagesAsRead(conv, SenderType.CUSTOMER);
 	}
 
@@ -279,4 +296,50 @@ public class ChatServiceImpl implements ChatService {
 				"Bạn là chuyên gia tư vấn về ăn uống lành mạnh và thực phẩm sạch của Green Kitchen. Luôn ưu tiên trả lời theo hướng dinh dưỡng, sức khỏe, hạn chế dầu mỡ, ưu tiên món ăn tốt cho người ăn kiêng, người già, trẻ em.")
 				.user(prompt).call().content();
 	}
+
+	@Override
+	@Transactional
+	public void claimConversationAsEmp(Long conversationId, Long employeeId) {
+		log.info("claimConversationAsEmp called with conversationId={}, employeeId={}", conversationId, employeeId);
+
+		if (conversationId == null || employeeId == null) {
+			log.error("conversationId hoặc employeeId bị null");
+			throw new IllegalArgumentException("conversationId và employeeId không được null");
+		}
+
+		Conversation conv = conversationRepo.findById(conversationId).orElseThrow(() -> {
+			log.error("Conversation không tồn tại với id={}", conversationId);
+			return new EntityNotFoundException("Conversation không tồn tại");
+		});
+
+		Employee emp = employeeRepo.findById(employeeId).orElseThrow(() -> {
+			log.error("Employee không tồn tại với id={}", employeeId);
+			return new EntityNotFoundException("Employee không tồn tại");
+		});
+
+		log.info("Assigning EMP={} to conversationId={}", employeeId, conversationId);
+		conv.setStatus(ConversationStatus.EMP);
+		conv.setEmployee(emp);
+		conversationRepo.saveAndFlush(conv);
+
+		log.info("Sending notify to /topic/emp-notify, convId={}", conv.getId());
+		messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+	}
+
+	@Override
+	@Transactional
+	public void releaseConversationToAI(Long conversationId) {
+		if (conversationId == null) {
+			throw new IllegalArgumentException("conversationId không được null");
+		}
+		Conversation conv = conversationRepo.findById(conversationId)
+				.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+		conv.setStatus(ConversationStatus.AI);
+		conv.setEmployee(null);
+		conversationRepo.saveAndFlush(conv);
+
+		// Bắn notify FE
+		messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+	}
+
 }
