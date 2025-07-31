@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.dtos;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class ChatResponse {
     private String senderRole;        // "CUSTOMER", "EMP", "AI"
     private String senderName;        // tên hiển thị người gửi hoặc AI
     private String content;           // nội dung tin nhắn
+    private List<MenuMealResponse> menu;
     private LocalDateTime timestamp;  // thời điểm
     
 }

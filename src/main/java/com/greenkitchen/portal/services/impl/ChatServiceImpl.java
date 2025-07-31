@@ -15,9 +15,12 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
 import com.greenkitchen.portal.dtos.ConversationResponse;
+import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.entities.Customer;
@@ -29,6 +32,7 @@ import com.greenkitchen.portal.repositories.ConversationRepository;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.EmployeeRepository;
 import com.greenkitchen.portal.services.ChatService;
+import com.greenkitchen.portal.tools.MenuTools;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +50,8 @@ public class ChatServiceImpl implements ChatService {
 	private final EmployeeRepository employeeRepo;
 	private final ModelMapper mapper;
 	private final SimpMessagingTemplate messagingTemplate;
+	// Thêm MenuTools để sử dụng trong các lệnh đặc biệt cho AI
+	 private final MenuTools menuTools;
 
 	@Override
 	public ChatResponse sendMessage(Long actorId, ChatRequest request) {
@@ -73,7 +79,7 @@ public class ChatServiceImpl implements ChatService {
 			log.info("Đã cập nhật trạng thái WAITING_EMP, sẽ gửi notify!");
 			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
 			return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Yêu cầu đã gửi, vui lòng chờ nhân viên.",
-					LocalDateTime.now());
+					null, LocalDateTime.now());
 		}
 
 		if ("/backtoAI".equals(content)) {
@@ -82,7 +88,7 @@ public class ChatServiceImpl implements ChatService {
 			log.info("Đã cập nhật trạng thái AI, sẽ gửi notify!");
 			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
 			return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Chuyển về AI thành công.",
-					LocalDateTime.now());
+					null, LocalDateTime.now());
 		}
 
 		// 2. Còn lại xử lý tin nhắn bình thường như code của bạn
@@ -112,13 +118,30 @@ public class ChatServiceImpl implements ChatService {
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
 
 		String aiContent = callAi(content, request.getLang());
-		ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, aiContent);
+		ObjectMapper om = new ObjectMapper();
+		String respContent = aiContent;
+		List<MenuMealResponse> menuList = null;
+
+		try {
+		    JsonNode root = om.readTree(aiContent);
+		    if (root.has("menu") && root.get("menu").isArray()) {
+		        respContent = root.has("content") ? root.get("content").asText() : "";
+		        menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
+		    }
+		} catch (Exception e) {
+		    // Không phải JSON hoặc không đúng format, xử lý mặc định
+		}
+
+		ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, respContent);
 		chatMessageRepo.save(aiMsg);
 
 		ChatResponse resp = mapper.map(aiMsg, ChatResponse.class);
 		resp.setSenderRole(SenderType.AI.name());
+		resp.setMenu(menuList); // <--- Quan trọng! FE sẽ nhận được menu ở đây.
+
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
 		return resp;
+
 	}
 
 	private ChatResponse handleEmployeeMessage(Long actorId, ChatRequest request, Conversation conv) {
@@ -294,7 +317,7 @@ public class ChatServiceImpl implements ChatService {
 	private String callAi(String prompt, String lang) {
 		return chatClient.prompt().system(
 				"Bạn là chuyên gia tư vấn về ăn uống lành mạnh và thực phẩm sạch của Green Kitchen. Luôn ưu tiên trả lời theo hướng dinh dưỡng, sức khỏe, hạn chế dầu mỡ, ưu tiên món ăn tốt cho người ăn kiêng, người già, trẻ em.")
-				.user(prompt).call().content();
+				.tools(menuTools).user(prompt).call().content();
 	}
 
 	@Override
