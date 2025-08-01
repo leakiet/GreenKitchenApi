@@ -33,4 +33,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 	@Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.conversation = :conv AND m.senderType = :senderType AND m.isRead = false")
 	void markMessagesAsRead(@Param("conv") Conversation conv, @Param("senderType") SenderType senderType);
 
+	// Lấy 10 tin nhắn mới nhất theo conversation, sắp xếp theo timestamp DESC
+	List<ChatMessage> findTop10ByConversationOrderByTimestampDesc(Conversation conv);
+
 }
