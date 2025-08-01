@@ -17,34 +17,52 @@ public class MenuTools {
         this.menuMealService = menuMealService;
     }
 
-    @Tool(description = """
-    		Lấy danh sách menu meals (các món ăn trong menu) cho khách hàng.
-    		**Kết quả trả về phải là một object JSON gồm 2 trường:**
-    		- "content": mô tả ngắn về menu (bằng tiếng Anh, nếu không có mô tả có thể để chuỗi rỗng "")
-    		- "menu": danh sách các món ăn (array). **Mỗi món ăn là một object giữ nguyên các trường tiếng Anh giống như trả ra từ cơ sở dữ liệu (vd: id, title, price, image, v.v)**.
+    @Tool(
+    	    name        = "getMenuMeals",
+    	    description = """
+    	        # PURPOSE
+    	        Lấy danh sách *menu meals* (các món ăn trong menu) cho khách hàng của Green Kitchen.
 
-    		**Yêu cầu:**
-    		- Luôn trả về đúng key "menu" (là array), và "content".
-    		- Không bao giờ trả về trường tiếng Việt hoặc format khác.
-    		- Không thêm trường phụ, không chú thích ngoài JSON.
+    	        # WHEN TO CALL
+    	        – **Chỉ** gọi hàm này nếu (và chỉ nếu) người dùng:
+    	          • hỏi trực tiếp về menu hôm nay / hôm nay có món gì,  
+    	          • yêu cầu xem món, giá, calorie, khẩu phần,  
+    	          • hoặc đề cập cụ thể “thịt bò”, “ức gà”, “salad … trong menu” v.v.  
+    	        – Nếu người dùng KHÔNG hỏi gì liên quan menu → KHÔNG gọi hàm, chỉ trả lời tự nhiên bằng tiếng Việt.
 
-    		**Ví dụ JSON đúng:**
-    		{
-    		  "content": "Today's menu for healthy eaters.",
-    		  "menu": [
-    		    {
-    		      "id": 1,
-    		      "title": "Balanced Protein Bowl",
-    		      "price": 15.99,
-    		      "image": "https://...",
-    		      "calories": 450,
-    		      ...
-    		    },
-    		    ...
-    		  ]
-    		}
-    		""")
+    	        # RESPONSE FORMAT (bắt buộc khi hàm được gọi)
+    	        Trả về *một* đối tượng JSON duy nhất gồm 2 field:
+    	        1. **"content"**  : mô tả ngắn bằng *tiếng Việt* (chuỗi, rỗng nếu không có).  
+    	        2. **"menu"**     : mảng các món ăn; GIỮ Y NGUYÊN tên trường tiếng Anh như trong DB (id, title, price, image, calories, type …).
 
+    	        > TUYỆT ĐỐI không thêm, đổi, dịch key; không bọc JSON trong markdown;  
+    	        > không thêm giải thích bên ngoài JSON khi trả về dưới dạng function call.
+
+    	        # VALID EXAMPLE
+    	        {
+    	          "content": "Dưới đây là các món phù hợp chế độ eat‑clean hôm nay ạ:",
+    	          "menu": [
+    	            {
+    	              "id"       : 1,
+    	              "title"    : "Balanced Protein Bowl",
+    	              "price"    : 15.99,
+    	              "image"    : "https://cdn.example.com/img1.jpg",
+    	              "calories" : 450,
+    	              "type"     : "main"
+    	            }
+    	            // … tối đa <limit> món
+    	          ]
+    	        }
+
+    	        # ERROR HANDLING
+    	        – Nếu DB trả về rỗng, vẫn trả JSON với menu = [] và content giải thích “hiện chưa có món phù hợp”.
+    	        – Nếu xảy ra lỗi hệ thống → trả lời tiếng Việt nói xin lỗi & hướng dẫn liên hệ CSKH; KHÔNG bịa dữ liệu.
+
+    	        # LANGUAGE
+    	        – Mọi văn bản người dùng thấy (content) luôn bằng tiếng Việt.
+    	        – Trường JSON luôn tiếng Anh.
+    	    """
+    	)
     public MenuMealsAiResponse getMenuMeals() {
         List<MenuMealResponse> meals = menuMealService.getAllMenuMeals();
         // Kiểm tra nếu danh sách món ăn rỗng hoặc null
