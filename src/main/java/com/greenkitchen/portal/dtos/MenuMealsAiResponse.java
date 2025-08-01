@@ -1,8 +1,6 @@
 package com.greenkitchen.portal.dtos;
 import java.util.List;
 
-import com.greenkitchen.portal.dtos.MenuMealResponse;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

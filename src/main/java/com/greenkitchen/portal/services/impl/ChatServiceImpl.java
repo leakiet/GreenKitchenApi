@@ -15,6 +15,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenkitchen.portal.dtos.ChatRequest;
@@ -49,9 +50,10 @@ public class ChatServiceImpl implements ChatService {
 	private final CustomerRepository customerRepo;
 	private final EmployeeRepository employeeRepo;
 	private final ModelMapper mapper;
+	ObjectMapper om = new ObjectMapper();
 	private final SimpMessagingTemplate messagingTemplate;
 	// Thêm MenuTools để sử dụng trong các lệnh đặc biệt cho AI
-	 private final MenuTools menuTools;
+	private final MenuTools menuTools;
 
 	@Override
 	public ChatResponse sendMessage(Long actorId, ChatRequest request) {
@@ -87,8 +89,8 @@ public class ChatServiceImpl implements ChatService {
 			conversationRepo.saveAndFlush(conv);
 			log.info("Đã cập nhật trạng thái AI, sẽ gửi notify!");
 			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-			return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Chuyển về AI thành công.",
-					null, LocalDateTime.now());
+			return new ChatResponse(null, conv.getId(), "SYSTEM", "SYSTEM", "Chuyển về AI thành công.", null,
+					LocalDateTime.now());
 		}
 
 		// 2. Còn lại xử lý tin nhắn bình thường như code của bạn
@@ -118,21 +120,35 @@ public class ChatServiceImpl implements ChatService {
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
 
 		String aiContent = callAi(content, request.getLang());
-		ObjectMapper om = new ObjectMapper();
+
 		String respContent = aiContent;
 		List<MenuMealResponse> menuList = null;
 
 		try {
-		    JsonNode root = om.readTree(aiContent);
-		    if (root.has("menu") && root.get("menu").isArray()) {
-		        respContent = root.has("content") ? root.get("content").asText() : "";
-		        menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
-		    }
+			JsonNode root = om.readTree(aiContent);
+			if (root.has("menu") && root.get("menu").isArray()) {
+				respContent = root.has("content") ? root.get("content").asText() : "";
+				menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
+			}
 		} catch (Exception e) {
-		    // Không phải JSON hoặc không đúng format, xử lý mặc định
+			// Đoạn này KHÔNG nên báo lỗi nghiêm trọng nếu aiContent không phải JSON!
+			log.info("AI response không phải JSON, sẽ dùng làm text thường: {}", aiContent);
+			respContent = aiContent;
+			menuList = null;
 		}
 
 		ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, respContent);
+
+		if (menuList != null && !menuList.isEmpty()) {
+			// Lưu menu JSON vào field mới (phải khai báo @Lob private String menuJson; ở
+			// entity ChatMessage)
+			try {
+				aiMsg.setMenuJson(om.writeValueAsString(menuList));
+			} catch (JsonProcessingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		chatMessageRepo.save(aiMsg);
 
 		ChatResponse resp = mapper.map(aiMsg, ChatResponse.class);
@@ -179,6 +195,21 @@ public class ChatServiceImpl implements ChatService {
 			if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
 				resp.setSenderName(m.getEmployee().getFirstName());
 			}
+
+			// ==== BỔ SUNG ĐOẠN NÀY ====
+			if (m.getMenuJson() != null) {
+				try {
+					ObjectMapper om = new ObjectMapper();
+					List<MenuMealResponse> menuList = om.readerForListOf(MenuMealResponse.class)
+							.readValue(m.getMenuJson());
+					resp.setMenu(menuList);
+				} catch (Exception ex) {
+					log.warn("Parse menuJson fail: {}", ex.getMessage());
+					resp.setMenu(null);
+				}
+			}
+			// ==== HẾT BỔ SUNG ====
+
 			// AI/SYSTEM giữ nguyên
 			return resp;
 		}).collect(Collectors.toList());
@@ -242,34 +273,46 @@ public class ChatServiceImpl implements ChatService {
 
 	@Override
 	public Page<ChatResponse> getMessagesByConversationPaged(Long conversationId, int page, int size) {
-		log.info("getMessagesByConversationPaged called with conversationId={}, page={}, size={}", conversationId, page,
-				size);
+	    log.info("getMessagesByConversationPaged called with conversationId={}, page={}, size={}", conversationId, page, size);
 
-		Page<ChatMessage> msgPage = chatMessageRepo.findByConversationIdOrderByTimestampDesc(conversationId,
-				PageRequest.of(page, size));
-		log.info("Found {} messages in conversationId={}", msgPage.getTotalElements(), conversationId);
+	    Page<ChatMessage> msgPage = chatMessageRepo.findByConversationIdOrderByTimestampDesc(conversationId, PageRequest.of(page, size));
+	    log.info("Found {} messages in conversationId={}", msgPage.getTotalElements(), conversationId);
 
-		return msgPage.map(m -> {
-			log.debug("Mapping messageId={}, senderType={}, customer={}, employee={}", m.getId(), m.getSenderType(),
-					m.getCustomer() != null ? m.getCustomer().getFirstName() : null,
-					m.getEmployee() != null ? m.getEmployee().getFirstName() : null);
+	    return msgPage.map(m -> {
+	        log.debug("Mapping messageId={}, senderType={}, customer={}, employee={}", m.getId(), m.getSenderType(),
+	                m.getCustomer() != null ? m.getCustomer().getFirstName() : null,
+	                m.getEmployee() != null ? m.getEmployee().getFirstName() : null);
 
-			ChatResponse resp = mapper.map(m, ChatResponse.class);
+	        ChatResponse resp = mapper.map(m, ChatResponse.class);
 
-			resp.setSenderRole(m.getSenderType() != null ? m.getSenderType().name() : null);
+	        resp.setSenderRole(m.getSenderType() != null ? m.getSenderType().name() : null);
 
-			if (m.getSenderType() == SenderType.CUSTOMER && m.getCustomer() != null) {
-				resp.setSenderName(m.getCustomer().getFirstName());
-			} else if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
-				resp.setSenderName(m.getEmployee().getFirstName());
-			}
+	        if (m.getSenderType() == SenderType.CUSTOMER && m.getCustomer() != null) {
+	            resp.setSenderName(m.getCustomer().getFirstName());
+	        } else if (m.getSenderType() == SenderType.EMP && m.getEmployee() != null) {
+	            resp.setSenderName(m.getEmployee().getFirstName());
+	        }
 
-			log.debug("ChatResponse mapped: id={}, senderRole={}, senderName={}", resp.getId(), resp.getSenderRole(),
-					resp.getSenderName());
+	        // ===== BỔ SUNG PHẦN NÀY =====
+	        if (m.getMenuJson() != null) {
+	            try {
+	                ObjectMapper om = new ObjectMapper();
+	                List<MenuMealResponse> menuList = om.readerForListOf(MenuMealResponse.class).readValue(m.getMenuJson());
+	                resp.setMenu(menuList);
+	            } catch (Exception ex) {
+	                log.warn("Parse menuJson fail: {}", ex.getMessage());
+	                resp.setMenu(null);
+	            }
+	        }
+	        // ===== HẾT BỔ SUNG =====
 
-			return resp;
-		});
+	        log.debug("ChatResponse mapped: id={}, senderRole={}, senderName={}", resp.getId(), resp.getSenderRole(),
+	                resp.getSenderName());
+
+	        return resp;
+	    });
 	}
+
 
 	@Override
 	public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses) {
@@ -315,8 +358,12 @@ public class ChatServiceImpl implements ChatService {
 	}
 
 	private String callAi(String prompt, String lang) {
-		return chatClient.prompt().system(
-				"Bạn là chuyên gia tư vấn về ăn uống lành mạnh và thực phẩm sạch của Green Kitchen. Luôn ưu tiên trả lời theo hướng dinh dưỡng, sức khỏe, hạn chế dầu mỡ, ưu tiên món ăn tốt cho người ăn kiêng, người già, trẻ em.")
+		return chatClient.prompt()
+				.system("""
+						Bạn là nhân viên tư vấn Green Kitchen. Khi trả lời danh sách menu,
+						**luôn trả về duy nhất một object JSON với 2 key: "content" (chuỗi mô tả ngắn) và "menu" (array các món ăn với trường tiếng Anh giống DB).**
+						Tuyệt đối không ghi thêm text nào ngoài object JSON này.
+						""")
 				.tools(menuTools).user(prompt).call().content();
 	}
 
