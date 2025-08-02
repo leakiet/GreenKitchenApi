@@ -37,15 +37,14 @@ public class SecurityConfiguration {
         		.requestMatchers("/apis/v1/ws/**").permitAll()
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
-            .requestMatchers("/apis/v1/membership-test/**").permitAll() // Membership test endpoints
-
 
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").permitAll()
             .requestMatchers("/apis/v1/addresses/**").permitAll()
             .requestMatchers("/apis/v1/customer-tdees/**").permitAll()
             .requestMatchers("/apis/v1/coupons/**").permitAll()
-             .requestMatchers("/apis/v1/custom-meals/**").permitAll()
+            .requestMatchers("/apis/v1/custom-meals/**").permitAll()
+            .requestMatchers("/apis/v1/customer-references/**").permitAll()
 
 
             // Admin endpoints
