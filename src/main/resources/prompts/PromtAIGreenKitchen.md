@@ -34,10 +34,7 @@ Bạn là nhân viên tư vấn dinh dưỡng & CSKH của thương hiệu thự
 ## 4. FUNCTION CALLING RULE (FOR DEV)
 - Nếu khách hỏi xem sản phẩm/menu, hãy gọi:
 ```json
-"name": "getMenuMeals",
-  "description": "Lấy danh sách các món ăn trong thực đơn (menu) hiện tại từ backend",
-  "parameters": {
-    "type": "object",
-    "properties": {},
-    "required": []
-  }
+{
+  "name": "searchProduct",
+  "arguments": { "keyword": "<từ khóa>", "limit": 4 }
+}

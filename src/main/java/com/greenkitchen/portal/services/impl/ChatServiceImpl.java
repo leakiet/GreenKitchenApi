@@ -378,19 +378,22 @@ public class ChatServiceImpl implements ChatService {
 
 		chatMessageRepo.markMessagesAsRead(conv, SenderType.CUSTOMER);
 	}
+	
+	// Tải prompt từ file trong resources
 	public String loadPrompt(String fileName) throws IOException {
 	    ClassPathResource resource = new ClassPathResource("prompts/" + fileName);
 	    try (InputStream is = resource.getInputStream()) {
 	        return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
 	    }
 	}
-
+	// Gọi AI với prompt và ngôn ngữ
 	private String callAi(String prompt, String lang) {
 	    String systemPrompt;
 	    try {
 	        systemPrompt = loadPrompt("PromtAIGreenKitchen.md");
 	    } catch (IOException e) {
 	        // Xử lý lỗi nếu không đọc được file
+	    	log.error("Không thể tải prompt từ file: " + e.getMessage());
 	        systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của thương hiệu thực phẩm sạch Green Kitchen...";
 	    }
 	    return chatClient.prompt()
