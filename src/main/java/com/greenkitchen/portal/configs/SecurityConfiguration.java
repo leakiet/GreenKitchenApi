@@ -39,7 +39,7 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
 
             // Protected endpoints - cần authentication
-            .requestMatchers("/apis/v1/customers/**").permitAll()
+            .requestMatchers("/apis/v1/customers/**").authenticated()
             .requestMatchers("/apis/v1/addresses/**").permitAll()
             .requestMatchers("/apis/v1/customer-tdees/**").permitAll()
             .requestMatchers("/apis/v1/coupons/**").permitAll()
