@@ -15,6 +15,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -127,16 +134,12 @@ public class ChatServiceImpl implements ChatService {
 		StringBuilder context = new StringBuilder();
 		context.append("Conversation history:\n");
 		for (ChatMessage msg : last10Msgs) {
-		    context.append(msg.getSenderName())
-		          .append(" (")
-		          .append(msg.getSenderType().name())
-		          .append("): ")
-		          .append(msg.getContent())
-		          .append("\n");
+			context.append(msg.getSenderName()).append(" (").append(msg.getSenderType().name()).append("): ")
+					.append(msg.getContent()).append("\n");
 		}
 		context.append("\nLatest user message:\n").append(request.getContent());
-		
-	    String aiContent = callAi(context.toString(), request.getLang());
+
+		String aiContent = callAi(context.toString(), request.getLang());
 
 		String respContent = aiContent;
 		List<MenuMealResponse> menuList = null;
@@ -375,20 +378,29 @@ public class ChatServiceImpl implements ChatService {
 
 		chatMessageRepo.markMessagesAsRead(conv, SenderType.CUSTOMER);
 	}
+	public String loadPrompt(String fileName) throws IOException {
+	    ClassPathResource resource = new ClassPathResource("prompts/" + fileName);
+	    try (InputStream is = resource.getInputStream()) {
+	        return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
+	    }
+	}
 
 	private String callAi(String prompt, String lang) {
-		return chatClient.prompt()
-				.system("""
-						Bạn là nhân viên tư vấn Green Kitchen.
-
-						- **Chỉ trả về object JSON với 2 key: "content" (chuỗi mô tả ngắn) và "menu" (array các món ăn với trường tiếng Anh giống DB) nếu và chỉ nếu user hỏi về menu, món ăn, giá, calorie, khẩu phần, hoặc cụ thể tên món.**
-						- Trong các trường hợp khác (user hỏi chuyện, hỏi công thức, hỏi tính toán v.v.), trả lời tự nhiên bằng tiếng Việt, không trả về JSON, không gọi hàm menu.
-
-						Tuyệt đối không trả về object JSON nếu user không yêu cầu menu.
-						""")
-
-				.tools(menuTools).user(prompt).call().content();
+	    String systemPrompt;
+	    try {
+	        systemPrompt = loadPrompt("PromtAIGreenKitchen.md");
+	    } catch (IOException e) {
+	        // Xử lý lỗi nếu không đọc được file
+	        systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của thương hiệu thực phẩm sạch Green Kitchen...";
+	    }
+	    return chatClient.prompt()
+	            .system(systemPrompt)
+	            .tools(menuTools)
+	            .user(prompt)
+	            .call()
+	            .content();
 	}
+
 
 	@Override
 	@Transactional
