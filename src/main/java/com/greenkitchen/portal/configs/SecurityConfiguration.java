@@ -45,6 +45,7 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/coupons/**").permitAll()
             .requestMatchers("/apis/v1/custom-meals/**").permitAll()
             .requestMatchers("/apis/v1/customer-references/**").permitAll()
+            .requestMatchers("/apis/v1/orders/**").permitAll()
 
 
             // Admin endpoints

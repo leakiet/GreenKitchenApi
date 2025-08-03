@@ -24,7 +24,11 @@ public class CustomMeal extends AbstractEntity {
   private Long customerId;
 
   @Column(nullable = false)
-  private String name;
+  private String title; //doi name thanh title cho dong bo voi MenuMeal
+
+  private Double price; //them vao
+  private String description; // them vao
+  private String image; //them vao
 
   @Embedded
   private NutritionInfo nutrition;

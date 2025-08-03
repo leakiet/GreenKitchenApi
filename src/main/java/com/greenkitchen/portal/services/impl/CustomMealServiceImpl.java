@@ -49,7 +49,7 @@ public class CustomMealServiceImpl implements CustomMealService {
   public CustomMealResponse createCustomMeal(CustomMealRequest request) {
     CustomMeal meal = new CustomMeal();
     meal.setCustomerId(request.getCustomerId());
-    meal.setName(request.getName());
+    meal.setTitle(request.getName());
 
     if (meal.getNutrition() == null) {
       meal.setNutrition(new NutritionInfo());
@@ -105,7 +105,7 @@ public class CustomMealServiceImpl implements CustomMealService {
         .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
 
     existingMeal.setCustomerId(request.getCustomerId());
-    existingMeal.setName(request.getName());
+    existingMeal.setTitle(request.getName());
 
     if (existingMeal.getNutrition() == null) {
         existingMeal.setNutrition(new NutritionInfo());
