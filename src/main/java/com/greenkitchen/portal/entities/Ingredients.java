@@ -29,4 +29,5 @@ public class Ingredients extends AbstractEntity {
     @Embedded
     private NutritionInfo nutrition;
     private String image;
+    private Double price;
 }
