@@ -1,4 +1,4 @@
-package com.greenkitchen.portal.utils;
+package com.greenkitchen.portal.security;
 
 import java.security.Key;
 import java.util.Date;
@@ -8,8 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
-
-import com.greenkitchen.portal.security.MyUserDetails;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -92,16 +90,23 @@ public class JwtUtils {
 			}
 			
 			return true;
-		} catch (MalformedJwtException e) {
-			logger.error("Invalid {} token: {}", expectedType, e.getMessage());
 		} catch (ExpiredJwtException e) {
 			logger.error("{} token is expired: {}", expectedType, e.getMessage());
+			// Rethrow ExpiredJwtException để AuthTokenFilter có thể catch và trả về 410
+			throw e;
+		} catch (MalformedJwtException e) {
+			logger.error("Invalid {} token: {}", expectedType, e.getMessage());
+			// Rethrow MalformedJwtException để AuthTokenFilter có thể catch và trả về 401
+			throw e;
 		} catch (UnsupportedJwtException e) {
 			logger.error("{} token is unsupported: {}", expectedType, e.getMessage());
+			// Rethrow UnsupportedJwtException để AuthTokenFilter có thể catch và trả về 401
+			throw e;
 		} catch (IllegalArgumentException e) {
 			logger.error("{} token claims string is empty: {}", expectedType, e.getMessage());
+			// Rethrow IllegalArgumentException để AuthTokenFilter có thể catch và trả về 401
+			throw e;
 		}
-		return false;
 	}
 
 	public String getUserNameFromRefreshToken(String refreshToken) {
