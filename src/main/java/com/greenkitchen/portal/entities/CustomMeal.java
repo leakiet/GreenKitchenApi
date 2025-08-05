@@ -33,6 +33,10 @@ public class CustomMeal extends AbstractEntity {
   @Embedded
   private NutritionInfo nutrition;
 
+  private Double price;
+  private String description;
+  private String image;
+
   // @JsonIgnore
   @OneToMany(mappedBy = "customMeal", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<CustomMealDetail> details;

@@ -15,4 +15,6 @@ public interface CustomMealService {
     CustomMealResponse updateCustomMeal(Long id, CustomMealRequest request);
 
     void deleteCustomMeal(Long id);
+
+    CustomMealResponse findById(Long id);
 }

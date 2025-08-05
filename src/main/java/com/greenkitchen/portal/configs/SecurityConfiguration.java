@@ -40,13 +40,14 @@ public class SecurityConfiguration {
 
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").authenticated()
+            .requestMatchers("/apis/v1/ingredients/**").permitAll()
+            .requestMatchers("/apis/v1/carts/**").permitAll()
             .requestMatchers("/apis/v1/addresses/**").permitAll()
             .requestMatchers("/apis/v1/customer-tdees/**").permitAll()
             .requestMatchers("/apis/v1/coupons/**").permitAll()
             .requestMatchers("/apis/v1/custom-meals/**").permitAll()
             .requestMatchers("/apis/v1/customer-references/**").permitAll()
             .requestMatchers("/apis/v1/orders/**").permitAll()
-
 
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
