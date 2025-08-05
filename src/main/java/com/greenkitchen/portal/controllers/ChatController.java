@@ -107,10 +107,13 @@ public class ChatController {
 	public ResponseEntity<List<ConversationResponse>> getConversationsForEmp(
 			@RequestParam(value = "status", required = false) List<ConversationStatus> statuses) {
 		if (statuses == null || statuses.isEmpty()) {
-			statuses = List.of(ConversationStatus.EMP, ConversationStatus.WAITING_EMP);
+			statuses = List.of(ConversationStatus.EMP, ConversationStatus.WAITING_EMP, ConversationStatus.AI);																									// viên
 		}
 		// Gọi sang service mới đã mapping unreadCount
 		List<ConversationResponse> resp = chatService.getConversationsForEmp(statuses);
+		if (resp.isEmpty()) {
+			throw new EntityNotFoundException("Không có cuộc hội thoại nào phù hợp");
+		}
 		return ResponseEntity.ok(resp);
 	}
 
@@ -120,21 +123,45 @@ public class ChatController {
 				.orElseThrow(() -> new EntityNotFoundException("Không tồn tại"));
 		return ResponseEntity.ok(conv.getStatus().name()); // Trả về "AI", "EMP", "WAITING_EMP"
 	}
+
 	@PostMapping("/mark-read")
 	public ResponseEntity<Void> markRead(@RequestParam("conversationId") Long conversationId) {
-	    chatService.markCustomerMessagesAsRead(conversationId);
-	    return ResponseEntity.ok().build();
-	}
-	
-	@PostMapping("/init-guest")
-	public ResponseEntity<Long> initGuestConversation() {
-	    // Tạo conversation mới, không gắn customer, status = AI
-	    Conversation conv = new Conversation();
-	    conv.setStartTime(LocalDateTime.now());
-	    conv.setStatus(ConversationStatus.AI);
-	    Conversation saved = conversationRepo.save(conv);
-	    return ResponseEntity.ok(saved.getId());
+		chatService.markCustomerMessagesAsRead(conversationId);
+		return ResponseEntity.ok().build();
 	}
 
+	@PostMapping("/init-guest")
+	public ResponseEntity<Long> initGuestConversation() {
+		// Tạo conversation mới, không gắn customer, status = AIBây giờ
+		Conversation conv = new Conversation();
+		conv.setStartTime(LocalDateTime.now());
+		conv.setStatus(ConversationStatus.AI);
+		Conversation saved = conversationRepo.save(conv);
+		return ResponseEntity.ok(saved.getId());
+	}
+
+	@PostMapping("/claim-emp")
+	public ResponseEntity<Void> claimEmp(@RequestBody ConversationResquest req) {
+		// Log toàn bộ object request nhận vào (có thể dùng toString hoặc log từng
+		// trường)
+		logger.info("API /claim-emp nhận vào: conversationId={}, employeeId={}", req.getConversationId(),
+				req.getEmployeeId());
+		if (req.getConversationId() == null || req.getEmployeeId() == null) {	
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"conversationId và employeeId không được để trống");
+		}
+		chatService.claimConversationAsEmp(req.getConversationId(), req.getEmployeeId());
+		return ResponseEntity.ok().build();
+	}
+
+	@PostMapping("/release-to-ai")
+	public ResponseEntity<Void> releaseToAI(@RequestBody ConversationResquest req) {
+		if (req.getConversationId() == null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "conversationId không được để trống");
+		}
+		System.out.println("" + req.getConversationId());
+		chatService.releaseConversationToAI(req.getConversationId());
+		return ResponseEntity.ok().build();
+	}
 
 }

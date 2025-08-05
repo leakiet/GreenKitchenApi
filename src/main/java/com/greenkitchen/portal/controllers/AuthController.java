@@ -20,11 +20,11 @@ import com.greenkitchen.portal.dtos.ResetPasswordRequest;
 import com.greenkitchen.portal.dtos.VerifyRequest;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.security.MyUserDetails;
+import com.greenkitchen.portal.security.JwtUtils;
 import com.greenkitchen.portal.security.MyUserDetailService;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.services.EmployeeService;
 import com.greenkitchen.portal.services.GoogleAuthService;
-import com.greenkitchen.portal.utils.JwtUtils;
 
 import jakarta.validation.Valid;
 
@@ -245,9 +245,9 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
       
-      // Validate refresh token
+      // Validate refresh token (expired)
       if (!jwtUtils.validateRefreshToken(refreshToken)) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.GONE).build();
       }
       
       // Lấy username từ refresh token
@@ -288,7 +288,7 @@ public class AuthController {
       return ResponseEntity.ok(response);
       
     } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      return ResponseEntity.status(418).build();
     }
   }
 

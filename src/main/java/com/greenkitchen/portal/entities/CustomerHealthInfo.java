@@ -44,9 +44,9 @@ public class CustomerHealthInfo extends AbstractEntity {
     @Enumerated(EnumType.STRING)
     private HealthGoal goal;
     
-    @ElementCollection
-    @CollectionTable(name = "customer_allergies", joinColumns = @JoinColumn(name = "health_info_id"))
-    @Column(name = "allergy")
-    private List<String> allergies;
+    // @ElementCollection
+    // @CollectionTable(name = "customer_allergies", joinColumns = @JoinColumn(name = "health_info_id"))
+    // @Column(name = "allergy")
+    // private List<String> allergies;
 
 }

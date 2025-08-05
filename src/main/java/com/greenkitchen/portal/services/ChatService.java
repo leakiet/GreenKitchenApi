@@ -16,4 +16,6 @@ public interface ChatService {
     Page<ChatResponse> getMessagesByConversationPaged(Long conversationId, int page, int size);
     List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses);
     public void markCustomerMessagesAsRead(Long conversationId);
+    void claimConversationAsEmp(Long conversationId, Long employeeId);
+    void releaseConversationToAI(Long conversationId);
 }

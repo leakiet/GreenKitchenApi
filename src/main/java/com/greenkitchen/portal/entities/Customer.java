@@ -76,13 +76,21 @@ public class Customer extends AbstractEntity {
 	@OneToMany(mappedBy = "customer", cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
 	private List<CustomerTDEE> customerTDEEs;
 
-	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "customer", cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
 	@JsonManagedReference
 	private List<PointHistory> pointHistories;
 
 	@OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@JsonManagedReference  
 	private CustomerMembership membership;
+
+	@OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JsonManagedReference
+	private CustomerReference customerReference;
+	
+	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JsonManagedReference
+	private List<Order> orders;
 
 	public String getFullName() {
 		return lastName + " " + firstName;
