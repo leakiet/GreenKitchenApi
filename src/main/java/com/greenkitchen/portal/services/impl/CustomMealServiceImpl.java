@@ -46,6 +46,13 @@ public class CustomMealServiceImpl implements CustomMealService {
   }
 
   @Override
+  public CustomMealResponse findById(Long id) {
+    CustomMeal meal = customMealRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
+    return toResponse(meal);
+  }
+
+  @Override
   public CustomMealResponse createCustomMeal(CustomMealRequest request) {
     CustomMeal meal = new CustomMeal();
     meal.setCustomerId(request.getCustomerId());
@@ -108,7 +115,7 @@ public class CustomMealServiceImpl implements CustomMealService {
     existingMeal.setName(request.getName());
 
     if (existingMeal.getNutrition() == null) {
-        existingMeal.setNutrition(new NutritionInfo());
+      existingMeal.setNutrition(new NutritionInfo());
     }
     existingMeal.getNutrition().setCalories(request.getCalories());
     existingMeal.getNutrition().setProtein(request.getProtein());
@@ -117,42 +124,42 @@ public class CustomMealServiceImpl implements CustomMealService {
 
     // Thay vì clear() và tạo mới, hãy remove từng element một cách an toàn
     if (existingMeal.getDetails() != null) {
-        // Clear existing details an toàn
-        existingMeal.getDetails().removeAll(existingMeal.getDetails());
+      // Clear existing details an toàn
+      existingMeal.getDetails().removeAll(existingMeal.getDetails());
     } else {
-        existingMeal.setDetails(new ArrayList<>());
+      existingMeal.setDetails(new ArrayList<>());
     }
 
     // Tạo new details
     List<CustomMealDetail> newDetails = new ArrayList<>();
 
     if (request.getProteins() != null) {
-        newDetails.addAll(request.getProteins().stream()
-            .map(d -> createDetail(d, existingMeal))
-            .collect(Collectors.toList()));
+      newDetails.addAll(request.getProteins().stream()
+          .map(d -> createDetail(d, existingMeal))
+          .collect(Collectors.toList()));
     }
 
     if (request.getCarbs() != null) {
-        newDetails.addAll(request.getCarbs().stream()
-            .map(d -> createDetail(d, existingMeal))
-            .collect(Collectors.toList()));
+      newDetails.addAll(request.getCarbs().stream()
+          .map(d -> createDetail(d, existingMeal))
+          .collect(Collectors.toList()));
     }
 
     if (request.getSides() != null) {
-        newDetails.addAll(request.getSides().stream()
-            .map(d -> createDetail(d, existingMeal))
-            .collect(Collectors.toList()));
+      newDetails.addAll(request.getSides().stream()
+          .map(d -> createDetail(d, existingMeal))
+          .collect(Collectors.toList()));
     }
 
     if (request.getSauces() != null) {
-        newDetails.addAll(request.getSauces().stream()
-            .map(d -> createDetail(d, existingMeal))
-            .collect(Collectors.toList()));
+      newDetails.addAll(request.getSauces().stream()
+          .map(d -> createDetail(d, existingMeal))
+          .collect(Collectors.toList()));
     }
 
     // Add new details to existing collection
     existingMeal.getDetails().addAll(newDetails);
-    
+
     CustomMeal saved = customMealRepository.save(existingMeal);
     return toResponse(saved);
   }
@@ -166,38 +173,37 @@ public class CustomMealServiceImpl implements CustomMealService {
     CustomMealResponse response = modelMapper.map(meal, CustomMealResponse.class);
 
     if (meal.getNutrition() != null) {
-        response.setCalories(meal.getNutrition().getCalories());
-        response.setProtein(meal.getNutrition().getProtein());
-        response.setCarb(meal.getNutrition().getCarbs());
-        response.setFat(meal.getNutrition().getFat());
+      response.setCalories(meal.getNutrition().getCalories());
+      response.setProtein(meal.getNutrition().getProtein());
+      response.setCarb(meal.getNutrition().getCarbs());
+      response.setFat(meal.getNutrition().getFat());
     }
 
     if (meal.getDetails() != null) {
-        List<CustomMealDetailResponse> detailResponses = meal.getDetails().stream()
-            .map(d -> {
-                CustomMealDetailResponse detailResponse = new CustomMealDetailResponse();
-                detailResponse.setQuantity(d.getQuantity());
+      List<CustomMealDetailResponse> detailResponses = meal.getDetails().stream()
+          .map(d -> {
+            CustomMealDetailResponse detailResponse = new CustomMealDetailResponse();
+            detailResponse.setQuantity(d.getQuantity());
 
-                ingredientRepository.findById(d.getIngredientId())
-                    .ifPresent(ingredient -> {
-                        detailResponse.setId(ingredient.getId());
-                        detailResponse.setTitle(ingredient.getTitle());
-                        detailResponse.setType(ingredient.getType());
-                        detailResponse.setDescription(ingredient.getDescription());
-                        detailResponse.setImage(ingredient.getImage());
+            ingredientRepository.findById(d.getIngredientId())
+                .ifPresent(ingredient -> {
+                  detailResponse.setId(ingredient.getId());
+                  detailResponse.setTitle(ingredient.getTitle());
+                  detailResponse.setType(ingredient.getType());
+                  detailResponse.setDescription(ingredient.getDescription());
+                  detailResponse.setImage(ingredient.getImage());
 
-                        if (ingredient.getNutrition() != null) {
-                            detailResponse.setCalories(ingredient.getNutrition().getCalories());
-                            detailResponse.setProtein(ingredient.getNutrition().getProtein());
-                            detailResponse.setCarbs(ingredient.getNutrition().getCarbs());
-                            detailResponse.setFat(ingredient.getNutrition().getFat());
-                        }
-                    });
-
-                return detailResponse;
-            })
-            .collect(Collectors.toList());
-        response.setDetails(detailResponses);
+                  if (ingredient.getNutrition() != null) {
+                    detailResponse.setCalories(ingredient.getNutrition().getCalories());
+                    detailResponse.setProtein(ingredient.getNutrition().getProtein());
+                    detailResponse.setCarbs(ingredient.getNutrition().getCarbs());
+                    detailResponse.setFat(ingredient.getNutrition().getFat());
+                  }
+                });
+            return detailResponse;
+          })
+          .collect(Collectors.toList());
+      response.setDetails(detailResponses);
     }
     return response;
   }
