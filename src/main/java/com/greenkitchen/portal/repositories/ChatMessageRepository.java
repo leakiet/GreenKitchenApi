@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
-import com.greenkitchen.portal.entities.SenderType;
+import com.greenkitchen.portal.enums.SenderType;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 	List<ChatMessage> findByConversation(Conversation conv);

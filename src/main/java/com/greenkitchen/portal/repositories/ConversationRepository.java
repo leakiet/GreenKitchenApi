@@ -3,7 +3,7 @@ package com.greenkitchen.portal.repositories;
 import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.Employee;
-import com.greenkitchen.portal.entities.ConversationStatus;
+import com.greenkitchen.portal.enums.ConversationStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

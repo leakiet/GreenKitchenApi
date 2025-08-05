@@ -25,7 +25,7 @@ import com.greenkitchen.portal.services.IngredientService;
 import com.greenkitchen.portal.utils.ImageUtils;
 
 @RestController
-@RequestMapping("/apis/v1")
+@RequestMapping("/apis/v1/ingredients")
 public class IngredientController {
     @Autowired
     private IngredientService ingredientService;
@@ -41,7 +41,7 @@ public class IngredientController {
         this.ImageUtils = ImageUtils;
     }
 
-    @GetMapping("/customers/ingredients")
+    @GetMapping()
     public ResponseEntity<Map<String, List<IngredientResponse>>> getAllIngredientsGrouped() {
         List<Ingredients> all = ingredientService.findAll();
         List<IngredientResponse> responses = all.stream().map(ingredient -> {
@@ -67,7 +67,7 @@ public class IngredientController {
         return ResponseEntity.ok(grouped);
     }
 
-    @PostMapping("/ingredients")
+    @PostMapping("/")
     public ResponseEntity<Ingredients> addIngredient(@ModelAttribute IngredientRequest ingredientRequest,
             @RequestParam("imageFile") MultipartFile file) {
 
@@ -80,7 +80,7 @@ public class IngredientController {
         return ResponseEntity.status(201).body(saved);
     }
 
-    @PutMapping("/ingredients/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<Ingredients> updateIngredient(
             @PathVariable("id") Long id,
             @ModelAttribute IngredientRequest ingredientRequest,
@@ -117,7 +117,7 @@ public class IngredientController {
         return ResponseEntity.ok(updated);
     }
 
-    @GetMapping("/customers/ingredients/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<IngredientResponse> findById(@PathVariable("id") Long id) {
         Ingredients ingredient = ingredientService.findById(id);
         if (ingredient == null) {
@@ -132,7 +132,7 @@ public class IngredientController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/ingredients/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteById(@PathVariable("id") Long id) {
         ingredientService.deleteById(id);
         return ResponseEntity.ok("Ingredient deleted successfully");

@@ -18,7 +18,7 @@ import jakarta.persistence.PrePersist;
 import java.time.LocalDateTime;
 import com.greenkitchen.portal.enums.Gender;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.greenkitchen.portal.enums.ActivityLevel;
+import com.greenkitchen.portal.enums.ActivityLevel_v2;
 import com.greenkitchen.portal.enums.Goal;
 
 @Entity
@@ -52,7 +52,7 @@ public class CustomerTDEE {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "activity_level")
-  private ActivityLevel activityLevel;
+  private ActivityLevel_v2 activityLevel;
 
   @Column(name = "bmr")
   private Double bmr;
