@@ -14,6 +14,7 @@ import com.greenkitchen.portal.dtos.EmailRequest;
 import com.greenkitchen.portal.dtos.GoogleLoginRequest;
 import com.greenkitchen.portal.dtos.LoginRequest;
 import com.greenkitchen.portal.dtos.LoginResponse;
+import com.greenkitchen.portal.dtos.PhoneLoginRequest;
 import com.greenkitchen.portal.dtos.RegisterRequest;
 import com.greenkitchen.portal.dtos.RegisterResponse;
 import com.greenkitchen.portal.dtos.ResetPasswordRequest;
@@ -25,6 +26,7 @@ import com.greenkitchen.portal.security.MyUserDetailService;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.services.EmployeeService;
 import com.greenkitchen.portal.services.GoogleAuthService;
+import com.greenkitchen.portal.services.FirebaseAuthService;
 
 import jakarta.validation.Valid;
 
@@ -48,6 +50,9 @@ public class AuthController {
 
   @Autowired
   private GoogleAuthService googleAuthService;
+
+  @Autowired
+  private FirebaseAuthService firebaseAuthService;
 
   @Autowired
   private JwtUtils jwtUtils;
@@ -224,6 +229,62 @@ public class AuthController {
       return ResponseEntity.ok(response);
     } catch (Exception e) {
       throw new IllegalArgumentException("Google login failed: " + e.getMessage());
+    }
+  }
+
+  @PostMapping("/phone-login")
+  public ResponseEntity<LoginResponse> phoneLogin(@Valid @RequestBody PhoneLoginRequest request, HttpServletResponse httpResponse) {
+    try {
+      // Verify Firebase ID token
+      if (!firebaseAuthService.verifyIdToken(request.getFirebaseIdToken())) {
+        throw new IllegalArgumentException("Invalid Firebase ID token");
+      }
+      
+      // Extract phone number from token or use request phone number
+      String phoneNumber = firebaseAuthService.extractPhoneNumber(request.getFirebaseIdToken());
+      if (phoneNumber == null) {
+        phoneNumber = request.getPhoneNumber();
+      }
+      
+      // Validate phone number exists
+      if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+        throw new IllegalArgumentException("Phone number is required");
+      }
+      
+      // Use MyUserDetailService to handle phone authentication
+      MyUserDetails userDetails = (MyUserDetails) userDetailService.loadUserByPhoneNumber(phoneNumber);
+      Customer customer = userDetails.getCustomer();
+      
+      // Generate JWT tokens
+      Authentication authentication = new UsernamePasswordAuthenticationToken(
+        userDetails, null, userDetails.getAuthorities());
+      String jwt = jwtUtils.generateJwtToken(authentication);
+      String refreshToken = jwtUtils.generateRefreshToken(authentication);
+
+      // Create response
+      LoginResponse response = mapper.map(customer, LoginResponse.class);
+      response.setRole("USER");
+      response.setToken(jwt);
+      response.setRefreshToken(refreshToken);
+      response.setTokenType("Bearer");
+
+      // Save access token to cookie
+      Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+      accessTokenCookie.setHttpOnly(true);
+      accessTokenCookie.setPath("/");
+      accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+      httpResponse.addCookie(accessTokenCookie);
+
+      // Save refresh token to cookie
+      Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+      refreshTokenCookie.setHttpOnly(true);
+      refreshTokenCookie.setPath("/");
+      refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days
+      httpResponse.addCookie(refreshTokenCookie);
+      
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Phone login failed: " + e.getMessage());
     }
   }
 

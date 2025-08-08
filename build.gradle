@@ -63,6 +63,9 @@ implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'com.google.oauth-client:google-oauth-client:1.36.0'
 	implementation 'com.google.http-client:google-http-client-jackson2:1.45.0'
 
+	// Firebase Admin SDK
+	implementation 'com.google.firebase:firebase-admin:9.2.0'
+
 	// Spring AI
 	implementation platform("org.springframework.ai:spring-ai-bom:1.0.0-M6")
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M6'

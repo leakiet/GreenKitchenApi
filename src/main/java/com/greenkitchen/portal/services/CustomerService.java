@@ -9,6 +9,7 @@ import com.greenkitchen.portal.entities.Customer;
 
 public interface CustomerService {
   Customer findByEmail(String email);
+  Customer findOrCreateCustomerByPhone(String phoneNumber);
   List<Customer> listAll();
   Customer update(Customer customer);
   Customer save(Customer customer);

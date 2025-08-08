@@ -2,6 +2,8 @@ package com.greenkitchen.portal.entities;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -21,6 +23,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CustomMeal extends AbstractEntity {
   @Column(name = "customer_id", nullable = false)
+  @JsonBackReference
   private Long customerId;
 
   @Column(nullable = false)

@@ -18,8 +18,10 @@ public class GlobalCorsConfig {
     return new WebMvcConfigurer() {
       @Override
       public void addCorsMappings(@NonNull CorsRegistry registry) {
+        // Split multiple origins by comma
+        String[] origins = allowedOrigins.split(",");
         registry.addMapping("/apis/v1/**")
-            .allowedOrigins(allowedOrigins)
+            .allowedOrigins(origins)
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true);

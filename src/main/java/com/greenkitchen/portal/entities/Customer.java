@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.greenkitchen.portal.enums.Gender;
 
 import jakarta.persistence.Column;
@@ -58,6 +59,10 @@ public class Customer extends AbstractEntity {
 
 	private Boolean isActive = false;
 
+	private Boolean isPhoneLogin = false;
+
+	private Boolean isEmailLogin = true;
+
 	@JsonIgnore
 	private String verifyToken;
 
@@ -93,6 +98,9 @@ public class Customer extends AbstractEntity {
 	private List<Order> orders;
 
 	public String getFullName() {
+		if (firstName == null && lastName == null) {
+			return "Name Not Provided";
+		}
 		return lastName + " " + firstName;
 	}
 
