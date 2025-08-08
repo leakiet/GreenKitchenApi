@@ -48,6 +48,29 @@ public class CustomerServiceImpl implements CustomerService {
   }
 
   @Override
+  public Customer findOrCreateCustomerByPhone(String phoneNumber) {
+    Customer existingCustomer = customerRepository.findByPhone(phoneNumber);
+
+    if (existingCustomer != null) {
+      return existingCustomer;
+    }
+
+    // Create new customer if not exists
+    Customer newCustomer = new Customer();
+    newCustomer.setPhone(phoneNumber);
+
+    String generatedEmail = phoneNumber.replaceAll("[^0-9]", "") + "@greenkitchen.temp";
+    newCustomer.setEmail(generatedEmail);
+    newCustomer.setFirstName("User");
+    newCustomer.setLastName(phoneNumber);
+    newCustomer.setIsPhoneLogin(true);
+    newCustomer.setIsActive(true);
+    newCustomer.setIsEmailLogin(false);
+
+    return customerRepository.save(newCustomer);
+  }
+
+  @Override
   public List<Customer> listAll() {
     return customerRepository.findAll();
   }
@@ -153,8 +176,7 @@ public class CustomerServiceImpl implements CustomerService {
     customerRepository.save(customer);
     emailService.sendVerificationEmail(
         customer.getEmail(),
-        verifyToken
-      );
+        verifyToken);
     return customer;
   }
 
@@ -168,14 +190,14 @@ public class CustomerServiceImpl implements CustomerService {
     if (!customer.getIsActive()) {
       throw new IllegalArgumentException("Please verify your email first before requesting OTP");
     }
-    if(customer.getIsDeleted()) {
+    if (customer.getIsDeleted()) {
       throw new IllegalArgumentException("Account is deleted. Please contact support.");
     }
 
     // Check if there's already a recent OTP request within 5 minutes
     LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
     OtpRecords recentOtpRecord = otpRecordsRepository.findRecentOtpByEmailAndTime(email, fiveMinutesAgo);
-    
+
     if (recentOtpRecord != null) {
       throw new IllegalArgumentException("You have requested OTP too frequently. Please try again later.");
     }
@@ -190,7 +212,7 @@ public class CustomerServiceImpl implements CustomerService {
     otpRecord.setOtpCode(otpCode);
     otpRecord.setExpiredAt(expiredAt);
     otpRecordsRepository.save(otpRecord);
-    
+
     // Send OTP via email
     emailService.sendOtpEmail(email, otpCode);
   }
@@ -200,13 +222,16 @@ public class CustomerServiceImpl implements CustomerService {
 
     OtpRecords otpRecord = otpRecordsRepository.findByEmailAndOtpCode(email, otpCode);
 
-    if (otpRecord == null) throw new IllegalArgumentException("Invalid OTP code");
-    if (otpRecord.isExpired()) throw new IllegalArgumentException("OTP code has expired");
-    if (otpRecord.getIsUsed()) throw new IllegalArgumentException("OTP code has already been used");
+    if (otpRecord == null)
+      throw new IllegalArgumentException("Invalid OTP code");
+    if (otpRecord.isExpired())
+      throw new IllegalArgumentException("OTP code has expired");
+    if (otpRecord.getIsUsed())
+      throw new IllegalArgumentException("OTP code has already been used");
     // Mark OTP as used
     otpRecord.setIsUsed(true);
     otpRecordsRepository.save(otpRecord);
-    
+
     return true;
   }
 
@@ -217,7 +242,7 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer == null) {
       throw new IllegalArgumentException("Customer not found with email: " + email);
     }
-    
+
     if (!customer.getIsActive()) {
       throw new IllegalArgumentException("Account is not active. Please verify your email first.");
     }
@@ -225,12 +250,12 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer.getIsDeleted()) {
       throw new IllegalArgumentException("Account is deleted. Please contact support.");
     }
-    
+
     // Update password
     String hashedPassword = encoder.encode(newPassword);
     customer.setPassword(hashedPassword);
     customerRepository.save(customer);
-    
+
     // Mark all other OTPs as used for security
     otpRecordsRepository.markAllOtpAsUsedByEmail(email);
   }
@@ -242,7 +267,7 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer == null) {
       throw new IllegalArgumentException("Customer not found with email: " + email);
     }
-    
+
     if (!customer.getIsActive()) {
       throw new IllegalArgumentException("Account is not active. Please verify your email first.");
     }
@@ -250,12 +275,12 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer.getIsDeleted()) {
       throw new IllegalArgumentException("Account is deleted. Please contact support.");
     }
-    
+
     // Verify old password
     if (!encoder.matches(oldPassword, customer.getPassword())) {
       throw new IllegalArgumentException("Current password is incorrect");
     }
-    
+
     // Update password
     String hashedNewPassword = encoder.encode(newPassword);
     customer.setPassword(hashedNewPassword);
@@ -270,7 +295,7 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer == null) {
       throw new IllegalArgumentException("Customer not found with email: " + email);
     }
-    
+
     if (!customer.getIsActive()) {
       throw new IllegalArgumentException("Account is not active. Please verify your email first.");
     }
@@ -278,17 +303,17 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer.getIsDeleted()) {
       throw new IllegalArgumentException("Account is deleted. Please contact support.");
     }
-    
+
     // Check if account is linked with Google
     if (!customer.getIsOauthUser() || !"google".equals(customer.getOauthProvider())) {
       throw new IllegalArgumentException("Account is not linked with Google");
     }
-    
+
     // Unlink Google account
     customer.setOauthProvider(null);
     customer.setOauthProviderId(null);
     customer.setIsOauthUser(false);
-    
+
     customerRepository.save(customer);
   }
 
@@ -299,7 +324,7 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer == null) {
       throw new IllegalArgumentException("Customer not found with email: " + email);
     }
-    
+
     if (!customer.getIsActive()) {
       throw new IllegalArgumentException("Account is not active. Please verify your email first.");
     }
@@ -307,21 +332,21 @@ public class CustomerServiceImpl implements CustomerService {
     if (customer.getIsDeleted()) {
       throw new IllegalArgumentException("Account is deleted. Please contact support.");
     }
-    
+
     // Check if account is already linked with Google
     if (customer.getIsOauthUser() && "google".equals(customer.getOauthProvider())) {
       throw new IllegalArgumentException("Account is already linked with Google");
     }
-    
+
     try {
       // Verify Google token and get Google user info
       Customer googleUser = googleAuthService.authenticateGoogleUser(idToken);
-      
+
       // Link Google account to existing customer
       customer.setOauthProvider("google");
       customer.setOauthProviderId(googleUser.getOauthProviderId());
       customer.setIsOauthUser(true);
-      
+
       customerRepository.save(customer);
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to link Google account: " + e.getMessage());
@@ -349,7 +374,7 @@ public class CustomerServiceImpl implements CustomerService {
 
       // Upload ảnh mới
       String imageUrl = imageUtils.uploadImage(file);
-      
+
       // Cập nhật avatar
       customer.setAvatar(imageUrl);
       customerRepository.save(customer);

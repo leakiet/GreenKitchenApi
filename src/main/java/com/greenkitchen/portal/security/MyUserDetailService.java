@@ -32,4 +32,14 @@ public class MyUserDetailService implements UserDetailsService {
 		}
 		throw new UsernameNotFoundException("User not found with email: " + username);
 	}
+
+	public UserDetails loadUserByPhoneNumber(String phoneNumber) throws UsernameNotFoundException {
+		try {
+			// Find or create customer by phone number
+			Customer customer = customerService.findOrCreateCustomerByPhone(phoneNumber);
+			return new MyUserDetails(customer);
+		} catch (Exception e) {
+			throw new UsernameNotFoundException("Could not create or find user with phone: " + phoneNumber + " - " + e.getMessage());
+		}
+	}
 }
