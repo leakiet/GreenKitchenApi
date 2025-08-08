@@ -39,7 +39,12 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 		return !path.startsWith("/apis/")
 			|| path.startsWith("/apis/v1/auth/")
 			|| path.startsWith("/apis/v1/ws/")
-			|| path.startsWith("/apis/v1/chat/");
+			|| path.startsWith("/apis/v1/chat/")
+			|| path.startsWith("/apis/v1/ingredients/")
+			|| path.startsWith("/apis/v1/ingredient-act-his/")
+			|| path.startsWith("/apis/v1/menu-meals/")
+			|| path.startsWith("/apis/v1/carts/")
+			|| path.startsWith("/apis/v1/menu-meal-reviews/");
 	}
 	
 	@Override

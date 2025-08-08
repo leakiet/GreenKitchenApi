@@ -23,7 +23,7 @@ import com.greenkitchen.portal.services.IngredientService;
 
 
 @RestController
-@RequestMapping("/apis/v1")
+@RequestMapping("/apis/v1/ingredient-act-his")
 public class IngredientActHisController {
   @Autowired
     private IngredientActHisService ingredientActHisService;

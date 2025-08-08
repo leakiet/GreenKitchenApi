@@ -22,7 +22,7 @@ import com.greenkitchen.portal.utils.ImageUtils;
 import com.greenkitchen.portal.utils.SlugUtils;
 
 @RestController
-@RequestMapping("/apis/v1")
+@RequestMapping("/apis/v1/menu-meals")
 public class MenuMealController {
   @Autowired
   private ImageUtils imageUtils;

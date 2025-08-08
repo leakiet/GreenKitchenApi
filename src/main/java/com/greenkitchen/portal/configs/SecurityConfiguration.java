@@ -37,11 +37,15 @@ public class SecurityConfiguration {
         		.requestMatchers("/apis/v1/ws/**").permitAll()
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
+            .requestMatchers("/apis/v1/ingredients/**").permitAll() // ingredients
+            .requestMatchers("/apis/v1/ingredient-act-his").permitAll() // ingredient actions history
+            .requestMatchers("/apis/v1/menu-meals/**").permitAll()    
+            .requestMatchers("/apis/v1/carts/**").permitAll()
+            .requestMatchers("/apis/v1/carts/**").permitAll()
+            .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll() // Custom meals
 
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").authenticated()
-            .requestMatchers("/apis/v1/ingredients/**").permitAll()
-            .requestMatchers("/apis/v1/carts/**").permitAll()
             .requestMatchers("/apis/v1/addresses/**").permitAll()
             .requestMatchers("/apis/v1/customer-tdees/**").permitAll()
             .requestMatchers("/apis/v1/coupons/**").permitAll()
