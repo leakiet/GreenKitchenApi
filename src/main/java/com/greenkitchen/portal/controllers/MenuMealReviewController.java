@@ -21,13 +21,13 @@ import com.greenkitchen.portal.services.MenuMealReviewService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/apis/v1")
+@RequestMapping("/apis/v1/menu-meal-reviews")
 public class MenuMealReviewController {
     
     @Autowired
     private MenuMealReviewService menuMealReviewService;
     
-    @GetMapping("/menu-meal-reviews/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<MenuMealReview> getMenuMealReviewById(@PathVariable("id") Long id) {
         MenuMealReview review = menuMealReviewService.getMenuMealReviewById(id);
         if (review == null) {
@@ -67,13 +67,13 @@ public class MenuMealReviewController {
         }
     }
     
-    @GetMapping("/menu-meal-reviews/menu-meal/{menuMealId}") 
+    @GetMapping("/menu-meal/{menuMealId}") 
     public ResponseEntity<List<MenuMealReviewResponse>> getReviewsByMenuMeal(@PathVariable("menuMealId") Long menuMealId) {
         List<MenuMealReviewResponse> reviews = menuMealReviewService.getAllReviewsByMenuMealId(menuMealId);
         return ResponseEntity.ok(reviews);
     }
 
-    @GetMapping("/menu-meal-reviews/customer/{customerId}") 
+    @GetMapping("/customer/{customerId}") 
     public ResponseEntity<List<MenuMealReviewResponse>> getReviewsByCustomer(@PathVariable("customerId") Long customerId) {
         List<MenuMealReviewResponse> reviews = menuMealReviewService.getAllReviewsByCustomerId(customerId);
         return ResponseEntity.ok(reviews);

@@ -1,7 +1,6 @@
 package com.greenkitchen.portal.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.greenkitchen.portal.enums.OrderItemType;
 
 import jakarta.persistence.Column;

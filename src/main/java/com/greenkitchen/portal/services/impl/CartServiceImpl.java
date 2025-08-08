@@ -257,7 +257,7 @@ public class CartServiceImpl implements CartService {
             if (item.getCustomMeal() != null) {
                 CustomMeal customMeal = item.getCustomMeal();
                 response.setCustomMealId(customMeal.getId());
-                response.setCustomMealName(customMeal.getName());
+                response.setCustomMealName(customMeal.getTitle());
 
                 // Map custom meal details
                 if (customMeal.getDetails() != null) {
