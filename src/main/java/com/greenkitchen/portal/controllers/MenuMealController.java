@@ -35,13 +35,13 @@ public class MenuMealController {
   // this.ImageUtils = ImageUtils;
   // }
 
-  @GetMapping("/customers/menu-meals")
+  @GetMapping("/customers")
   public ResponseEntity<List<MenuMealResponse>> getAllMenuMeals() {
     List<MenuMealResponse> menuMeals = menuMealService.getAllMenuMeals();
     return ResponseEntity.ok(menuMeals);
   }
 
-  @PostMapping("/customers/menu-meals")
+  @PostMapping("/customers")
   public ResponseEntity<MenuMeal> createMenuMeal(@ModelAttribute MenuMealRequest request,
       @RequestParam("imageFile") MultipartFile file) {
     String baseSlug = SlugUtils.toSlug(request.getTitle());
@@ -86,7 +86,7 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/customers/menu-meals/{id}")
+  @GetMapping("/customers/{id}")
   public ResponseEntity<MenuMealResponse> getMenuMealById(@PathVariable("id") Long id) {
     MenuMealResponse menuMeal = menuMealService.getMenuMealById(id);
     if (menuMeal == null) {
@@ -95,7 +95,7 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/customers/menu-meals/slug/{slug}")
+  @GetMapping("/customers/slug/{slug}")
   public ResponseEntity<MenuMealResponse> getMenuMealBySlug(@PathVariable("slug") String slug) {
     MenuMealResponse menuMeal = menuMealService.getMenuMealBySlug(slug);
     if (menuMeal == null) {

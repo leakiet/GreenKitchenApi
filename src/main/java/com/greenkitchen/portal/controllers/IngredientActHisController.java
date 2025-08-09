@@ -51,7 +51,7 @@ public class IngredientActHisController {
     return ResponseEntity.ok(actions);
   }
 
-  @PostMapping("/customers/ingredient-act-his")
+  @PostMapping("/customers")
   public ResponseEntity<IngredientActHis> addIngredientAction(@RequestBody IngredientActHisRequest req) {
     Customer customer = customerService.findById(req.getCustomerId());
     if (customer == null) {
