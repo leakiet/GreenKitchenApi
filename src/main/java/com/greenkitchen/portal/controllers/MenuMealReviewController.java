@@ -36,7 +36,7 @@ public class MenuMealReviewController {
         return ResponseEntity.ok(review);
     }
 
-    @PostMapping("/customers/menu-meal-reviews")
+    @PostMapping("/customers")
     public ResponseEntity<?> createMenuMealReview(@Valid @RequestBody MenuMealReviewRequest request) {
         try {
             MenuMealReviewResponse review = menuMealReviewService.createMenuMealReview(request);
@@ -45,9 +45,9 @@ public class MenuMealReviewController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    
-    @PutMapping("/customers/menu-meal-reviews/{id}")
-    public ResponseEntity<?> updateMenuMealReview(@PathVariable("id") Long id, 
+
+    @PutMapping("/customers/{id}")
+    public ResponseEntity<?> updateMenuMealReview(@PathVariable("id") Long id,
             @Valid @RequestBody MenuMealReviewRequest request) {
         try {
             MenuMealReviewResponse review = menuMealReviewService.updateMenuMealReview(id, request);
@@ -57,7 +57,7 @@ public class MenuMealReviewController {
         }
     }
 
-    @DeleteMapping("/customers/menu-meal-reviews/{id}")
+    @DeleteMapping("/customers/{id}")
     public ResponseEntity<?> deleteMenuMealReview(@PathVariable("id") Long id) {
         try {
             menuMealReviewService.deleteMenuMealReview(id);

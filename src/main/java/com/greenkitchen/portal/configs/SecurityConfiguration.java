@@ -38,7 +38,7 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
             .requestMatchers("/apis/v1/ingredients/**").permitAll() // ingredients
-            .requestMatchers("/apis/v1/ingredient-act-his").permitAll() // ingredient actions history
+            .requestMatchers("/apis/v1/ingredient-act-his/customers").permitAll() // ingredient actions history
             .requestMatchers("/apis/v1/menu-meals/**").permitAll()    
             .requestMatchers("/apis/v1/carts/**").permitAll()
             .requestMatchers("/apis/v1/carts/**").permitAll()
