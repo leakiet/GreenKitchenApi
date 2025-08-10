@@ -22,6 +22,7 @@ public interface MenuMealRepository extends JpaRepository<MenuMeal, Long> {
     @Query("SELECT m FROM MenuMeal m WHERE m.slug = :slug AND m.isDeleted = false")
     MenuMeal findBySlugActive(@Param("slug") String slug);
 
-    @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END FROM MenuMeal m WHERE m.slug = :slug")
+    @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END FROM MenuMeal m WHERE m.slug = :slug AND m.isDeleted = false")
     boolean existsBySlug(@Param("slug") String slug);
+
 }

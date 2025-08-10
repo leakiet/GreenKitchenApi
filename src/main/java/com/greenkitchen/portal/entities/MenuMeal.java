@@ -1,12 +1,16 @@
 package com.greenkitchen.portal.entities;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.greenkitchen.portal.enums.Allergen;
 import com.greenkitchen.portal.enums.MenuMealType;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -38,6 +42,10 @@ public class MenuMeal extends AbstractEntity {
     private Double price;
     private String slug;
     @OneToMany(mappedBy = "menuMeal", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("menuMeal") // ✅ Ngăn circular reference
+    @JsonIgnoreProperties("menuMeal")
     private List<MenuMealReview> reviews = new ArrayList<>();
+
+    @ElementCollection(targetClass = Allergen.class)
+    @Enumerated(EnumType.STRING)
+    private Set<Allergen> allergens = new HashSet<>();
 }
