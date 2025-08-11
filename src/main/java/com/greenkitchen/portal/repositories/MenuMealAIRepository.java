@@ -11,11 +11,8 @@ import com.greenkitchen.portal.entities.MenuMeal;
 
 public interface MenuMealAIRepository  extends JpaRepository<MenuMeal, Long> {
 	
-	@Query("SELECT m FROM MenuMeal m WHERE " +
-		       "LOWER(m.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-		       "OR LOWER(m.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-		List<MenuMeal> aiSearchByKeyword(@Param("keyword") String keyword, Pageable pageable);
-
+    @Query("SELECT m FROM MenuMeal m WHERE m.isDeleted = false")
+    List<MenuMeal> findAllActive();
 	
 }
 	

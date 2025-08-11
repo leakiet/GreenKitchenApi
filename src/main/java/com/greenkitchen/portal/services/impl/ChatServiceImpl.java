@@ -127,13 +127,14 @@ public class ChatServiceImpl implements ChatService {
 		userResp.setSenderRole(SenderType.CUSTOMER.name());
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
 
-		List<ChatMessage> last10Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
-		Collections.reverse(last10Msgs); // đảo thứ tự cho đúng flow
+		//lấy 20 tin nhắn cho AI làm context
+		List<ChatMessage> last20Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
+		Collections.reverse(last20Msgs); // đảo thứ tự cho đúng flow
 
 		// Xây prompt context cho AI (tuỳ bạn định dạng, ví dụ)
 		StringBuilder context = new StringBuilder();
 		context.append("Conversation history:\n");
-		for (ChatMessage msg : last10Msgs) {
+		for (ChatMessage msg : last20Msgs) {
 			context.append(msg.getSenderName()).append(" (").append(msg.getSenderType().name()).append("): ")
 					.append(msg.getContent()).append("\n");
 		}
@@ -145,17 +146,17 @@ public class ChatServiceImpl implements ChatService {
 		List<MenuMealResponse> menuList = null;
 
 		try {
-			JsonNode root = om.readTree(aiContent);
-			if (root.has("menu") && root.get("menu").isArray()) {
-				respContent = root.has("content") ? root.get("content").asText() : "";
-				menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
-			}
+		    JsonNode root = om.readTree(aiContent);
+		    if (root.has("menu") && root.get("menu").isArray()) {
+		        respContent = root.path("content").asText(""); // path() tránh NullPointer
+		        menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
+		    } else {
+		        log.info("AI response có 'menu' nhưng không phải array hoặc null.");
+		    }
 		} catch (Exception e) {
-			// Đoạn này KHÔNG nên báo lỗi nghiêm trọng nếu aiContent không phải JSON!
-			log.info("AI response không phải JSON, sẽ dùng làm text thường: {}", aiContent);
-			respContent = aiContent;
-			menuList = null;
+		    log.info("AI response không phải JSON hợp lệ: {}", aiContent);
 		}
+
 
 		ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, respContent);
 
