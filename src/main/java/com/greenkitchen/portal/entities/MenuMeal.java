@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.greenkitchen.portal.enums.Allergen;
+import com.greenkitchen.portal.enums.MenuIngredients;
 import com.greenkitchen.portal.enums.MenuMealType;
 
 import jakarta.persistence.CascadeType;
@@ -45,7 +45,7 @@ public class MenuMeal extends AbstractEntity {
     @JsonIgnoreProperties("menuMeal")
     private List<MenuMealReview> reviews = new ArrayList<>();
 
-    @ElementCollection(targetClass = Allergen.class)
+    @ElementCollection(targetClass = MenuIngredients.class)
     @Enumerated(EnumType.STRING)
-    private Set<Allergen> allergens = new HashSet<>();
+    private Set<MenuIngredients> menuIngredients = new HashSet<>();
 }
