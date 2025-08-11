@@ -34,6 +34,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 	void markMessagesAsRead(@Param("conv") Conversation conv, @Param("senderType") SenderType senderType);
 
 	// Lấy 10 tin nhắn mới nhất theo conversation, sắp xếp theo timestamp DESC
-	List<ChatMessage> findTop10ByConversationOrderByTimestampDesc(Conversation conv);
+	List<ChatMessage> findTop20ByConversationOrderByTimestampDesc(Conversation conv);
 
 }

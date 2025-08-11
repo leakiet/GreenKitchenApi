@@ -127,7 +127,7 @@ public class ChatServiceImpl implements ChatService {
 		userResp.setSenderRole(SenderType.CUSTOMER.name());
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
 
-		List<ChatMessage> last10Msgs = chatMessageRepo.findTop10ByConversationOrderByTimestampDesc(conv);
+		List<ChatMessage> last10Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
 		Collections.reverse(last10Msgs); // đảo thứ tự cho đúng flow
 
 		// Xây prompt context cho AI (tuỳ bạn định dạng, ví dụ)
