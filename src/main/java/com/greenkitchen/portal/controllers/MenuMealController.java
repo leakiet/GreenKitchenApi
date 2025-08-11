@@ -20,7 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.greenkitchen.portal.dtos.MenuMealRequest;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.MenuMeal;
-import com.greenkitchen.portal.enums.Allergen;
+import com.greenkitchen.portal.enums.MenuIngredients;
 import com.greenkitchen.portal.services.MenuMealService;
 import com.greenkitchen.portal.utils.ImageUtils;
 import com.greenkitchen.portal.utils.SlugUtils;
@@ -59,14 +59,14 @@ public class MenuMealController {
         request.setImage(imageUrl);
       }
 
-      // Parse allergensString thành Set<Allergen>
+      // Parse allergensString thành Set<MenuIngredients>
       if (request.getAllergensString() != null && !request.getAllergensString().isEmpty()) {
-        Set<Allergen> allergenSet = Arrays.stream(request.getAllergensString().split(","))
+        Set<MenuIngredients> allergenSet = Arrays.stream(request.getAllergensString().split(","))
             .map(String::trim)
             .map(String::toUpperCase)
-            .map(Allergen::valueOf)
+            .map(MenuIngredients::valueOf)
             .collect(Collectors.toSet());
-        request.setAllergens(allergenSet);
+        request.setMenuIngredients(allergenSet);
       }
 
       MenuMeal menuMeal = menuMealService.createMenuMeal(request);

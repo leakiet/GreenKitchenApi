@@ -117,11 +117,11 @@ public class MenuMealServiceImpl implements MenuMealService {
         response.setImage(menuMeal.getImage());
         response.setPrice(menuMeal.getPrice());
         response.setSlug(menuMeal.getSlug());
-        if (menuMeal.getAllergens() != null) {
-            response.setAllergens(
-                    menuMeal.getAllergens() != null ? new HashSet<>(menuMeal.getAllergens()) : new HashSet<>());
+        if (menuMeal.getMenuIngredients() != null) {
+            response.setMenuIngredients(
+                    menuMeal.getMenuIngredients() != null ? new HashSet<>(menuMeal.getMenuIngredients()) : new HashSet<>());
         } else {
-            response.setAllergens(new HashSet<>());
+            response.setMenuIngredients(new HashSet<>());
         }
 
         if (menuMeal.getNutrition() != null) {

@@ -1,6 +1,6 @@
 package com.greenkitchen.portal.enums;
 
-public enum Allergen {
+public enum MenuIngredients {
     GLUTEN,
     PEANUTS,
     TREE_NUTS,
