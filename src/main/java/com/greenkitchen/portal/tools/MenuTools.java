@@ -4,105 +4,104 @@ import java.util.Collections;
 import java.util.List;
 
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.dtos.MenuMealsAiResponse;
+import com.greenkitchen.portal.services.MenuMealAIService;
 import com.greenkitchen.portal.services.MenuMealService;
 
 @Component
 public class MenuTools {
-    private final MenuMealService menuMealService;
-    public MenuTools(MenuMealService menuMealService) {
-        this.menuMealService = menuMealService;
-    }
+	@Autowired
+	MenuMealService menuMealService;
+	
+	@Tool(name = "getMenuMeals", description = """
+			***IMPORTANT***: Buộc trả về JSON hợp lệ để FE render UI. KHÔNG markdown/HTML/text ngoài JSON. KHÔNG dịch/đổi key/ghi bịa dữ liệu trong `menu` (giữ nguyên key tiếng Anh như DB).
 
-    @Tool(
-    	    name        = "getMenuMeals",
-    	    description = """
-    	        # PURPOSE
-    	        Lấy danh sách *menu meals* (các món ăn trong menu) cho khách hàng của Green Kitchen.
+			# PURPOSE
+			Lấy danh sách menu meals (các món trong menu) của Green Kitchen để phản hồi ở MENU_JSON_MODE theo Output Contract hệ thống.
 
-    	        # WHEN TO CALL
-    	        – **Chỉ** gọi hàm này nếu (và chỉ nếu) người dùng:
-    	          • hỏi trực tiếp về menu hôm nay / hôm nay có món gì,  
-    	          • yêu cầu xem món, giá, calorie, khẩu phần,  
-    	          • hoặc đề cập cụ thể “thịt bò”, “ức gà”, “salad … trong menu” v.v.  
-    	        – Nếu người dùng KHÔNG hỏi gì liên quan menu → KHÔNG gọi hàm, chỉ trả lời tự nhiên bằng tiếng Việt.
+			# WHEN TO CALL
+			Luôn gọi hàm này nếu CURRENT_USER_MESSAGE (hoặc lịch sử gần nhất) chứa ý định về:
+			- menu/món/giá/calorie(kcal)/khẩu phần/nguyên liệu/loại món/"hôm nay", hoặc tên món/nguyên liệu cụ thể.
+			Kể cả người dùng nói "không JSON" → vẫn phải gọi hàm và trả JSON; khi đó viết ghi chú ngắn trong `content` rằng hệ thống chỉ hỗ trợ JSON cho menu.
 
-    	        # RESPONSE FORMAT (bắt buộc khi hàm được gọi)
-    	        Trả về *một* đối tượng JSON duy nhất gồm 2 field:
-    	        1. **"content"**  : mô tả ngắn bằng *tiếng Việt* (chuỗi, rỗng nếu không có).  
-    	        2. **"menu"**     : mảng các món ăn; GIỮ Y NGUYÊN tên trường tiếng Anh như trong DB (id, title, price, image, calories, type …).
+			# PARAMETERS
+			- limit (integer, optional): số món tối đa cần trả. Mặc định 10. Nếu vượt số món hiện có → giới hạn theo số món hiện có.
 
-    	        > TUYỆT ĐỐI không thêm, đổi, dịch key; không bọc JSON trong markdown;  
-    	        > không thêm giải thích bên ngoài JSON khi trả về dưới dạng function call.
+			# RESPONSE FORMAT (BẮT BUỘC)
+			Trả về DUY NHẤT một JSON object:
+			{
+			  "content": "Chuỗi tiếng Việt ngắn gọn (có thể rỗng)",
+			  "menu": [
+			    {
+			      "id": number,
+			      "title": string,
+			      "description": string,
+			      "calories": number | null,
+			      "protein": number | null,
+			      "carbs": number | null,
+			      "fat": number | null,
+			      "image": string,
+			      "price": number,
+			      "slug": string,
+			      "type": string,
+			      "reviews": []
+			    }
+			  ]
+			}
+			- `menu` lấy nguyên bản từ DB; không đổi key, không dịch giá trị.
+			- Không bao bọc JSON bằng markdown; không thêm text ngoài JSON.
 
-    	        # VALID EXAMPLE
-    	        {
-    	          "content": "Dưới đây là các món phù hợp chế độ eat‑clean hôm nay ạ:",
-    	          "menu": [
-    	            {
-    	              "id"       : 1,
-    	              "title"    : "Balanced Protein Bowl",
-    	              "price"    : 15.99,
-    	              "image"    : "https://cdn.example.com/img1.jpg",
-    	              "calories" : 450,
-    	              "type"     : "main"
-    	            }
-    	            // … tối đa <limit> món
-    	          ]
-    	        }
-
-    	        # ERROR HANDLING
-    	        – Nếu DB trả về rỗng, vẫn trả JSON với menu = [] và content giải thích “hiện chưa có món phù hợp”.
-    	        – Nếu xảy ra lỗi hệ thống → trả lời tiếng Việt nói xin lỗi & hướng dẫn liên hệ CSKH; KHÔNG bịa dữ liệu.
-
-    	        # LANGUAGE
-    	        – Mọi văn bản người dùng thấy (content) luôn bằng tiếng Việt.
-    	        – Trường JSON luôn tiếng Anh.
-    	    """
-    	)
-    public MenuMealsAiResponse getMenuMeals() {
-        List<MenuMealResponse> meals = menuMealService.getAllMenuMeals();
-        // Kiểm tra nếu danh sách món ăn rỗng hoặc null
-        if (meals == null || meals.isEmpty()) {
-            return new MenuMealsAiResponse(
-                "EMPTY_MENU",
-                "Hiện tại menu đang trống. Em sẽ cập nhật món mới sớm nhất. Anh/chị cần tư vấn dinh dưỡng, món ăn lành mạnh thì em luôn sẵn sàng hỗ trợ!",
-                Collections.emptyList()
-            );
-        }
-
-        // Lấy tối đa 3 món đầu tiên để test nhanh
-        int n = Math.min(3, meals.size());
-        List<MenuMealResponse> firstThreeMeals = meals.subList(0, n);
-
-        return new MenuMealsAiResponse(
-            "MENU_LIST",
-            "Dưới đây là 3 món trong menu của Green Kitchen để test nhanh:",
-            firstThreeMeals
-        );
-    }
+			# VALID EXAMPLE
+			{
+			  "content": "Dưới đây là một số món trong menu hôm nay:",
+			  "menu": [
+			    {
+			      "id": 3,
+			      "title": "Salmon Sweet Potato Bowl",
+			      "description": "Salmon with sweet potato and steamed broccoli",
+			      "calories": 480.0,
+			      "protein": 30.0,
+			      "carbs": 38.0,
+			      "fat": 20.0,
+			      "image": "https://...",
+			      "price": 17.99,
+			      "slug": "salmon-sweet-potato-bowl",
+			      "type": "BALANCE",		     
+			      "reviews": []
+			    }
+			  ]
+			}
+			***IMPORTANT***:
+			- Trả nguyên bản dữ liệu từ DB cho tất cả field trong `menu` (title, description, type…)
+			- Không dịch, không chỉnh sửa giá trị trong `menu`.
+			- Không format Markdown/HTML.
 
 
-    
-//    @Tool(description = "Lấy danh sách món ăn trong menu theo ID của menu")
-//    public MenuMealsAiResponse getMenuMeals(Long menuId) {
-//		@SuppressWarnings("unchecked")
-//		List<MenuMealResponse> meals = (List<MenuMealResponse>) menuMealService.getMenuMealById((long) 1);
-//		if (meals == null || meals.isEmpty()) {
-//			return new MenuMealsAiResponse(
-//				"EMPTY_MENU",
-//				"Hiện tại menu đang trống. Em sẽ cập nhật món mới sớm nhất. Anh/chị cần tư vấn dinh dưỡng, món ăn lành mạnh thì em luôn sẵn sàng hỗ trợ!",
-//				Collections.emptyList()
-//			);
-//		}
-//		return new MenuMealsAiResponse(
-//			"MENU_LIST",
-//			"Dưới đây là các món trong menu của Green Kitchen, anh/chị tham khảo nhé:",
-//			meals
-//		);
-//	}
+			# ERROR HANDLING
+			- Nếu DB rỗng: trả {"content": "Hiện chưa có món phù hợp.", "menu": []}.
+			- Nếu xảy ra lỗi hệ thống: ném exception để lớp ngoài xin lỗi người dùng; KHÔNG bịa dữ liệu.
+			""")
+	public MenuMealsAiResponse getMenuMeals(Integer limit) {
+	    try {
+	        List<MenuMealResponse> allMeals = menuMealService.getAllMenuMeals();
+	        List<MenuMealResponse> meals = (allMeals == null) ? Collections.emptyList() : allMeals;
 
+	        if (meals.isEmpty()) {
+	            return new MenuMealsAiResponse("Hiện chưa có món phù hợp.", Collections.emptyList());
+	        }
+
+	        int maxItems = Math.min(limit != null ? limit : 10, meals.size());
+	        List<MenuMealResponse> limited = meals.stream().limit(maxItems).toList();
+
+	        String content = "Dưới đây là một số món trong menu của Green Kitchen ạ:";
+
+	        return new MenuMealsAiResponse(content, limited);
+	    } catch (Exception ex) {
+	        throw ex; // để lớp xử lý ngoài bắt và phản hồi lỗi người dùng
+	    }
+	}
 }

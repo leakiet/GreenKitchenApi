@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.services.impl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,7 @@ public class MenuMealServiceImpl implements MenuMealService {
         menuMeal.getNutrition().setProtein(dto.getProtein());
         menuMeal.getNutrition().setCarbs(dto.getCarbs());
         menuMeal.getNutrition().setFat(dto.getFat());
+
         modelMapper.map(dto, menuMeal);
 
         return menuMealRepository.save(menuMeal);
@@ -56,8 +58,8 @@ public class MenuMealServiceImpl implements MenuMealService {
     @Override
     public List<MenuMealResponse> getAllMenuMeals() {
         return menuMealRepository.findAllActive().stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -65,6 +67,14 @@ public class MenuMealServiceImpl implements MenuMealService {
         MenuMeal existingMenuMeal = menuMealRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("MenuMeal not found with id: " + id));
 
+        if (existingMenuMeal.getNutrition() == null) {
+            existingMenuMeal.setNutrition(new NutritionInfo());
+        }
+        existingMenuMeal.getNutrition().setCalories(dto.getCalories());
+        existingMenuMeal.getNutrition().setProtein(dto.getProtein());
+        existingMenuMeal.getNutrition().setCarbs(dto.getCarbs());
+        existingMenuMeal.getNutrition().setFat(dto.getFat());
+        
         modelMapper.map(dto, existingMenuMeal);
         existingMenuMeal.setId(id);
 
@@ -107,9 +117,14 @@ public class MenuMealServiceImpl implements MenuMealService {
         response.setImage(menuMeal.getImage());
         response.setPrice(menuMeal.getPrice());
         response.setSlug(menuMeal.getSlug());
+        if (menuMeal.getMenuIngredients() != null) {
+            response.setMenuIngredients(
+                    menuMeal.getMenuIngredients() != null ? new HashSet<>(menuMeal.getMenuIngredients()) : new HashSet<>());
+        } else {
+            response.setMenuIngredients(new HashSet<>());
+        }
 
         if (menuMeal.getNutrition() != null) {
-            response.setCalories(menuMeal.getNutrition().getCalories());
             response.setProtein(menuMeal.getNutrition().getProtein());
             response.setCarbs(menuMeal.getNutrition().getCarbs());
             response.setFat(menuMeal.getNutrition().getFat());
@@ -117,28 +132,27 @@ public class MenuMealServiceImpl implements MenuMealService {
 
         if (menuMeal.getReviews() != null) {
             List<MenuMealReviewResponse> reviewResponses = menuMeal.getReviews().stream()
-                .map(review -> {
-                    MenuMealReviewResponse reviewResponse = new MenuMealReviewResponse();
-                    reviewResponse.setId(review.getId());
-                    reviewResponse.setRating(review.getRating());
-                    reviewResponse.setComment(review.getComment());
-                    
-                    reviewResponse.setMenuMealId(menuMeal.getId());
-                    reviewResponse.setMenuMealTitle(menuMeal.getTitle());
-                    
-                    if (review.getCustomer() != null) {
-                        reviewResponse.setCustomerId(review.getCustomer().getId());
-                        reviewResponse.setCustomerName(
-                            review.getCustomer().getFirstName() + " " + review.getCustomer().getLastName()
-                        );
-                    }
-                    
-                    reviewResponse.setCreatedAt(review.getCreatedAt());
-                    reviewResponse.setUpdatedAt(review.getUpdatedAt());
-                    
-                    return reviewResponse;
-                })
-                .collect(Collectors.toList());
+                    .map(review -> {
+                        MenuMealReviewResponse reviewResponse = new MenuMealReviewResponse();
+                        reviewResponse.setId(review.getId());
+                        reviewResponse.setRating(review.getRating());
+                        reviewResponse.setComment(review.getComment());
+
+                        reviewResponse.setMenuMealId(menuMeal.getId());
+                        reviewResponse.setMenuMealTitle(menuMeal.getTitle());
+
+                        if (review.getCustomer() != null) {
+                            reviewResponse.setCustomerId(review.getCustomer().getId());
+                            reviewResponse.setCustomerName(
+                                    review.getCustomer().getFirstName() + " " + review.getCustomer().getLastName());
+                        }
+
+                        reviewResponse.setCreatedAt(review.getCreatedAt());
+                        reviewResponse.setUpdatedAt(review.getUpdatedAt());
+
+                        return reviewResponse;
+                    })
+                    .collect(Collectors.toList());
             response.setReviews(reviewResponses);
         } else {
             response.setReviews(new ArrayList<>());

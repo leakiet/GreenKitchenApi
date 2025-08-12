@@ -1,6 +1,9 @@
 package com.greenkitchen.portal.controllers;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.greenkitchen.portal.dtos.MenuMealRequest;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.MenuMeal;
+import com.greenkitchen.portal.enums.MenuIngredients;
 import com.greenkitchen.portal.services.MenuMealService;
 import com.greenkitchen.portal.utils.ImageUtils;
 import com.greenkitchen.portal.utils.SlugUtils;
@@ -35,29 +39,42 @@ public class MenuMealController {
   // this.ImageUtils = ImageUtils;
   // }
 
-  @GetMapping("/customers/menu-meals")
+  @GetMapping("/customers")
   public ResponseEntity<List<MenuMealResponse>> getAllMenuMeals() {
     List<MenuMealResponse> menuMeals = menuMealService.getAllMenuMeals();
     return ResponseEntity.ok(menuMeals);
   }
 
-  @PostMapping("/customers/menu-meals")
+  @PostMapping("/customers")
   public ResponseEntity<MenuMeal> createMenuMeal(@ModelAttribute MenuMealRequest request,
       @RequestParam("imageFile") MultipartFile file) {
-    String baseSlug = SlugUtils.toSlug(request.getTitle());
-    String uniqueSlug = SlugUtils.generateUniqueSlug(baseSlug,
-        slug -> menuMealService.existsBySlug(slug));
-    request.setSlug(uniqueSlug);
+    try {
+      String baseSlug = SlugUtils.toSlug(request.getTitle());
+      String uniqueSlug = SlugUtils.generateUniqueSlug(baseSlug,
+          slug -> menuMealService.existsBySlug(slug));
+      request.setSlug(uniqueSlug);
 
-    if (file != null && !file.isEmpty()) {
-      String imageUrl = imageUtils.uploadImage(file);
-      request.setImage(imageUrl);
+      if (file != null && !file.isEmpty()) {
+        String imageUrl = imageUtils.uploadImage(file);
+        request.setImage(imageUrl);
+      }
+
+      // Parse allergensString thành Set<MenuIngredients>
+      if (request.getAllergensString() != null && !request.getAllergensString().isEmpty()) {
+        Set<MenuIngredients> allergenSet = Arrays.stream(request.getAllergensString().split(","))
+            .map(String::trim)
+            .map(String::toUpperCase)
+            .map(MenuIngredients::valueOf)
+            .collect(Collectors.toSet());
+        request.setMenuIngredients(allergenSet);
+      }
+
+      MenuMeal menuMeal = menuMealService.createMenuMeal(request);
+      return ResponseEntity.ok(menuMeal);
+    } catch (Exception e) {
+      return ResponseEntity.status(500).build();
     }
-
-    MenuMeal menuMeal = menuMealService.createMenuMeal(request);
-    return ResponseEntity.ok(menuMeal);
   }
-  
 
   @PutMapping("/{id}")
   public ResponseEntity<MenuMeal> updateMenuMeal(@PathVariable("id") Long id, @ModelAttribute MenuMealRequest request,
@@ -86,7 +103,7 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/customers/menu-meals/{id}")
+  @GetMapping("/customers/{id}")
   public ResponseEntity<MenuMealResponse> getMenuMealById(@PathVariable("id") Long id) {
     MenuMealResponse menuMeal = menuMealService.getMenuMealById(id);
     if (menuMeal == null) {
@@ -95,7 +112,7 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/customers/menu-meals/slug/{slug}")
+  @GetMapping("/customers/slug/{slug}")
   public ResponseEntity<MenuMealResponse> getMenuMealBySlug(@PathVariable("slug") String slug) {
     MenuMealResponse menuMeal = menuMealService.getMenuMealBySlug(slug);
     if (menuMeal == null) {
