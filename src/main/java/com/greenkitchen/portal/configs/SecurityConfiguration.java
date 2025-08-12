@@ -38,11 +38,11 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
             .requestMatchers("/apis/v1/ingredients/**").permitAll() // ingredients
-            .requestMatchers("/apis/v1/ingredient-act-his").permitAll() // ingredient actions history
+            .requestMatchers("/apis/v1/ingredient-act-his/**").permitAll() // ingredient actions history
             .requestMatchers("/apis/v1/menu-meals/**").permitAll()    
             .requestMatchers("/apis/v1/carts/**").permitAll()
-            .requestMatchers("/apis/v1/carts/**").permitAll()
             .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll() // Custom meals
+            .requestMatchers("/apis/v1/paypal/**").permitAll() // PayPal endpoints
 
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").authenticated()
@@ -52,6 +52,9 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/custom-meals/**").permitAll()
             .requestMatchers("/apis/v1/customer-references/**").permitAll()
             .requestMatchers("/apis/v1/orders/**").permitAll()
+            .requestMatchers("/apis/v1/coupons/**").permitAll()
+            .requestMatchers("/apis/v1/customer-coupons/**").permitAll()
+
 
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")

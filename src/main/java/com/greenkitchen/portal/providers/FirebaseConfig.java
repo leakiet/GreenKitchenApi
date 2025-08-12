@@ -1,4 +1,4 @@
-package com.greenkitchen.portal.configs;
+package com.greenkitchen.portal.providers;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;

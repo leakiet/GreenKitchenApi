@@ -120,17 +120,6 @@ class TheGreenKitchenApplicationTests {
 			System.out.println("   Amount: " + String.format("%,d", amount.longValue()) + " VND");
 			System.out.println("   Description: " + description);
 			
-			// Update membership after purchase (this will create point history automatically)
-			CustomerMembership membership = membershipService.updateMembershipAfterPurchase(customer, amount, orderId);
-			
-			BigDecimal pointsForThisPurchase = amount.divide(new BigDecimal("1000"));
-			totalSpent = totalSpent.add(amount);
-			totalPointsEarned = totalPointsEarned.add(pointsForThisPurchase);
-			
-			System.out.println("   Points earned: " + pointsForThisPurchase + " points");
-			System.out.println("   Current tier: " + membership.getCurrentTier());
-			System.out.println("   ✅ Transaction saved to database");
-			System.out.println();
 		}
 		
 		// Create some point usage transactions

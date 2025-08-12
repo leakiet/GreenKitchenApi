@@ -50,7 +50,7 @@ public class Address implements Serializable {
 
     // Method to get full address
     public String getFullAddress() {
-        return String.format("%s, Phường %s, Quận %s, %s", street, ward, district, city);
+        return String.format("%s, %s, %s, %s", street, ward, district, city);
     }
     
     // Method to get full address with customer name

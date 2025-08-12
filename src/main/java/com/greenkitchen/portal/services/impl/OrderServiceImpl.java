@@ -40,23 +40,6 @@ public class OrderServiceImpl implements OrderService {
 
   @Override
   public Order createOrder(CreateOrderRequest request) {
-    // Validate required fields
-    if (request.getCustomerId() == null) {
-      throw new RuntimeException("Customer ID is required");
-    }
-
-    if (request.getOrderItems() == null || request.getOrderItems().isEmpty()) {
-      throw new RuntimeException("Order items are required");
-    }
-
-    if (request.getSubtotal() == null) {
-      throw new RuntimeException("Subtotal is required");
-    }
-
-    if (request.getShippingFee() == null) {
-      throw new RuntimeException("Shipping fee is required");
-    }
-
     // Tìm customer
     Customer customer = customerRepository.findById(request.getCustomerId())
         .orElseThrow(() -> new RuntimeException("Customer not found"));
@@ -86,13 +69,13 @@ public class OrderServiceImpl implements OrderService {
     if ("COD".equals(request.getPaymentMethod())) {
       order.setStatus(OrderStatus.PENDING);
       order.setPaymentStatus(PaymentStatus.PENDING);
-    } else if ("CARD".equals(request.getPaymentMethod())) {
-      order.setStatus(OrderStatus.PENDING); // Sẽ thay đổi sau khi có payment gateway
-      order.setPaymentStatus(PaymentStatus.PENDING);
+    } else if ("PAYPAL".equals(request.getPaymentMethod())) {
+      order.setStatus(OrderStatus.CONFIRMED);
+      order.setPaymentStatus(PaymentStatus.COMPLETED);
     }
 
-    // Calculate and set point earn (1% of total amount)
-    Double pointEarn = Math.round(request.getTotalAmount() * 0.01 * 100.0) / 100.0;
+    // Calculate and set point earn (1000 VND = 1 point)
+    Double pointEarn = Math.round(request.getTotalAmount() * 0.001 * 100.0) / 100.0;
     order.setPointEarn(pointEarn);
 
     // Tạo OrderItems manually

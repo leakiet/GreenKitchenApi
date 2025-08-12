@@ -77,7 +77,11 @@ public class Order extends AbstractEntity {
     
     // Phương thức thanh toán
     @Column(nullable = false)
-    private String paymentMethod = "COD"; // "COD" hoặc "CARD"
+    private String paymentMethod = "COD"; // "COD", "PAYPAL"
+
+    // PayPal Order ID cho thanh toán PayPal
+    @Column(name = "paypal_order_id")
+    private String paypalOrderId;
     
     // Quan hệ với OrderItem
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
