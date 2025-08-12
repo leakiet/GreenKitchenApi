@@ -1,19 +1,20 @@
 package com.greenkitchen.portal.dtos;
-import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+/**
+ * Dùng làm response cho AI để gói `content` và danh sách `menu` các món ăn.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class MenuMealsAiResponse {
-    @JsonProperty("content") // đúng key yêu cầu
     private String content;
-
-    @JsonProperty("menu")
-    private List<MenuMealResponse> menu ;
-
+    private List<MenuMealResponse> menu;
 }

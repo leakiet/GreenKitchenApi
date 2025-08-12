@@ -16,9 +16,7 @@ import com.greenkitchen.portal.services.MenuMealService;
 public class MenuTools {
 	@Autowired
 	MenuMealService menuMealService;
-	@Autowired
-	MenuMealAIService menuMealAIService;
-
+	
 	@Tool(name = "getMenuMeals", description = """
 			***IMPORTANT***: Buộc trả về JSON hợp lệ để FE render UI. KHÔNG markdown/HTML/text ngoài JSON. KHÔNG dịch/đổi key/ghi bịa dữ liệu trong `menu` (giữ nguyên key tiếng Anh như DB).
 
@@ -50,7 +48,6 @@ public class MenuTools {
 			      "price": number,
 			      "slug": string,
 			      "type": string,
-			      "allergens": [],
 			      "reviews": []
 			    }
 			  ]
@@ -73,8 +70,7 @@ public class MenuTools {
 			      "image": "https://...",
 			      "price": 17.99,
 			      "slug": "salmon-sweet-potato-bowl",
-			      "type": "BALANCE",
-			      "allergens": [],
+			      "type": "BALANCE",		     
 			      "reviews": []
 			    }
 			  ]
@@ -90,22 +86,22 @@ public class MenuTools {
 			- Nếu xảy ra lỗi hệ thống: ném exception để lớp ngoài xin lỗi người dùng; KHÔNG bịa dữ liệu.
 			""")
 	public MenuMealsAiResponse getMenuMeals(Integer limit) {
-		try {
-			List<MenuMealResponse> meals = menuMealService.getAllMenuMeals();
-			List<MenuMealResponse> list = (meals == null) ? Collections.emptyList() : meals;
+	    try {
+	        List<MenuMealResponse> allMeals = menuMealService.getAllMenuMeals();
+	        List<MenuMealResponse> meals = (allMeals == null) ? Collections.emptyList() : allMeals;
 
-			int n = Math.max(1, Math.min(limit != null ? limit : 10, list.size()));
-			list = list.stream().limit(n).toList();
+	        if (meals.isEmpty()) {
+	            return new MenuMealsAiResponse("Hiện chưa có món phù hợp.", Collections.emptyList());
+	        }
 
-			String content = list.isEmpty()
-					? "Hiện tại menu đang trống. Em sẽ cập nhật món mới sớm nhất. Anh/chị cần tư vấn dinh dưỡng lành mạnh thì em luôn sẵn sàng hỗ trợ!"
-					: "Dưới đây là một số món trong menu của Green Kitchen ạ:";
+	        int maxItems = Math.min(limit != null ? limit : 10, meals.size());
+	        List<MenuMealResponse> limited = meals.stream().limit(maxItems).toList();
 
-			return new MenuMealsAiResponse(content, list);
-		} catch (Exception ex) {
-			// Theo prompt: lỗi hệ thống -> không trả JSON, để layer ngoài phát ngôn xin lỗi
-			throw ex;
-		}
+	        String content = "Dưới đây là một số món trong menu của Green Kitchen ạ:";
+
+	        return new MenuMealsAiResponse(content, limited);
+	    } catch (Exception ex) {
+	        throw ex; // để lớp xử lý ngoài bắt và phản hồi lỗi người dùng
+	    }
 	}
-
 }
