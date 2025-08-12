@@ -11,8 +11,8 @@ public interface MembershipService {
     /**
      * Tính toán và cập nhật membership khi customer có giao dịch mới
      */
-    CustomerMembership updateMembershipAfterPurchase(Customer customer, BigDecimal spentAmount, String orderId);
-    
+    CustomerMembership updateMembershipAfterPurchase(long customerId, double spentAmount, double pointEarned, long orderId);
+
     /**
      * Lấy thông tin membership hiện tại của customer
      */

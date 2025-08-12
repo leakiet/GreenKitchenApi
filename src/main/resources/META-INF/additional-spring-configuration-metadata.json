@@ -48,5 +48,20 @@
     "name": "CLOUDINARY_CLOUD_NAME",
     "type": "java.lang.String",
     "description": "A description for 'CLOUDINARY_CLOUD_NAME'"
+  },
+  {
+    "name": "app.paypal.client-id",
+    "type": "java.lang.String",
+    "description": "A description for 'app.paypal.client-id'"
+  },
+  {
+    "name": "app.paypal.client-secret",
+    "type": "java.lang.String",
+    "description": "A description for 'app.paypal.client-secret'"
+  },
+  {
+    "name": "app.paypal.mode",
+    "type": "java.lang.String",
+    "description": "A description for 'app.paypal.mode'"
   }
 ]}

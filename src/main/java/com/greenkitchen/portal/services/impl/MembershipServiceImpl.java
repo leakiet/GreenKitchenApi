@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import com.greenkitchen.portal.enums.MembershipTier;
 import com.greenkitchen.portal.enums.PointTransactionType;
 import com.greenkitchen.portal.repositories.CustomerMembershipRepository;
 import com.greenkitchen.portal.repositories.PointHistoryRepository;
+import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.services.MembershipService;
 
 @Service
@@ -27,30 +29,32 @@ public class MembershipServiceImpl implements MembershipService {
     
     @Autowired
     private PointHistoryRepository pointHistoryRepository;
-    
-    // Tỷ lệ quy đổi: 1000 VND = 1 điểm
-    private static final BigDecimal POINT_CONVERSION_RATE = new BigDecimal("1000");
+
+    @Autowired
+    private CustomerService customerService;
     
     /**
      * Tính toán và cập nhật membership khi customer có giao dịch mới
      */
     @Override
-    public CustomerMembership updateMembershipAfterPurchase(Customer customer, BigDecimal spentAmount, String orderId) {
+    public CustomerMembership updateMembershipAfterPurchase(long customerId, double spentAmount, double pointEarned, long orderId) {
+        Customer customer = customerService.findById(customerId);
         // Lấy hoặc tạo membership
-        CustomerMembership membership = getOrCreateMembership(customer);
+        CustomerMembership membership = getOrCreateMembership(customer);  
         
-        // Tính điểm thưởng
-        BigDecimal pointsEarned = calculatePointsEarned(spentAmount);
+        // Convert double to BigDecimal
+        BigDecimal spentAmountBD = new BigDecimal(String.valueOf(spentAmount));
+        BigDecimal pointEarnedBD = new BigDecimal(String.valueOf(pointEarned));
         
         // Tạo point history
-        PointHistory pointHistory = new PointHistory(customer, spentAmount, pointsEarned, 
-            "Earned from order: " + orderId, orderId);
+        PointHistory pointHistory = new PointHistory(customer, spentAmountBD, pointEarnedBD,
+            "Earned from order: " + orderId, String.valueOf(orderId));
         pointHistoryRepository.save(pointHistory);
         
         // Cập nhật membership
-        membership.setTotalPointsEarned(membership.getTotalPointsEarned().add(pointsEarned));
-        membership.setAvailablePoints(membership.getAvailablePoints().add(pointsEarned));
-        
+        membership.setTotalPointsEarned(membership.getTotalPointsEarned().add(pointEarnedBD));
+        membership.setAvailablePoints(membership.getAvailablePoints().add(pointEarnedBD));
+
         // Tính lại tổng chi tiêu 6 tháng qua
         BigDecimal totalSpent6Months = calculateTotalSpentLast6Months(customer);
         membership.setTotalSpentLast6Months(totalSpent6Months);
@@ -145,13 +149,6 @@ public class MembershipServiceImpl implements MembershipService {
                 CustomerMembership newMembership = new CustomerMembership(customer);
                 return membershipRepository.save(newMembership);
             });
-    }
-    
-    /**
-     * Tính điểm thưởng dựa trên số tiền chi tiêu
-     */
-    private BigDecimal calculatePointsEarned(BigDecimal spentAmount) {
-        return spentAmount.divide(POINT_CONVERSION_RATE, 0, RoundingMode.DOWN);
     }
     
     /**

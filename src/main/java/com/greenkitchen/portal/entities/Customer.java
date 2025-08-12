@@ -3,11 +3,12 @@ package com.greenkitchen.portal.entities;
 import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.greenkitchen.portal.enums.Gender;
+import com.greenkitchen.portal.enums.CustomerCouponStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -96,6 +97,27 @@ public class Customer extends AbstractEntity {
 	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@JsonManagedReference
 	private List<Order> orders;
+
+	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JsonManagedReference
+	private List<CustomerCoupon> customerCoupons;
+
+	// Override getter để chỉ trả về coupon chưa sử dụng và còn hạn  
+	public List<CustomerCoupon> getCustomerCoupons() {
+		if (customerCoupons == null) {
+			return null;
+		}
+		LocalDateTime now = LocalDateTime.now();
+		return customerCoupons.stream()
+			.filter(coupon -> coupon.getStatus() == CustomerCouponStatus.AVAILABLE && 
+							 coupon.getExpiresAt().isAfter(now))
+			.collect(Collectors.toList());
+	}
+	
+	// Setter để Hibernate có thể set dữ liệu
+	public void setCustomerCoupons(List<CustomerCoupon> customerCoupons) {
+		this.customerCoupons = customerCoupons;
+	}
 
 	public String getFullName() {
 		if (firstName == null && lastName == null) {
