@@ -3,7 +3,7 @@ package com.greenkitchen.portal.dtos;
 import java.util.List;
 import java.util.Set;
 
-import com.greenkitchen.portal.enums.Allergen;
+import com.greenkitchen.portal.enums.MenuIngredients;
 import com.greenkitchen.portal.enums.MenuMealType;
 
 import lombok.AllArgsConstructor;
@@ -27,6 +27,6 @@ public class MenuMealResponse {
   private Double price;
   private String slug;
   private MenuMealType type;
-  private Set<Allergen> allergens;
+  private Set<MenuIngredients> menuIngredients;
   private List<MenuMealReviewResponse> reviews;
 }

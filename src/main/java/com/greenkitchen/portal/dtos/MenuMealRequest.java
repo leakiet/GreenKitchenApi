@@ -2,7 +2,7 @@ package com.greenkitchen.portal.dtos;
 
 import java.util.Set;
 
-import com.greenkitchen.portal.enums.Allergen;
+import com.greenkitchen.portal.enums.MenuIngredients;
 import com.greenkitchen.portal.enums.MenuMealType;
 
 import jakarta.persistence.EnumType;
@@ -28,6 +28,6 @@ public class MenuMealRequest {
     private String image;
     private Double price;
     private String slug;
-    private Set<Allergen> allergens;
+    private Set<MenuIngredients> menuIngredients;
     private String allergensString;
 }
