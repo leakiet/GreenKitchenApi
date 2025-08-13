@@ -137,18 +137,31 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 
 
         String respContent = aiContent;
+        
+        // Phân tích JSON từ AI
         List<MenuMealResponse> menuList = null;
         try {
-            String trimmed = aiContent.trim(); // thêm dòng này
-            JsonNode root = om.readTree(trimmed); // dùng bản trim
-            
+            String trimmed = aiContent.trim();
+
+            // Xử lý nếu AI trả về markdown kiểu ```json\n...\n```
+            if (trimmed.startsWith("```")) {
+                trimmed = trimmed.replaceAll("(?s)^```(?:json)?\\s*", "")
+                                 .replaceAll("\\s*```$", "");
+            }
+
+            JsonNode root = om.readTree(trimmed);
+
             if (root.has("menu") && root.get("menu").isArray()) {
-                respContent = root.path("content").asText("");
+                respContent = root.path("content").asText(""); // fallback ""
                 menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
             }
+            log.debug("JSON sau khi clean:\n{}", trimmed);
+
         } catch (Exception e) {
             log.error("Lỗi parse AI JSON:\n{}", aiContent, e);
+            
         }
+
 
 
         ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, respContent);
