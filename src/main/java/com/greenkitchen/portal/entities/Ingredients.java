@@ -30,4 +30,5 @@ public class Ingredients extends AbstractEntity {
     private NutritionInfo nutrition;
     private String image;
     private Double price;
+    private Integer stock;
 }
