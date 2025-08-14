@@ -74,7 +74,7 @@ public class MenuMealServiceImpl implements MenuMealService {
         existingMenuMeal.getNutrition().setProtein(dto.getProtein());
         existingMenuMeal.getNutrition().setCarbs(dto.getCarbs());
         existingMenuMeal.getNutrition().setFat(dto.getFat());
-        
+
         modelMapper.map(dto, existingMenuMeal);
         existingMenuMeal.setId(id);
 
@@ -119,12 +119,14 @@ public class MenuMealServiceImpl implements MenuMealService {
         response.setSlug(menuMeal.getSlug());
         if (menuMeal.getMenuIngredients() != null) {
             response.setMenuIngredients(
-                    menuMeal.getMenuIngredients() != null ? new HashSet<>(menuMeal.getMenuIngredients()) : new HashSet<>());
+                    menuMeal.getMenuIngredients() != null ? new HashSet<>(menuMeal.getMenuIngredients())
+                            : new HashSet<>());
         } else {
             response.setMenuIngredients(new HashSet<>());
         }
 
         if (menuMeal.getNutrition() != null) {
+            response.setCalories(menuMeal.getNutrition().getCalories());
             response.setProtein(menuMeal.getNutrition().getProtein());
             response.setCarbs(menuMeal.getNutrition().getCarbs());
             response.setFat(menuMeal.getNutrition().getFat());

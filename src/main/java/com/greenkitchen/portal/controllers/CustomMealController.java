@@ -45,7 +45,7 @@ public class CustomMealController {
     @PostMapping
     public ResponseEntity<CustomMealResponse> create(@RequestBody CustomMealRequest request) {
         try {
-            if (request.getCustomerId() == null || request.getName() == null) {
+            if (request.getCustomerId() == null || request.getTitle() == null) {
                 return ResponseEntity.badRequest().body(null);
             }
             return ResponseEntity.ok(customMealService.createCustomMeal(request));
@@ -58,7 +58,7 @@ public class CustomMealController {
     public ResponseEntity<CustomMealResponse> update(@PathVariable("id") Long id,
             @RequestBody CustomMealRequest request) {
         try {
-            if (request.getCustomerId() == null || request.getName() == null) {
+            if (request.getCustomerId() == null || request.getTitle() == null) {
                 return ResponseEntity.badRequest().body(null);
             }
             return ResponseEntity.ok(customMealService.updateCustomMeal(id, request));
