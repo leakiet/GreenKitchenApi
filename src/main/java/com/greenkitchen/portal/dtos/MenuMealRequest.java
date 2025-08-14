@@ -29,5 +29,5 @@ public class MenuMealRequest {
     private Double price;
     private String slug;
     private Set<MenuIngredients> menuIngredients;
-    private String allergensString;
+    private String menuIngredientsString;
 }

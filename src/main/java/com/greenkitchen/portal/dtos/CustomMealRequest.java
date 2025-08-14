@@ -13,11 +13,14 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CustomMealRequest {
   private Long customerId;
-  private String name;
+  private String title;
   private Double protein;
   private Double calories;
   private Double carb;
   private Double fat;
+  private Double price;
+  private String description;
+  private String image;
   private List<CustomMealDetailRequest> proteins;
   private List<CustomMealDetailRequest> carbs;
   private List<CustomMealDetailRequest> sides;

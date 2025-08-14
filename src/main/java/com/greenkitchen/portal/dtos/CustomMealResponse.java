@@ -14,7 +14,10 @@ import lombok.Setter;
 public class CustomMealResponse {
     private Long id;
     private Long customerId;
-    private String name;
+    private String title;
+    private Double price;
+    private String description;
+    private String image;
     private Double protein;
     private Double calories;
     private Double carb;
