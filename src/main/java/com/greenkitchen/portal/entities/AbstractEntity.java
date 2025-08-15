@@ -29,10 +29,8 @@ public abstract class AbstractEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
 
-    @JsonIgnore
     protected LocalDateTime createdAt;
 
-    @JsonIgnore
     protected LocalDateTime updatedAt;
 
     @JsonIgnore

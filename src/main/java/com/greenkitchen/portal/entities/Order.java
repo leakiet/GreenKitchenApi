@@ -34,6 +34,8 @@ import lombok.Setter;
 public class Order extends AbstractEntity {
     private static final long serialVersionUID = 1L;
 
+    private String orderCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     @JsonBackReference
@@ -77,10 +79,11 @@ public class Order extends AbstractEntity {
     
     // Phương thức thanh toán
     @Column(nullable = false)
-    private String paymentMethod = "COD"; // "COD", "PAYPAL"
+    private String paymentMethod;
 
     // PayPal Order ID cho thanh toán PayPal
     @Column(name = "paypal_order_id")
+    @JsonIgnore
     private String paypalOrderId;
     
     // Quan hệ với OrderItem

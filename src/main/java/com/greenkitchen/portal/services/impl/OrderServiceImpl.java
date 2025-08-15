@@ -14,13 +14,18 @@ import com.greenkitchen.portal.entities.CustomMeal;
 import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.Order;
 import com.greenkitchen.portal.entities.OrderItem;
+import com.greenkitchen.portal.entities.Payment;
 import com.greenkitchen.portal.enums.OrderStatus;
+import com.greenkitchen.portal.enums.PaymentMethod;
 import com.greenkitchen.portal.enums.PaymentStatus;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.CustomMealRepository;
 import com.greenkitchen.portal.repositories.MenuMealRepository;
 import com.greenkitchen.portal.repositories.OrderRepository;
+import com.greenkitchen.portal.repositories.PaymentRepository;
 import com.greenkitchen.portal.services.OrderService;
+import com.greenkitchen.portal.services.PaymentService;
+import com.greenkitchen.portal.services.impl.MembershipServiceImpl;
 
 @Service
 @Transactional
@@ -38,15 +43,26 @@ public class OrderServiceImpl implements OrderService {
   @Autowired
   private CustomMealRepository customMealRepository;
 
+  @Autowired
+  private PaymentService paymentService;
+  
+  @Autowired
+  private PaymentRepository paymentRepository;
+  
+  @Autowired
+  private MembershipServiceImpl membershipService;
+
   @Override
   public Order createOrder(CreateOrderRequest request) {
     // Tìm customer
     Customer customer = customerRepository.findById(request.getCustomerId())
         .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-    // Tạo Order entity manually thay vì dùng ModelMapper
     Order order = new Order();
     order.setCustomer(customer);
+
+    String orderCode = "GK-" + System.currentTimeMillis();
+    order.setOrderCode(orderCode);
 
     // Map thông tin giao hàng
     order.setStreet(request.getStreet());
@@ -64,6 +80,8 @@ public class OrderServiceImpl implements OrderService {
     order.setCouponDiscount(request.getCouponDiscount() != null ? request.getCouponDiscount() : 0.0);
     order.setNotes(request.getNotes());
     order.setPaymentMethod(request.getPaymentMethod());
+
+    order.setPaypalOrderId(request.getPaypalOrderId());
 
     // Set status based on payment method
     if ("COD".equals(request.getPaymentMethod())) {
@@ -127,7 +145,20 @@ public class OrderServiceImpl implements OrderService {
       order.setTotalAmount(Math.max(0, totalAmount));
     }
 
-    return orderRepository.save(order);
+    Order savedOrder = orderRepository.save(order);
+    
+    // Tạo Payment record dựa trên payment method
+    if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+      // Tạo COD payment với status PENDING - chỉ complete khi delivery thành công
+      paymentService.createCODPayment(savedOrder, customer, savedOrder.getTotalAmount(), 
+          "COD payment for order #" + savedOrder.getId());
+    } else if ("PAYPAL".equalsIgnoreCase(request.getPaymentMethod())) {
+      // Tạo PayPal payment và complete luôn 
+      paymentService.createPayPalPayment(savedOrder, customer, savedOrder.getTotalAmount(), 
+          "paypal_order_" + savedOrder.getId());
+    }
+
+    return savedOrder;
   }
 
   @Override
@@ -170,5 +201,158 @@ public class OrderServiceImpl implements OrderService {
     }
 
     return orderRepository.save(order);
+  }
+  
+  @Override
+  public Order getOrderById(Long orderId) {
+    return orderRepository.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+  }
+
+  @Override
+  public Order getOrderByCode(String orderCode) {
+    try{
+      Order order = orderRepository.findByOrderCode(orderCode);
+      if (order == null) {
+        throw new IllegalArgumentException("Order not found with code: " + orderCode);
+      }
+      return order;
+    } catch (Exception e) {
+      throw new RuntimeException("Order not found with code: " + orderCode);
+    }
+  }
+
+  @Override
+  public Order completeCODOrder(Long orderId) {
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+    
+    // Chỉ complete nếu là COD order và đang pending payment
+    if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+      throw new RuntimeException("Order is not COD payment method");
+    }
+    
+    if (order.getPaymentStatus() != PaymentStatus.PENDING) {
+      throw new RuntimeException("Order payment is not in PENDING status");
+    }
+    
+    // Chỉ complete COD khi order đang SHIPPING (nhân viên đang giao hàng)
+    if (order.getStatus() != OrderStatus.SHIPPING) {
+      throw new RuntimeException("Order must be in SHIPPING status to complete COD payment. Current status: " + order.getStatus());
+    }
+    
+    // Tìm COD payment của order này
+    Payment codPayment = paymentRepository.findByOrderIdAndPaymentMethod(orderId, PaymentMethod.COD)
+        .orElseThrow(() -> new RuntimeException("COD Payment not found for order: " + orderId));
+    
+    // Complete COD payment - không fire event nữa
+    paymentService.completeCODPayment(codPayment.getId());
+    
+    // Update order status to DELIVERED và payment status
+    order.setPaymentStatus(PaymentStatus.COMPLETED);
+    order.setStatus(OrderStatus.DELIVERED);
+    
+    Order savedOrder = orderRepository.save(order);
+    
+    // Gọi updateMembershipAfterPurchase để cộng điểm khi COD shipping thành công
+    try {
+      membershipService.updateMembershipAfterPurchase(
+          order.getCustomer().getId(), 
+          order.getTotalAmount(), 
+          order.getPointEarn(), 
+          order.getId()
+      );
+      System.out.println("✅ COD order completed - loyalty points updated for customer: " + order.getCustomer().getId());
+    } catch (Exception e) {
+      System.err.println("❌ Error updating membership after COD completion: " + e.getMessage());
+      // Don't fail the order completion if membership update fails
+    }
+    
+    return savedOrder;
+  }
+  
+  @Override
+  public Order updateOrderStatus(Long orderId, String newStatus) {
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+    
+    // Validate status transition
+    OrderStatus currentStatus = order.getStatus();
+    OrderStatus targetStatus;
+    
+    try {
+      targetStatus = OrderStatus.valueOf(newStatus.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new RuntimeException("Invalid order status: " + newStatus);
+    }
+    
+    // Validate workflow cho COD orders
+    if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
+      validateCODStatusTransition(currentStatus, targetStatus);
+    }
+    
+    // Update status
+    order.setStatus(targetStatus);
+    
+    // Special handling cho DELIVERED status
+    if (targetStatus == OrderStatus.DELIVERED && "COD".equalsIgnoreCase(order.getPaymentMethod())) {
+      // Nếu update trực tiếp sang DELIVERED, tự động complete COD payment
+      if (order.getPaymentStatus() == PaymentStatus.PENDING) {
+        Payment codPayment = paymentRepository.findByOrderIdAndPaymentMethod(orderId, PaymentMethod.COD)
+            .orElseThrow(() -> new RuntimeException("COD Payment not found for order: " + orderId));
+        
+        paymentService.completeCODPayment(codPayment.getId());
+        order.setPaymentStatus(PaymentStatus.COMPLETED);
+        
+        // Gọi updateMembershipAfterPurchase khi COD order DELIVERED
+        try {
+          membershipService.updateMembershipAfterPurchase(
+              order.getCustomer().getId(), 
+              order.getTotalAmount(), 
+              order.getPointEarn(), 
+              order.getId()
+          );
+          System.out.println("✅ COD order delivered - loyalty points updated for customer: " + order.getCustomer().getId());
+        } catch (Exception e) {
+          System.err.println("❌ Error updating membership after COD delivery: " + e.getMessage());
+          // Don't fail the status update if membership update fails
+        }
+      }
+    }
+    
+    Order savedOrder = orderRepository.save(order);
+    return savedOrder;
+  }
+  
+  /**
+   * Validate COD order status transitions
+   */
+  private void validateCODStatusTransition(OrderStatus currentStatus, OrderStatus targetStatus) {
+    switch (currentStatus) {
+      case PENDING:
+        if (targetStatus != OrderStatus.CONFIRMED && targetStatus != OrderStatus.CANCELLED) {
+          throw new RuntimeException("From PENDING, can only move to CONFIRMED or CANCELLED");
+        }
+        break;
+      case CONFIRMED:
+        if (targetStatus != OrderStatus.PREPARING && targetStatus != OrderStatus.CANCELLED) {
+          throw new RuntimeException("From CONFIRMED, can only move to PREPARING or CANCELLED");
+        }
+        break;
+      case PREPARING:
+        if (targetStatus != OrderStatus.SHIPPING && targetStatus != OrderStatus.CANCELLED) {
+          throw new RuntimeException("From PREPARING, can only move to SHIPPING or CANCELLED");
+        }
+        break;
+      case SHIPPING:
+        if (targetStatus != OrderStatus.DELIVERED && targetStatus != OrderStatus.CANCELLED) {
+          throw new RuntimeException("From SHIPPING, can only move to DELIVERED or CANCELLED");
+        }
+        break;
+      case DELIVERED:
+        throw new RuntimeException("Cannot change status from DELIVERED");
+      case CANCELLED:
+        throw new RuntimeException("Cannot change status from CANCELLED");
+    }
   }
 }

@@ -136,10 +136,8 @@ public class PayPalController {
             ResponseEntity<String> response = restTemplate.postForEntity(captureUrl, entity, String.class);
             
             if (response.getStatusCode().is2xxSuccessful()) {
-                System.out.println("PayPal capture successful: " + response.getBody());
-                
-                // TODO: Lưu thông tin payment vào database
-                // updateOrderPaymentStatus(request.getOrderId(), request.getOrderID(), "COMPLETED");
+                System.out.println("✅ PayPal capture successful: " + response.getBody());
+                System.out.println("✅ Payment record was already created in createOrder - no need to create again");
 
                 Map<String, Object> result = new HashMap<>();
                 result.put("id", request.getOrderID());

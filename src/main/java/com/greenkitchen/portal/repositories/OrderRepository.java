@@ -7,5 +7,5 @@ import com.greenkitchen.portal.entities.Order;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    
+    Order findByOrderCode(String orderCode);
 }
