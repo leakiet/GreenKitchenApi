@@ -60,8 +60,8 @@ public class MenuMealController {
       }
 
       // Parse allergensString thành Set<MenuIngredients>
-      if (request.getAllergensString() != null && !request.getAllergensString().isEmpty()) {
-        Set<MenuIngredients> allergenSet = Arrays.stream(request.getAllergensString().split(","))
+      if (request.getMenuIngredientsString() != null && !request.getMenuIngredientsString().isEmpty()) {
+        Set<MenuIngredients> allergenSet = Arrays.stream(request.getMenuIngredientsString().split(","))
             .map(String::trim)
             .map(String::toUpperCase)
             .map(MenuIngredients::valueOf)

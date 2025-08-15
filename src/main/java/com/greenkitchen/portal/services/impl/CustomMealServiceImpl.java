@@ -56,12 +56,14 @@ public class CustomMealServiceImpl implements CustomMealService {
   public CustomMealResponse createCustomMeal(CustomMealRequest request) {
     CustomMeal meal = new CustomMeal();
     meal.setCustomerId(request.getCustomerId());
-    meal.setTitle(request.getName());
+    meal.setTitle(request.getTitle());
 
     if (meal.getNutrition() == null) {
       meal.setNutrition(new NutritionInfo());
     }
-
+    meal.setPrice(request.getPrice());
+    meal.setDescription(request.getDescription());
+    meal.setImage(request.getImage());
     meal.getNutrition().setCalories(request.getCalories());
     meal.getNutrition().setProtein(request.getProtein());
     meal.getNutrition().setCarbs(request.getCarb());
@@ -112,11 +114,14 @@ public class CustomMealServiceImpl implements CustomMealService {
         .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
 
     existingMeal.setCustomerId(request.getCustomerId());
-    existingMeal.setTitle(request.getName());
+    existingMeal.setTitle(request.getTitle());
 
     if (existingMeal.getNutrition() == null) {
       existingMeal.setNutrition(new NutritionInfo());
     }
+    existingMeal.setPrice(request.getPrice());
+    existingMeal.setDescription(request.getDescription());
+    existingMeal.setImage(request.getImage());
     existingMeal.getNutrition().setCalories(request.getCalories());
     existingMeal.getNutrition().setProtein(request.getProtein());
     existingMeal.getNutrition().setCarbs(request.getCarb());
@@ -178,6 +183,7 @@ public class CustomMealServiceImpl implements CustomMealService {
       response.setCarb(meal.getNutrition().getCarbs());
       response.setFat(meal.getNutrition().getFat());
     }
+
 
     if (meal.getDetails() != null) {
       List<CustomMealDetailResponse> detailResponses = meal.getDetails().stream()
