@@ -67,6 +67,7 @@ Luôn sẵn sàng trả lời mọi câu hỏi theo cách thân thiện, chính 
       "price": 17.99,
       "slug": "balanced-protein-bowl",
       "type": "BALANCE",
+      "menuIngredients": []
       "reviews": []
     }
   ]
