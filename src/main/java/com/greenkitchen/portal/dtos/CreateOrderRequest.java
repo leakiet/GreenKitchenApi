@@ -24,7 +24,8 @@ public class CreateOrderRequest {
     private String recipientName;
     private String recipientPhone;
     private LocalDateTime deliveryTime;
-    
+    private String paypalOrderId;
+
     // Thông tin giá cả (frontend tính toán)
     private Double subtotal;
     private Double shippingFee;
