@@ -1,18 +1,22 @@
 package com.greenkitchen.portal.services.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.io.IOException;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StreamUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -137,18 +141,31 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 
 
         String respContent = aiContent;
+        
+        // Phân tích JSON từ AI
         List<MenuMealResponse> menuList = null;
         try {
-            String trimmed = aiContent.trim(); // thêm dòng này
-            JsonNode root = om.readTree(trimmed); // dùng bản trim
-            
+            String trimmed = aiContent.trim();
+
+            // Xử lý nếu AI trả về markdown kiểu ```json\n...\n```
+            if (trimmed.startsWith("```")) {
+                trimmed = trimmed.replaceAll("(?s)^```(?:json)?\\s*", "")
+                                 .replaceAll("\\s*```$", "");
+            }
+
+            JsonNode root = om.readTree(trimmed);
+
             if (root.has("menu") && root.get("menu").isArray()) {
-                respContent = root.path("content").asText("");
+                respContent = root.path("content").asText(""); // fallback ""
                 menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
             }
+            log.debug("JSON sau khi clean:\n{}", trimmed);
+
         } catch (Exception e) {
             log.error("Lỗi parse AI JSON:\n{}", aiContent, e);
+            
         }
+
 
 
         ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, respContent);
@@ -244,10 +261,10 @@ public class ChatCommandServiceImpl implements ChatCommandService {
     }
 
     private String loadPrompt(String fileName) throws IOException {
-        org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource(
+        ClassPathResource resource = new ClassPathResource(
                 "prompts/" + fileName);
-        try (java.io.InputStream is = resource.getInputStream()) {
-            return org.springframework.util.StreamUtils.copyToString(is, java.nio.charset.StandardCharsets.UTF_8);
+        try (InputStream is = resource.getInputStream()) {
+            return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
         }
     }
 

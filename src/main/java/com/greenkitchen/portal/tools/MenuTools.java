@@ -48,6 +48,7 @@ public class MenuTools {
 			      "price": number,
 			      "slug": string,
 			      "type": string,
+			      "menuIngredients":[],
 			      "reviews": []
 			    }
 			  ]
@@ -71,6 +72,7 @@ public class MenuTools {
 			      "price": 17.99,
 			      "slug": "salmon-sweet-potato-bowl",
 			      "type": "BALANCE",		     
+			      "menuIngredients": [beef],
 			      "reviews": []
 			    }
 			  ]
@@ -79,6 +81,8 @@ public class MenuTools {
 			- Trả nguyên bản dữ liệu từ DB cho tất cả field trong `menu` (title, description, type…)
 			- Không dịch, không chỉnh sửa giá trị trong `menu`.
 			- Không format Markdown/HTML.
+			- Trả về JSON THUẦN, KHÔNG bọc ` ```json ` hay bất kỳ Markdown nào.
+			- KHÔNG thêm văn bản nào khác ngoài object JSON.
 
 
 			# ERROR HANDLING
