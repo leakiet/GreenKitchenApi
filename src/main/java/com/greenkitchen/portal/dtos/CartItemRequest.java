@@ -15,9 +15,12 @@ public class CartItemRequest {
   private Long menuMealId; // For menu items
   private Long customMealId; // For custom items
   private Integer quantity;
-  private Double basePrice;
+  private Double unitPrice;
+  private Double totalPrice;
   private String title;
   private String description;
+  private String image; 
+  private String itemType;
   
   // Nutrition info
   private Double calories;

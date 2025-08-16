@@ -65,7 +65,7 @@ public class CartController {
             @PathVariable("customerId") Long customerId,
             @RequestBody CartItemRequest itemRequest) {
         try {
-            if (itemRequest.getQuantity() == null || itemRequest.getBasePrice() == null) {
+            if (itemRequest.getQuantity() == null || itemRequest.getUnitPrice() == null) {
                 return ResponseEntity.badRequest().body(null);
             }
             CartItemResponse item = cartService.addItemToCart(customerId, itemRequest);
@@ -83,7 +83,7 @@ public class CartController {
             @PathVariable("itemId") Long itemId,
             @RequestBody CartItemRequest itemRequest) {
         try {
-            if (itemRequest.getQuantity() == null || itemRequest.getBasePrice() == null) {
+            if (itemRequest.getQuantity() == null || itemRequest.getUnitPrice() == null) {
                 return ResponseEntity.badRequest().body(null);
             }
             CartItemResponse item = cartService.updateCartItem(itemId, itemRequest);

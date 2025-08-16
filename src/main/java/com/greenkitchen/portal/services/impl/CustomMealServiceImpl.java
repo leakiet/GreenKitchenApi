@@ -174,7 +174,7 @@ public class CustomMealServiceImpl implements CustomMealService {
     customMealRepository.deleteById(id);
   }
 
-  private CustomMealResponse toResponse(CustomMeal meal) {
+  public CustomMealResponse toResponse(CustomMeal meal) {
     CustomMealResponse response = modelMapper.map(meal, CustomMealResponse.class);
 
     if (meal.getNutrition() != null) {

@@ -3,6 +3,7 @@ package com.greenkitchen.portal.dtos;
 import java.util.List;
 
 import com.greenkitchen.portal.enums.MenuMealType;
+import com.greenkitchen.portal.enums.OrderItemType;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,24 +19,15 @@ public class CartItemResponse {
     private Long cartId;
     private Boolean isCustom;
     
-    // Menu meal data (khi isCustom = false)
-    private Long menuMealId;
-    private String menuMealTitle;
-    private String menuMealDescription;
-    private String menuMealImage;
-    private Double menuMealPrice;
-    private String menuMealSlug;
-    private String menuMealType;
-    
-    // Custom meal data (khi isCustom = true)
-    private Long customMealId;
-    private String customMealName;
-    private List<CustomMealDetailResponse> details;
+    private MenuMealResponse menuMeal;
+    private CustomMealResponse customMeal;
+    private OrderItemType itemType;
     
     private Integer quantity;
-    private Double basePrice;
+    private Double unitPrice;
     private Double totalPrice;
     private String title;
+    private String image;
     private String description;
     
     // Nutrition info
