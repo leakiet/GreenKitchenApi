@@ -107,7 +107,7 @@ public class MenuMealServiceImpl implements MenuMealService {
         return menuMealRepository.existsBySlug(slug);
     }
 
-    private MenuMealResponse toResponse(MenuMeal menuMeal) {
+    public MenuMealResponse toResponse(MenuMeal menuMeal) {
         MenuMealResponse response = new MenuMealResponse();
 
         response.setId(menuMeal.getId());

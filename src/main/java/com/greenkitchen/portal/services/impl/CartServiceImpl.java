@@ -13,12 +13,14 @@ import com.greenkitchen.portal.dtos.CartItemResponse;
 import com.greenkitchen.portal.dtos.CartRequest;
 import com.greenkitchen.portal.dtos.CartResponse;
 import com.greenkitchen.portal.dtos.CustomMealDetailResponse;
+import com.greenkitchen.portal.dtos.CustomMealResponse;
+import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.Cart;
 import com.greenkitchen.portal.entities.CartItem;
 import com.greenkitchen.portal.entities.CustomMeal;
 import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.NutritionInfo;
-import com.greenkitchen.portal.enums.CartStatus;
+import com.greenkitchen.portal.enums.OrderItemType;
 import com.greenkitchen.portal.repositories.CartItemRepository;
 import com.greenkitchen.portal.repositories.CartRepository;
 import com.greenkitchen.portal.repositories.CustomMealRepository;
@@ -46,20 +48,28 @@ public class CartServiceImpl implements CartService {
     private MenuMealRepository menuMealRepository;
 
     @Autowired
+    private MenuMealServiceImpl menuMealServiceImpl;
+
+    @Autowired
+    private CustomMealServiceImpl customMealServiceImpl;
+
+    @Autowired
     private ModelMapper modelMapper;
 
     @Override
     public CartResponse getCartByCustomerId(Long customerId) {
-        // Thay đổi từ findByCustomerIdAndStatus thành findByCustomerIdAndStatusWithActiveItems
-        Cart cart = cartRepository.findByCustomerIdAndStatusWithActiveItems(customerId, CartStatus.ACTIVE)
+        // Thay đổi từ findByCustomerIdAndStatus thành
+        // findByCustomerIdAndStatusWithActiveItems
+        Cart cart = cartRepository.findByCustomerIdAndStatusWithActiveItems(customerId)
                 .orElse(createNewCart(customerId));
         return toCartResponse(cart);
     }
 
     @Override
     public CartResponse createOrUpdateCart(CartRequest request) {
-        // Thay đổi từ findByCustomerIdAndStatus thành findByCustomerIdAndStatusWithActiveItems
-        Cart cart = cartRepository.findByCustomerIdAndStatusWithActiveItems(request.getCustomerId(), CartStatus.ACTIVE)
+        // Thay đổi từ findByCustomerIdAndStatus thành
+        // findByCustomerIdAndStatusWithActiveItems
+        Cart cart = cartRepository.findByCustomerIdAndStatusWithActiveItems(request.getCustomerId())
                 .orElse(createNewCart(request.getCustomerId()));
 
         if (cart.getCartItems() != null) {
@@ -80,18 +90,38 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public CartItemResponse addItemToCart(Long customerId, CartItemRequest itemRequest) {
-        // Thay đổi từ findByCustomerIdAndStatus thành findByCustomerIdAndStatusWithActiveItems
-        Cart cart = cartRepository.findByCustomerIdAndStatusWithActiveItems(customerId, CartStatus.ACTIVE)
+        Cart cart = cartRepository.findByCustomerIdAndStatusWithActiveItems(customerId)
                 .orElse(createNewCart(customerId));
 
-        CartItem cartItem = createCartItem(itemRequest, cart);
-        cart.getCartItems().add(cartItem);
+        CartItem existingItem = cart.getCartItems().stream()
+                .filter(item -> {
+                    if (Boolean.TRUE.equals(itemRequest.getIsCustom())) {
+                        return Boolean.TRUE.equals(item.getIsCustom()) &&
+                                item.getCustomMeal() != null &&
+                                item.getCustomMeal().getId().equals(itemRequest.getCustomMealId());
+                    } else {
+                        return Boolean.FALSE.equals(item.getIsCustom()) &&
+                                item.getMenuMeal() != null &&
+                                item.getMenuMeal().getId().equals(itemRequest.getMenuMealId());
+                    }
+                })
+                .findFirst()
+                .orElse(null);
+
+        if (existingItem != null) {
+            existingItem.setQuantity(existingItem.getQuantity() + itemRequest.getQuantity());
+            existingItem.setTotalPrice(existingItem.getUnitPrice() * existingItem.getQuantity());
+        } else {
+            CartItem cartItem = createCartItem(itemRequest, cart);
+            cart.getCartItems().add(cartItem);
+        }
+
         cart.setTotalAmount(calculateTotalAmount(cart));
-
         Cart saved = cartRepository.save(cart);
-        CartItem savedItem = saved.getCartItems().get(saved.getCartItems().size() - 1);
 
-        return toItemResponse(savedItem);
+        CartItem resultItem = (existingItem != null) ? existingItem
+                : saved.getCartItems().get(saved.getCartItems().size() - 1);
+        return toItemResponse(resultItem);
     }
 
     @Override
@@ -131,8 +161,9 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void clearCart(Long customerId) {
-        // Thay đổi từ findByCustomerIdAndStatus thành findByCustomerIdAndStatusWithActiveItems
-        cartRepository.findByCustomerIdAndStatusWithActiveItems(customerId, CartStatus.ACTIVE)
+        // Thay đổi từ findByCustomerIdAndStatus thành
+        // findByCustomerIdAndStatusWithActiveItems
+        cartRepository.findByCustomerIdAndStatusWithActiveItems(customerId)
                 .ifPresent(cart -> {
                     // Soft delete tất cả items
                     cart.getCartItems().forEach(item -> item.setIsDeleted(true));
@@ -150,7 +181,6 @@ public class CartServiceImpl implements CartService {
     private Cart createNewCart(Long customerId) {
         Cart cart = new Cart();
         cart.setCustomerId(customerId);
-        cart.setStatus(CartStatus.ACTIVE);
         cart.setTotalAmount(0.0);
         return cart;
     }
@@ -160,10 +190,15 @@ public class CartServiceImpl implements CartService {
         cartItem.setCart(cart);
         cartItem.setIsCustom(request.getIsCustom());
         cartItem.setQuantity(request.getQuantity());
-        cartItem.setBasePrice(request.getBasePrice());
-        cartItem.setTotalPrice(request.getBasePrice() * request.getQuantity());
+        cartItem.setUnitPrice(request.getUnitPrice());
+        cartItem.setTotalPrice(request.getUnitPrice() * request.getQuantity());
         cartItem.setTitle(request.getTitle());
         cartItem.setDescription(request.getDescription());
+        cartItem.setImage(request.getImage());
+
+        if (request.getItemType() != null) {
+            cartItem.setItemType(OrderItemType.valueOf(request.getItemType()));
+        }
 
         // Set nutrition info
         if (request.getCalories() != null || request.getProtein() != null ||
@@ -190,11 +225,8 @@ public class CartServiceImpl implements CartService {
 
     private void updateCartItemFromRequest(CartItem cartItem, CartItemRequest request) {
         cartItem.setQuantity(request.getQuantity());
-        cartItem.setBasePrice(request.getBasePrice());
-        cartItem.setTotalPrice(request.getBasePrice() * request.getQuantity());
-        cartItem.setTitle(request.getTitle());
-        cartItem.setDescription(request.getDescription());
-
+        cartItem.setUnitPrice(request.getUnitPrice());
+        cartItem.setTotalPrice(request.getUnitPrice() * request.getQuantity());
         // Update nutrition info
         if (cartItem.getNutrition() == null) {
             cartItem.setNutrition(new NutritionInfo());
@@ -205,12 +237,12 @@ public class CartServiceImpl implements CartService {
         cartItem.getNutrition().setFat(request.getFat());
     }
 
-    // Có thể bỏ filter trong calculateTotalAmount và toCartResponse vì repository đã filter sẵn
+    // Có thể bỏ filter trong calculateTotalAmount và toCartResponse vì repository
+    // đã filter sẵn
     private Double calculateTotalAmount(Cart cart) {
-        return cart.getCartItems() != null ?
-                cart.getCartItems().stream()
-                        .mapToDouble(CartItem::getTotalPrice)
-                        .sum() : 0.0;
+        return cart.getCartItems() != null ? cart.getCartItems().stream()
+                .mapToDouble(CartItem::getTotalPrice)
+                .sum() : 0.0;
     }
 
     private CartResponse toCartResponse(Cart cart) {
@@ -233,18 +265,9 @@ public class CartServiceImpl implements CartService {
     }
 
     private CartItemResponse toItemResponse(CartItem item) {
-        CartItemResponse response = new CartItemResponse();
+        CartItemResponse response = modelMapper.map(item, CartItemResponse.class);
 
-        response.setId(item.getId());
-        response.setCartId(item.getCart().getId());
-        response.setIsCustom(item.getIsCustom());
-        response.setQuantity(item.getQuantity());
-        response.setBasePrice(item.getBasePrice());
-        response.setTotalPrice(item.getTotalPrice());
-        response.setTitle(item.getTitle());
-        response.setDescription(item.getDescription());
-
-        // Set nutrition info
+        // Lấy dinh dưỡng từ CartItem (nếu có)
         if (item.getNutrition() != null) {
             response.setCalories(item.getNutrition().getCalories());
             response.setProtein(item.getNutrition().getProtein());
@@ -252,54 +275,43 @@ public class CartServiceImpl implements CartService {
             response.setFat(item.getNutrition().getFat());
         }
 
-        if (item.getIsCustom() != null && item.getIsCustom()) {
-            // Custom meal item
-            if (item.getCustomMeal() != null) {
-                CustomMeal customMeal = item.getCustomMeal();
-                response.setCustomMealId(customMeal.getId());
-                response.setCustomMealName(customMeal.getTitle());
-
-                // Map custom meal details
-                if (customMeal.getDetails() != null) {
-                    List<CustomMealDetailResponse> detailResponses = customMeal.getDetails().stream()
-                            .map(d -> {
-                                CustomMealDetailResponse detailResponse = new CustomMealDetailResponse();
-                                detailResponse.setQuantity(d.getQuantity());
-
-                                ingredientRepository.findById(d.getIngredientId())
-                                        .ifPresent(ingredient -> {
-                                            detailResponse.setId(ingredient.getId());
-                                            detailResponse.setTitle(ingredient.getTitle());
-                                            detailResponse.setType(ingredient.getType());
-                                            detailResponse.setDescription(ingredient.getDescription());
-                                            detailResponse.setImage(ingredient.getImage());
-
-                                            if (ingredient.getNutrition() != null) {
-                                                detailResponse.setCalories(ingredient.getNutrition().getCalories());
-                                                detailResponse.setProtein(ingredient.getNutrition().getProtein());
-                                                detailResponse.setCarbs(ingredient.getNutrition().getCarbs());
-                                                detailResponse.setFat(ingredient.getNutrition().getFat());
-                                            }
-                                        });
-                                return detailResponse;
-                            })
-                            .collect(Collectors.toList());
-                    response.setDetails(detailResponses);
-                }
-            }
-        } else {
-            // Menu meal item
-            if (item.getMenuMeal() != null) {
-                MenuMeal menuMeal = item.getMenuMeal();
-                response.setMenuMealId(menuMeal.getId());
-                response.setMenuMealTitle(menuMeal.getTitle());
-                response.setMenuMealDescription(menuMeal.getDescription());
-                response.setMenuMealImage(menuMeal.getImage());
-                response.setMenuMealPrice(menuMeal.getPrice());
-                response.setMenuMealSlug(menuMeal.getSlug());
-                response.setMenuMealType(menuMeal.getType() != null ? menuMeal.getType().toString() : null);
-            }
+        if (item.getItemType() != null) {
+            response.setItemType(item.getItemType());
         }
+
+        // Map menuMeal nếu có
+        if (item.getMenuMeal() != null) {
+            MenuMealResponse menuMealResponse = menuMealServiceImpl.toResponse(item.getMenuMeal());
+            response.setMenuMeal(menuMealResponse);
+            // response.setMenuMealType(item.getMenuMeal().getType());
+            // Ưu tiên dinh dưỡng từ CartItem, nếu không có thì lấy từ menuMeal
+            if (response.getCalories() == null)
+                response.setCalories(menuMealResponse.getCalories());
+            if (response.getProtein() == null)
+                response.setProtein(menuMealResponse.getProtein());
+            if (response.getCarbs() == null)
+                response.setCarbs(menuMealResponse.getCarbs());
+            if (response.getFat() == null)
+                response.setFat(menuMealResponse.getFat());
+        }
+
+        // Map customMeal nếu có
+        if (item.getCustomMeal() != null) {
+            CustomMealResponse customMealResponse = customMealServiceImpl.toResponse(item.getCustomMeal());
+            response.setCustomMeal(customMealResponse);
+            // Ưu tiên dinh dưỡng từ CartItem, nếu không có thì lấy từ customMeal
+            if (response.getCalories() == null)
+                response.setCalories(customMealResponse.getCalories());
+            if (response.getProtein() == null)
+                response.setProtein(customMealResponse.getProtein());
+            if (response.getCarbs() == null)
+                response.setCarbs(customMealResponse.getCarb());
+            if (response.getFat() == null)
+                response.setFat(customMealResponse.getFat());
+        }
+        response.setTitle(item.getTitle());
+        response.setImage(item.getImage());
+        response.setDescription(item.getDescription());
 
         return response;
     }
@@ -316,7 +328,7 @@ public class CartServiceImpl implements CartService {
         }
 
         existingItem.setQuantity(existingItem.getQuantity() + 1);
-        existingItem.setTotalPrice(existingItem.getBasePrice() * existingItem.getQuantity());
+        existingItem.setTotalPrice(existingItem.getUnitPrice() * existingItem.getQuantity());
 
         CartItem saved = cartItemRepository.save(existingItem);
 
@@ -342,7 +354,7 @@ public class CartServiceImpl implements CartService {
         }
 
         existingItem.setQuantity(existingItem.getQuantity() - 1);
-        existingItem.setTotalPrice(existingItem.getBasePrice() * existingItem.getQuantity());
+        existingItem.setTotalPrice(existingItem.getUnitPrice() * existingItem.getQuantity());
 
         CartItem saved = cartItemRepository.save(existingItem);
 
