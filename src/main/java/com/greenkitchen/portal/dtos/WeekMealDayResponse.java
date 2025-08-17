@@ -1,0 +1,14 @@
+package com.greenkitchen.portal.dtos;
+
+import java.time.LocalDate;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class WeekMealDayResponse {
+  private String day;
+  private LocalDate date;
+  private MenuMealResponse meal1; // Trả về luôn entity hoặc DTO của MenuMeal
+  private MenuMealResponse meal2;
+}
