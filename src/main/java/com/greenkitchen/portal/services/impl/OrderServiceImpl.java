@@ -123,6 +123,13 @@ public class OrderServiceImpl implements OrderService {
               // orderItem.setTitle(customMeal.getTitle());
               // orderItem.setDescription(customMeal.getDescription());
               // orderItem.setImage(customMeal.getImage());
+            case WEEK_MEAL:
+              // WeekMeal weekMeal = weekMealRepository.findById(itemRequest.getWeekMealId())
+              //     .orElseThrow(() -> new RuntimeException("WeekMeal not found"));
+              // orderItem.setWeekMeal(weekMeal);
+              // orderItem.setTitle(weekMeal.getTitle());
+              // orderItem.setDescription(weekMeal.getDescription());
+              // orderItem.setImage(weekMeal.getImage());
               break;
           }
 

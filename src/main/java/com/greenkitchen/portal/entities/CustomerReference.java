@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.CascadeType;
@@ -19,6 +18,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.greenkitchen.portal.enums.VegetarianType;
 import jakarta.persistence.EnumType;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -48,19 +49,19 @@ public class CustomerReference extends AbstractEntity {
     private String note;
 
     // One-to-Many relationships with new entities
-    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
-    private List<FavoriteProtein> favoriteProteins;
+    private List<FavoriteProtein> favoriteProteins = new ArrayList<>();
 
-    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
-    private List<FavoriteCarb> favoriteCarbs;
+    private List<FavoriteCarb> favoriteCarbs = new ArrayList<>();
 
-    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
-    private List<FavoriteVegetable> favoriteVegetables;
+    private List<FavoriteVegetable> favoriteVegetables = new ArrayList<>();
 
-    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "customerReference", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
-    private List<CustomerAllergy> allergies;
+    private List<CustomerAllergy> allergies = new ArrayList<>();
 }

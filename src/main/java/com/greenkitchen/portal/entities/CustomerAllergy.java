@@ -10,6 +10,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Getter
@@ -17,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "customer_allergies")
+@JsonIgnoreProperties({"customerReference"})
 public class CustomerAllergy extends AbstractEntity {
     
     @ManyToOne

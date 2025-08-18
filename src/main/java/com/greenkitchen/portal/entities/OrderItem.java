@@ -46,6 +46,11 @@ public class OrderItem extends AbstractEntity {
     @JsonBackReference
     private CustomMeal customMeal;
 
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "week_meal_id")
+    // @JsonBackReference
+    // private WeekMeal weekMeal;
+
     private String title;
     private String description;
     private String image;
