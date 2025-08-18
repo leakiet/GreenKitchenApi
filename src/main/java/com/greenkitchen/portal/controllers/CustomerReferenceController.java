@@ -1,9 +1,11 @@
 package com.greenkitchen.portal.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.greenkitchen.portal.dtos.CustomerReferenceRequest;
 import com.greenkitchen.portal.entities.CustomerReference;
 import com.greenkitchen.portal.services.CustomerReferenceService;
 
@@ -27,56 +29,32 @@ public class CustomerReferenceController {
             return ResponseEntity.ok(customerReferences);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Internal server error: " + e.getMessage());
         }
     }
 
     /**
-     * Tạo mới CustomerReference
+     * Tạo mới CustomerReference (sử dụng DTO)
      */
-    @PostMapping("/create")
-    public ResponseEntity<?> createCustomerReference(@RequestBody CustomerReference customerReference) {
+    @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> createCustomerReference(@RequestBody CustomerReferenceRequest request) {
         try {
-            CustomerReference createdReference = customerReferenceService.createCustomerReference(customerReference);
+            CustomerReference createdReference = customerReferenceService.createCustomerReference(request);
             return ResponseEntity.ok(createdReference);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace(); // Log for debugging
-            return ResponseEntity.internalServerError().body("Internal server error: " + e.getMessage());
         }
     }
 
     /**
-     * Cập nhật CustomerReference
+     * Cập nhật CustomerReference (sử dụng DTO)
      */
-    @PutMapping
-    public ResponseEntity<?> updateCustomerReference(@RequestBody CustomerReference customerReference) {
+    @PutMapping(value = "/update", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateCustomerReference(@RequestBody CustomerReferenceRequest request) {
         try {
-            CustomerReference updatedReference = customerReferenceService.updateCustomerReference(customerReference);
+            CustomerReference updatedReference = customerReferenceService.updateCustomerReference(request);
             return ResponseEntity.ok(updatedReference);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace(); // Log for debugging
-            return ResponseEntity.internalServerError().body("Internal server error: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Tạo mới hoặc cập nhật CustomerReference (upsert)
-     */
-    @PostMapping("/upsert")
-    public ResponseEntity<?> createOrUpdateCustomerReference(@RequestBody CustomerReference customerReference) {
-        try {
-            CustomerReference result = customerReferenceService.createOrUpdateCustomerReference(customerReference);
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace(); // Log for debugging
-            return ResponseEntity.internalServerError().body("Internal server error: " + e.getMessage());
         }
     }
 }

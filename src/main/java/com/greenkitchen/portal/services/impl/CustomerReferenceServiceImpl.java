@@ -4,13 +4,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.greenkitchen.portal.dtos.CustomerReferenceRequest;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.CustomerReference;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.CustomerReferenceRepository;
 import com.greenkitchen.portal.services.CustomerReferenceService;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.util.List;
+import java.util.ArrayList;
 
 @Service
 @Transactional
@@ -22,179 +26,118 @@ public class CustomerReferenceServiceImpl implements CustomerReferenceService {
     @Autowired
     private CustomerRepository customerRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Override
     public List<CustomerReference> getCustomerReferencesByCustomerId(Long customerId) {
         // Kiểm tra customer có tồn tại không
         customerRepository.findById(customerId)
-            .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + customerId));
-        
-        return customerReferenceRepository.findByCustomerId(customerId);
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + customerId));
+
+        return customerReferenceRepository.findByCustomerId(customerId)
+                .map(List::of)
+                .orElseGet(List::of);
     }
 
     @Override
-    public CustomerReference createCustomerReference(CustomerReference customerReference) {
+    public CustomerReference createCustomerReference(CustomerReferenceRequest request) {
         // Validate input
-        if (customerReference == null) {
-            throw new IllegalArgumentException("CustomerReference cannot be null");
-        }
-        
-        if (customerReference.getCustomer() == null || customerReference.getCustomer().getId() == null) {
-            throw new IllegalArgumentException("Customer information is required");
+        if (request.getCustomerId() == null) {
+            throw new IllegalArgumentException("Customer ID is required");
         }
 
-        Long customerId = customerReference.getCustomer().getId();
-        
+        Long customerId = request.getCustomerId();
         // Kiểm tra customer có tồn tại không
         Customer customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + customerId));
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + customerId));
 
-        // Kiểm tra xem customer đã có CustomerReference chưa (vì là OneToOne relationship)
-        List<CustomerReference> existingReferences = customerReferenceRepository.findByCustomerId(customerId);
-        if (!existingReferences.isEmpty()) {
-            throw new IllegalArgumentException("Customer with id " + customerId + " already has a CustomerReference. Use update instead of create.");
+        // Kiểm tra xem customer đã có CustomerReference chưa (vì là OneToOne
+        // relationship)
+        var existing = customerReferenceRepository.findByCustomerId(customerId);
+        if (existing.isPresent()) {
+            throw new IllegalArgumentException("Customer with id " + customerId
+                    + " already has a CustomerReference. Use update instead of create.");
         }
 
-        // Set customer reference
+        CustomerReference customerReference = new CustomerReference();
         customerReference.setCustomer(customer);
-        
-        // Clear ID to ensure new entity
-        customerReference.setId(null);
-        
-        // First save the CustomerReference to get the ID
-        CustomerReference savedReference = customerReferenceRepository.save(customerReference);
-        
-        // Now set customerReference for all child entities and clear IDs for new entities
+        customerReference.setNote(request.getNote());
+        customerReference.setCanEatDairy(request.getCanEatDairy());
+        customerReference.setCanEatEggs(request.getCanEatEggs());
+        customerReference.setVegetarianType(request.getVegetarianType());
+
+        customerReference.setFavoriteProteins(request.getFavoriteProteins());
+        customerReference.setFavoriteCarbs(request.getFavoriteCarbs());
+        customerReference.setFavoriteVegetables(request.getFavoriteVegetables());
+        customerReference.setAllergies(request.getAllergies());
+
+        // Set back-reference on child entities before saving so CascadeType.ALL
+        // persists them
         if (customerReference.getFavoriteProteins() != null && !customerReference.getFavoriteProteins().isEmpty()) {
-            customerReference.getFavoriteProteins().forEach(protein -> {
-                protein.setId(null); // Ensure new entity
-                protein.setCustomerReference(savedReference); // Set the saved reference with ID
-            });
-            // Re-set the list to trigger cascade save
-            savedReference.setFavoriteProteins(customerReference.getFavoriteProteins());
+            customerReference.getFavoriteProteins().forEach(protein -> protein.setCustomerReference(customerReference));
         }
-        
         if (customerReference.getFavoriteCarbs() != null && !customerReference.getFavoriteCarbs().isEmpty()) {
-            customerReference.getFavoriteCarbs().forEach(carb -> {
-                carb.setId(null); // Ensure new entity
-                carb.setCustomerReference(savedReference); // Set the saved reference with ID
-            });
-            savedReference.setFavoriteCarbs(customerReference.getFavoriteCarbs());
+            customerReference.getFavoriteCarbs().forEach(carb -> carb.setCustomerReference(customerReference));
         }
-        
         if (customerReference.getFavoriteVegetables() != null && !customerReference.getFavoriteVegetables().isEmpty()) {
-            customerReference.getFavoriteVegetables().forEach(vegetable -> {
-                vegetable.setId(null); // Ensure new entity
-                vegetable.setCustomerReference(savedReference); // Set the saved reference with ID
-            });
-            savedReference.setFavoriteVegetables(customerReference.getFavoriteVegetables());
+            customerReference.getFavoriteVegetables().forEach(veg -> veg.setCustomerReference(customerReference));
         }
-        
         if (customerReference.getAllergies() != null && !customerReference.getAllergies().isEmpty()) {
-            customerReference.getAllergies().forEach(allergy -> {
-                allergy.setId(null); // Ensure new entity
-                allergy.setCustomerReference(savedReference); // Set the saved reference with ID
-            });
-            savedReference.setAllergies(customerReference.getAllergies());
+            customerReference.getAllergies().forEach(allergy -> allergy.setCustomerReference(customerReference));
         }
-        
-        // Save again to persist the child entities
-        return customerReferenceRepository.save(savedReference);
+
+        // Save once; children will be cascaded
+        return customerReferenceRepository.save(customerReference);
     }
 
     @Override
-    public CustomerReference updateCustomerReference(CustomerReference customerReference) {
-        // Validate input
-        if (customerReference == null) {
-            throw new IllegalArgumentException("CustomerReference cannot be null");
-        }
-        
-        if (customerReference.getCustomer() == null || customerReference.getCustomer().getId() == null) {
-            throw new IllegalArgumentException("Customer information is required");
+    public CustomerReference updateCustomerReference(CustomerReferenceRequest request) {
+        if (request.getCustomerId() == null) {
+            throw new IllegalArgumentException("Customer ID is required");
         }
 
-        Long customerId = customerReference.getCustomer().getId();
-        
-        // Kiểm tra customer có tồn tại không
-        customerRepository.findById(customerId)
-            .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + customerId));
+        Long customerId = request.getCustomerId();
+        // Ensure customer exists
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + customerId));
 
-        // Tìm CustomerReference hiện tại
-        List<CustomerReference> existingReferences = customerReferenceRepository.findByCustomerId(customerId);
-        if (existingReferences.isEmpty()) {
-            throw new IllegalArgumentException("No CustomerReference found for customer id: " + customerId);
-        }
+        // Get existing reference
+        CustomerReference ref = customerReferenceRepository.findByCustomerId(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("CustomerReference not found for customer id: " + customerId));
 
-        CustomerReference existingReference = existingReferences.get(0);
-        
-        // Update basic fields
-        existingReference.setVegetarianType(customerReference.getVegetarianType());
-        existingReference.setCanEatEggs(customerReference.getCanEatEggs());
-        existingReference.setCanEatDairy(customerReference.getCanEatDairy());
-        existingReference.setNote(customerReference.getNote());
+        // Update scalar fields
+        ref.setCustomer(customer);
+        ref.setVegetarianType(request.getVegetarianType());
+        ref.setCanEatEggs(Boolean.TRUE.equals(request.getCanEatEggs()));
+        ref.setCanEatDairy(Boolean.TRUE.equals(request.getCanEatDairy()));
+        ref.setNote(request.getNote());
 
-        // Clear old relationships
-        if (existingReference.getFavoriteProteins() != null) {
-            existingReference.getFavoriteProteins().clear();
-        }
-        if (existingReference.getFavoriteCarbs() != null) {
-            existingReference.getFavoriteCarbs().clear();
-        }
-        if (existingReference.getFavoriteVegetables() != null) {
-            existingReference.getFavoriteVegetables().clear();
-        }
-        if (existingReference.getAllergies() != null) {
-            existingReference.getAllergies().clear();
+        // Clear and add new items in-place (avoid replacing collection instance)
+        ref.getFavoriteProteins().clear();
+        if (request.getFavoriteProteins() != null) {
+            request.getFavoriteProteins().forEach(p -> p.setCustomerReference(ref));
+            ref.getFavoriteProteins().addAll(request.getFavoriteProteins());
         }
 
-        // Set new relationships
-        if (customerReference.getFavoriteProteins() != null) {
-            customerReference.getFavoriteProteins().forEach(protein -> {
-                protein.setId(null);
-                protein.setCustomerReference(existingReference);
-            });
-            existingReference.setFavoriteProteins(customerReference.getFavoriteProteins());
-        }
-        
-        if (customerReference.getFavoriteCarbs() != null) {
-            customerReference.getFavoriteCarbs().forEach(carb -> {
-                carb.setId(null);
-                carb.setCustomerReference(existingReference);
-            });
-            existingReference.setFavoriteCarbs(customerReference.getFavoriteCarbs());
-        }
-        
-        if (customerReference.getFavoriteVegetables() != null) {
-            customerReference.getFavoriteVegetables().forEach(vegetable -> {
-                vegetable.setId(null);
-                vegetable.setCustomerReference(existingReference);
-            });
-            existingReference.setFavoriteVegetables(customerReference.getFavoriteVegetables());
-        }
-        
-        if (customerReference.getAllergies() != null) {
-            customerReference.getAllergies().forEach(allergy -> {
-                allergy.setId(null);
-                allergy.setCustomerReference(existingReference);
-            });
-            existingReference.setAllergies(customerReference.getAllergies());
+        ref.getFavoriteCarbs().clear();
+        if (request.getFavoriteCarbs() != null) {
+            request.getFavoriteCarbs().forEach(c -> c.setCustomerReference(ref));
+            ref.getFavoriteCarbs().addAll(request.getFavoriteCarbs());
         }
 
-        return customerReferenceRepository.save(existingReference);
-    }
-
-    @Override
-    public CustomerReference createOrUpdateCustomerReference(CustomerReference customerReference) {
-        if (customerReference == null || customerReference.getCustomer() == null || customerReference.getCustomer().getId() == null) {
-            throw new IllegalArgumentException("Customer information is required");
+        ref.getFavoriteVegetables().clear();
+        if (request.getFavoriteVegetables() != null) {
+            request.getFavoriteVegetables().forEach(v -> v.setCustomerReference(ref));
+            ref.getFavoriteVegetables().addAll(request.getFavoriteVegetables());
         }
 
-        Long customerId = customerReference.getCustomer().getId();
-        List<CustomerReference> existingReferences = customerReferenceRepository.findByCustomerId(customerId);
-        
-        if (existingReferences.isEmpty()) {
-            return createCustomerReference(customerReference);
-        } else {
-            return updateCustomerReference(customerReference);
+        ref.getAllergies().clear();
+        if (request.getAllergies() != null) {
+            request.getAllergies().forEach(a -> a.setCustomerReference(ref));
+            ref.getAllergies().addAll(request.getAllergies());
         }
+
+        return customerReferenceRepository.save(ref);
     }
 }
