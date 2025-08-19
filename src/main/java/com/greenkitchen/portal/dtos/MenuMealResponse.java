@@ -26,6 +26,7 @@ public class MenuMealResponse {
   private String image;
   private Double price;
   private String slug;
+  private int stock;
   private MenuMealType type;
   private Set<MenuIngredients> menuIngredients;
   private List<MenuMealReviewResponse> reviews;

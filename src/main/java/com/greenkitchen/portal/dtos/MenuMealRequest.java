@@ -28,6 +28,7 @@ public class MenuMealRequest {
     private String image;
     private Double price;
     private String slug;
+    private int stock;
     private Set<MenuIngredients> menuIngredients;
     private String menuIngredientsString;
 }

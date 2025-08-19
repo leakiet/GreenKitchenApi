@@ -117,6 +117,7 @@ public class MenuMealServiceImpl implements MenuMealService {
         response.setImage(menuMeal.getImage());
         response.setPrice(menuMeal.getPrice());
         response.setSlug(menuMeal.getSlug());
+        response.setStock(menuMeal.getStock());
         if (menuMeal.getMenuIngredients() != null) {
             response.setMenuIngredients(
                     menuMeal.getMenuIngredients() != null ? new HashSet<>(menuMeal.getMenuIngredients())
