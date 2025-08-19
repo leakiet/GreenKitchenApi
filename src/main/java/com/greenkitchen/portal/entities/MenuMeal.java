@@ -41,6 +41,7 @@ public class MenuMeal extends AbstractEntity {
     private String image;
     private Double price;
     private String slug;
+    private int stock;
     @OneToMany(mappedBy = "menuMeal", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnoreProperties("menuMeal")
     private List<MenuMealReview> reviews = new ArrayList<>();
