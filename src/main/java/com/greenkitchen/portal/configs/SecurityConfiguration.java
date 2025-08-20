@@ -59,6 +59,7 @@ public class SecurityConfiguration {
 
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
+            .requestMatchers("/apis/v1/posts/**").permitAll() // Posts endpoints
             
             // Default: require authentication for everything else
             .anyRequest().authenticated()

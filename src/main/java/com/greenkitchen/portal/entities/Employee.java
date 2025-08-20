@@ -37,4 +37,11 @@ public class Employee extends AbstractEntity {
   @Enumerated(EnumType.STRING)
   private Role role;
 
+  public String getFullName() {
+		if (firstName == null && lastName == null) {
+			return "Name Not Provided";
+		}
+		return lastName + " " + firstName;
+	}
+
 }
