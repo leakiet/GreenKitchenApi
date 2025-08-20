@@ -23,6 +23,7 @@ import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.security.MyUserDetails;
 import com.greenkitchen.portal.security.JwtUtils;
 import com.greenkitchen.portal.security.MyUserDetailService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.services.EmployeeService;
 import com.greenkitchen.portal.services.GoogleAuthService;
@@ -63,18 +64,18 @@ public class AuthController {
   @Autowired
   private ModelMapper mapper;
 
-  @Autowired
-  private AuthenticationManager authenticationManager;
+  // @Autowired
+  // private PasswordEncoder passwordEncoder;
 
   @PostMapping("/login")
-  public ResponseEntity<LoginResponse> loginCustomer(@RequestBody LoginRequest request, HttpServletResponse httpResponse) {
-    Authentication authentication;
-    try {
-      authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Username or password is incorrect");
-    }
+  public ResponseEntity<LoginResponse> loginCustomer(@RequestBody LoginRequest request,
+      HttpServletResponse httpResponse) {
     Customer customer = customerService.checkLogin(request.getEmail(), request.getPassword());
+
+    // Build Authentication from customer user details
+    MyUserDetails userDetails = new MyUserDetails(customer);
+    Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
     LoginResponse response = mapper.map(customer, LoginResponse.class);
     response.setRole("USER");
     response.setToken(jwtUtils.generateJwtToken(authentication));
@@ -118,23 +119,35 @@ public class AuthController {
     return ResponseEntity.ok("Logout successful");
   }
 
-  @PostMapping("/employee/login")
-  public ResponseEntity<LoginResponse> employeeLogin(@RequestBody LoginRequest request) {
-    try {
-      Authentication authentication = authenticationManager
-          .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-      Employee employee = employeeService.findByEmail(request.getEmail());
-      if (employee == null || !authentication.isAuthenticated()) {
-        throw new IllegalArgumentException("Username or password is incorrect");
-      }
-      LoginResponse response = mapper.map(employee, LoginResponse.class);
-      response.setToken(jwtUtils.generateJwtToken(authentication));
-      response.setRefreshToken(jwtUtils.generateRefreshToken(authentication)); // Thêm refresh token cho employee
-      response.setTokenType("Bearer");
-      return ResponseEntity.ok(response);
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Username or password is incorrect");
-    }
+  @PostMapping("/employee-login")
+  public ResponseEntity<LoginResponse> employeeLogin(@RequestBody LoginRequest request,
+      HttpServletResponse httpResponse) {
+    Employee employee = employeeService.checkLogin(request.getEmail(), request.getPassword());
+
+    // Build Authentication from employee user details
+    MyUserDetails userDetails = new MyUserDetails(employee);
+    Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+    LoginResponse response = mapper.map(employee, LoginResponse.class);
+    response.setToken(jwtUtils.generateJwtToken(authentication));
+    response.setRefreshToken(jwtUtils.generateRefreshToken(authentication)); // Thêm refresh token cho employee
+    response.setTokenType("Bearer");
+
+    // Lưu access token vào cookie
+    Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+    accessTokenCookie.setHttpOnly(true);
+    accessTokenCookie.setPath("/");
+    accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+    httpResponse.addCookie(accessTokenCookie);
+
+    // Lưu refresh token vào cookie
+    Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+    refreshTokenCookie.setHttpOnly(true);
+    refreshTokenCookie.setPath("/");
+    refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days (lâu hơn access token)
+    httpResponse.addCookie(refreshTokenCookie);
+
+    return ResponseEntity.ok(response);
   }
 
   @PostMapping("/register")
@@ -180,31 +193,31 @@ public class AuthController {
     }
     return ResponseEntity.ok("OTP verified successfully");
   }
-  
 
   @PostMapping("/resetPassword")
-  public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {  
+  public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
 
     customerService.resetPassword(request.getEmail(), request.getPassword());
-    
+
     return ResponseEntity.ok("Password reset successfully. Please login with your new password.");
   }
 
   @PostMapping("/google-login")
-  public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request, HttpServletResponse httpResponse) {
+  public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request,
+      HttpServletResponse httpResponse) {
     try {
       // Authenticate user với Google
       Customer customer = googleAuthService.authenticateGoogleUser(request.getIdToken());
-      
+
       // Tạo MyUserDetails object cho customer
       MyUserDetails userDetails = new MyUserDetails(customer);
-      
+
       // Generate JWT token
       Authentication authentication = new UsernamePasswordAuthenticationToken(
-        userDetails, null, userDetails.getAuthorities());
+          userDetails, null, userDetails.getAuthorities());
       String jwt = jwtUtils.generateJwtToken(authentication);
       String refreshToken = jwtUtils.generateRefreshToken(authentication);
-      
+
       // Return response giống như login thường
       LoginResponse response = mapper.map(customer, LoginResponse.class);
       response.setRole("USER");
@@ -225,7 +238,7 @@ public class AuthController {
       refreshTokenCookie.setPath("/");
       refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days (lâu hơn access token)
       httpResponse.addCookie(refreshTokenCookie);
-      
+
       return ResponseEntity.ok(response);
     } catch (Exception e) {
       throw new IllegalArgumentException("Google login failed: " + e.getMessage());
@@ -233,31 +246,32 @@ public class AuthController {
   }
 
   @PostMapping("/phone-login")
-  public ResponseEntity<LoginResponse> phoneLogin(@Valid @RequestBody PhoneLoginRequest request, HttpServletResponse httpResponse) {
+  public ResponseEntity<LoginResponse> phoneLogin(@Valid @RequestBody PhoneLoginRequest request,
+      HttpServletResponse httpResponse) {
     try {
       // Verify Firebase ID token
       if (!firebaseAuthService.verifyIdToken(request.getFirebaseIdToken())) {
         throw new IllegalArgumentException("Invalid Firebase ID token");
       }
-      
+
       // Extract phone number from token or use request phone number
       String phoneNumber = firebaseAuthService.extractPhoneNumber(request.getFirebaseIdToken());
       if (phoneNumber == null) {
         phoneNumber = request.getPhoneNumber();
       }
-      
+
       // Validate phone number exists
       if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
         throw new IllegalArgumentException("Phone number is required");
       }
-      
+
       // Use MyUserDetailService to handle phone authentication
       MyUserDetails userDetails = (MyUserDetails) userDetailService.loadUserByPhoneNumber(phoneNumber);
       Customer customer = userDetails.getCustomer();
-      
+
       // Generate JWT tokens
       Authentication authentication = new UsernamePasswordAuthenticationToken(
-        userDetails, null, userDetails.getAuthorities());
+          userDetails, null, userDetails.getAuthorities());
       String jwt = jwtUtils.generateJwtToken(authentication);
       String refreshToken = jwtUtils.generateRefreshToken(authentication);
 
@@ -281,7 +295,7 @@ public class AuthController {
       refreshTokenCookie.setPath("/");
       refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days
       httpResponse.addCookie(refreshTokenCookie);
-      
+
       return ResponseEntity.ok(response);
     } catch (Exception e) {
       throw new IllegalArgumentException("Phone login failed: " + e.getMessage());
@@ -301,30 +315,30 @@ public class AuthController {
           }
         }
       }
-      
+
       if (refreshToken == null || refreshToken.isEmpty()) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
-      
+
       // Validate refresh token (expired)
       if (!jwtUtils.validateRefreshToken(refreshToken)) {
         return ResponseEntity.status(HttpStatus.GONE).build();
       }
-      
+
       // Lấy username từ refresh token
       String username = jwtUtils.getUserNameFromRefreshToken(refreshToken);
-      
+
       // Load user details
       MyUserDetails userDetails = (MyUserDetails) userDetailService.loadUserByUsername(username);
-      
+
       // Tạo authentication object
       Authentication authentication = new UsernamePasswordAuthenticationToken(
           userDetails, null, userDetails.getAuthorities());
-      
+
       // Generate new tokens
       String newAccessToken = jwtUtils.generateJwtToken(authentication);
       // Refresh token giữ nguyên, không tạo mới
-      
+
       // Tạo response
       LoginResponse response = new LoginResponse();
       if (userDetails.getEmployee() != null) {
@@ -333,11 +347,11 @@ public class AuthController {
         response = mapper.map(userDetails.getCustomer(), LoginResponse.class);
         response.setRole("USER");
       }
-      
+
       response.setToken(newAccessToken);
       response.setRefreshToken(refreshToken); // Giữ nguyên refresh token cũ
       response.setTokenType("Bearer");
-      
+
       // Chỉ cập nhật access token cookie, refresh token giữ nguyên
       Cookie accessTokenCookie = new Cookie("access_token", newAccessToken);
       accessTokenCookie.setHttpOnly(true);
@@ -345,9 +359,9 @@ public class AuthController {
       accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
       httpResponse.addCookie(accessTokenCookie);
       // Không cập nhật refresh token cookie
-      
+
       return ResponseEntity.ok(response);
-      
+
     } catch (Exception e) {
       return ResponseEntity.status(418).build();
     }
