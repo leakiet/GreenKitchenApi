@@ -16,6 +16,9 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StreamUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -29,6 +32,7 @@ import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.Employee;
 import com.greenkitchen.portal.enums.ConversationStatus;
+import com.greenkitchen.portal.enums.MessageStatus;
 import com.greenkitchen.portal.enums.SenderType;
 import com.greenkitchen.portal.repositories.ChatMessageRepository;
 import com.greenkitchen.portal.repositories.ConversationRepository;
@@ -54,6 +58,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private final ModelMapper mapper;
 	private final SimpMessagingTemplate messagingTemplate;
 	private final MenuTools menuTools;
+    private final PlatformTransactionManager transactionManager;
 
 	ObjectMapper om = new ObjectMapper();
 
@@ -78,7 +83,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			conversationRepo.saveAndFlush(conv);
 			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
 			return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM",
-					"Yêu cầu đã gửi, vui lòng chờ nhân viên.", null, LocalDateTime.now());
+					"Yêu cầu đã gửi, vui lòng chờ nhân viên.", null, LocalDateTime.now(),MessageStatus.SENT);
 		}
 
 		if ("/backtoAI".equals(content)) {
@@ -87,15 +92,20 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			conversationRepo.saveAndFlush(conv);
 			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
 			return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM", "Chuyển về AI thành công.",
-					null, LocalDateTime.now());
+					null, LocalDateTime.now(),MessageStatus.SENT);
 		}
 
 		if (conv.getStatus() != ConversationStatus.AI) {
 			Customer customer = customerRepo.findById(actorId)
 					.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại"));
-			ChatMessage msg = buildMessage(customer, null, conv, customer.getFirstName(), SenderType.CUSTOMER, false,
-					content);
-			chatMessageRepo.save(msg);
+			// Lưu bằng giao dịch REQUIRES_NEW để commit ngay
+			TransactionTemplate tmpl = new TransactionTemplate(transactionManager);
+			tmpl.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+			ChatMessage msg = tmpl.execute(status -> {
+				ChatMessage m = buildMessage(customer, null, conv, customer.getFirstName(), SenderType.CUSTOMER, false, content);
+				m.setStatus(MessageStatus.SENT);
+				return chatMessageRepo.saveAndFlush(m);
+			});
 			ChatResponse resp = mapper.map(msg, ChatResponse.class);
 			resp.setSenderRole(SenderType.CUSTOMER.name());
 			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
@@ -106,13 +116,35 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		Customer customer = (actorId != null) ? customerRepo.findById(actorId)
 				.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại")) : null;
 
-		ChatMessage userMsg = buildMessage(customer, null, conv, customer != null ? customer.getFirstName() : "Guest",
-				SenderType.CUSTOMER, false, content);
-		chatMessageRepo.save(userMsg);
+		// 1) Lưu CUSTOMER PENDING và AI PENDING trong giao dịch REQUIRES_NEW để commit ngay
+		TransactionTemplate tmpl = new TransactionTemplate(transactionManager);
+		tmpl.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		final ChatMessage[] pendingMsgs = tmpl.execute(status -> {
+			ChatMessage u = buildMessage(customer, null, conv, customer != null ? customer.getFirstName() : "Guest",
+					SenderType.CUSTOMER, false, content);
+			u.setStatus(MessageStatus.PENDING);
+			u = chatMessageRepo.saveAndFlush(u);
 
+			ChatMessage a = buildMessage(null, null, conv, "AI", SenderType.AI, true, "");
+			a.setStatus(MessageStatus.PENDING);
+			a = chatMessageRepo.saveAndFlush(a);
+
+			return new ChatMessage[] { u, a };
+		});
+
+		if (pendingMsgs == null || pendingMsgs.length < 2 || pendingMsgs[0] == null || pendingMsgs[1] == null) {
+			throw new IllegalStateException("Không lưu được tin nhắn PENDING cho CUSTOMER/AI");
+		}
+		ChatMessage userMsg = pendingMsgs[0];
+		ChatMessage aiMsg = pendingMsgs[1];
+
+		// Emit sau khi commit
 		ChatResponse userResp = mapper.map(userMsg, ChatResponse.class);
 		userResp.setSenderRole(SenderType.CUSTOMER.name());
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
+		ChatResponse aiPendingResp = mapper.map(aiMsg, ChatResponse.class);
+		aiPendingResp.setSenderRole(SenderType.AI.name());
+		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), aiPendingResp);
 		List<ChatMessage> last20Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
 		Collections.reverse(last20Msgs);
 
@@ -134,6 +166,8 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				.append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
 
 		String context = sb.toString();
+
+		// 2) Gọi AI để lấy nội dung trả lời thực tế
 		String aiContent = callAi(context, request.getLang());
 
 		String respContent = aiContent;
@@ -143,10 +177,9 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		try {
 			String trimmed = aiContent.trim();
 
-			if (trimmed.startsWith("```")) {
+			if (trimmed.startsWith("```") ) {
 				trimmed = trimmed.replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
 			}
-
 			JsonNode root = om.readTree(trimmed);
 
 			// Chỉ khi có key menu mới parse tiếp
@@ -161,24 +194,43 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			log.warn("Không phải JSON hợp lệ, trả về như text thông thường.");
 		}
 
-		// Nếu không parse được JSON, trả về message text của AI luôn
-		ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, respContent);
+		// Chuẩn bị biến final để dùng trong lambda giao dịch
+		final String fRespContent = respContent;
+		final boolean fIsJson = isJson;
+		final List<MenuMealResponse> fMenuList = menuList;
 
-		if (isJson && menuList != null && !menuList.isEmpty()) {
-			try {
-				aiMsg.setMenuJson(om.writeValueAsString(menuList));
-			} catch (JsonProcessingException e) {
-				log.warn("Không lưu được menu JSON: {}", e.getMessage());
+		// 3) Cập nhật AI -> SENT và CUSTOMER -> SENT trong giao dịch REQUIRES_NEW
+		ChatMessage finalizedAiMsg = null;
+		TransactionTemplate finalizeTmpl = new TransactionTemplate(transactionManager);
+		finalizeTmpl.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		finalizedAiMsg = finalizeTmpl.execute(status -> {
+			ChatMessage aiToUpdate = chatMessageRepo.findById(aiMsg.getId())
+					.orElseThrow(() -> new EntityNotFoundException("AI message không tồn tại"));
+			aiToUpdate.setContent(fRespContent);
+			if (fIsJson && fMenuList != null && !fMenuList.isEmpty()) {
+				try {
+					aiToUpdate.setMenuJson(om.writeValueAsString(fMenuList));
+				} catch (JsonProcessingException e) {
+					log.warn("Không lưu được menu JSON: {}", e.getMessage());
+				}
 			}
-		}
-		chatMessageRepo.save(aiMsg);
+			aiToUpdate.setStatus(MessageStatus.SENT);
+			aiToUpdate = chatMessageRepo.saveAndFlush(aiToUpdate);
 
-		ChatResponse resp = mapper.map(aiMsg, ChatResponse.class);
+			ChatMessage userToUpdate = chatMessageRepo.findById(userMsg.getId())
+					.orElseThrow(() -> new EntityNotFoundException("User message không tồn tại"));
+			userToUpdate.setStatus(MessageStatus.SENT);
+			chatMessageRepo.saveAndFlush(userToUpdate);
+			return aiToUpdate;
+		});
+
+		ChatResponse resp = mapper.map(finalizedAiMsg, ChatResponse.class);
 		resp.setSenderRole(SenderType.AI.name());
 		if (isJson)
 			resp.setMenu(menuList);
 
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
+
 		return resp;
 	}
 

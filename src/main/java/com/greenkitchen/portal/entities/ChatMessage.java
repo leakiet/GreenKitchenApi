@@ -2,6 +2,7 @@ package com.greenkitchen.portal.entities;
 
 import java.time.LocalDateTime;
 
+import com.greenkitchen.portal.enums.MessageStatus;
 import com.greenkitchen.portal.enums.SenderType;
 
 import jakarta.persistence.Column;
@@ -49,6 +50,10 @@ public class ChatMessage extends AbstractEntity {
     private LocalDateTime timestamp;
     // Trạng thái đã đọc hay chưa
     private Boolean isRead = false;
+    @Enumerated(EnumType.STRING)
+    
+    private MessageStatus status = MessageStatus.SENT;
+
     
     @Lob
     @Column(name = "menu_json", columnDefinition = "TEXT")

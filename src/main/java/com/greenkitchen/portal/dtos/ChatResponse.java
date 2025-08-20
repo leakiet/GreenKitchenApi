@@ -2,8 +2,10 @@
 	
 	import java.time.LocalDateTime;
 	import java.util.List;
-	
-	import lombok.AllArgsConstructor;
+
+import com.greenkitchen.portal.enums.MessageStatus;
+
+import lombok.AllArgsConstructor;
 	import lombok.Getter;
 	import lombok.NoArgsConstructor;
 	import lombok.Setter;
@@ -23,5 +25,7 @@
 	    private String content;           // nội dung tin nhắn
 	    private List<MenuMealResponse> menu;
 	    private LocalDateTime timestamp;  // thời điểm
+	    private MessageStatus  status; // "PENDING", "SENT", "FAILED"
+
 	    
 	}
