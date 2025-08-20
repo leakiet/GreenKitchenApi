@@ -24,12 +24,14 @@ import org.springframework.util.StreamUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.entities.Customer;
+import com.greenkitchen.portal.entities.CustomerReference;
 import com.greenkitchen.portal.entities.Employee;
 import com.greenkitchen.portal.enums.ConversationStatus;
 import com.greenkitchen.portal.enums.MessageStatus;
@@ -39,6 +41,7 @@ import com.greenkitchen.portal.repositories.ConversationRepository;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.EmployeeRepository;
 import com.greenkitchen.portal.services.ChatCommandService;
+import com.greenkitchen.portal.services.CustomerReferenceService;
 import com.greenkitchen.portal.tools.MenuTools;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -55,6 +58,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private final ConversationRepository conversationRepo;
 	private final CustomerRepository customerRepo;
 	private final EmployeeRepository employeeRepo;
+	private final CustomerReferenceService customerReferenceService;
 	private final ModelMapper mapper;
 	private final SimpMessagingTemplate messagingTemplate;
 	private final MenuTools menuTools;
@@ -145,8 +149,22 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		ChatResponse aiPendingResp = mapper.map(aiMsg, ChatResponse.class);
 		aiPendingResp.setSenderRole(SenderType.AI.name());
 		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), aiPendingResp);
+		//Lấy 20 tin nhắn
 		List<ChatMessage> last20Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
 		Collections.reverse(last20Msgs);
+		//Halthy info
+		List<CustomerReference> refs = customerReferenceService.getCustomerReferencesByCustomerId(actorId);
+		String healthInfoJson = "[]"; // mặc định rỗng
+		try {
+		    if (refs != null && !refs.isEmpty()) {
+		        // Nếu chỉ cần 1 hồ sơ → dùng refs.get(0)
+		    	ObjectMapper objectMapper = new ObjectMapper();
+		    	objectMapper.registerModule(new JavaTimeModule());
+		        healthInfoJson = objectMapper.writeValueAsString(refs);
+		    }
+		} catch (JsonProcessingException e) {
+		    log.warn("Không convert được health info sang JSON", e);
+		}
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("<<<HISTORY>>>\n"); // start sentinel
@@ -161,6 +179,11 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 					.append(msg.getContent().replace("\n", " ").trim()).append("\n");
 		}
 		sb.append("<<<END_HISTORY>>>\n\n");
+		//Healthy info
+		sb.append("<<<HEALTH_INFO>>>\n")
+		  .append(healthInfoJson)
+		  .append("\n<<<END_HEALTH_INFO>>>\n\n");
+
 
 		sb.append("<<<CURRENT_USER_MESSAGE>>>\n").append(request.getContent().trim())
 				.append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
