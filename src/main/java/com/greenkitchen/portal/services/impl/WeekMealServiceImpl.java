@@ -68,6 +68,13 @@ public class WeekMealServiceImpl implements WeekMealService {
         dayRes.getMeal2().setCarbs(day.getMeal2().getNutrition().getCarbs());
         dayRes.getMeal2().setFat(day.getMeal2().getNutrition().getFat());
       }
+      dayRes.setMeal3(modelMapper.map(day.getMeal3(), MenuMealResponse.class));
+      if (day.getMeal3().getNutrition() != null) {
+        dayRes.getMeal3().setCalories(day.getMeal3().getNutrition().getCalories());
+        dayRes.getMeal3().setProtein(day.getMeal3().getNutrition().getProtein());
+        dayRes.getMeal3().setCarbs(day.getMeal3().getNutrition().getCarbs());
+        dayRes.getMeal3().setFat(day.getMeal3().getNutrition().getFat());
+      }
       dayResponses.add(dayRes);
     }
     response.setDays(dayResponses);
@@ -93,6 +100,7 @@ public class WeekMealServiceImpl implements WeekMealService {
       WeekMealDay day = modelMapper.map(d, WeekMealDay.class);
       day.setMeal1(menuMealRepository.findById(d.getMeal1()).orElseThrow());
       day.setMeal2(menuMealRepository.findById(d.getMeal2()).orElseThrow());
+      day.setMeal3(menuMealRepository.findById(d.getMeal3()).orElseThrow());
       day.setWeekMeal(weekMeal);
       days.add(day);
     }
@@ -128,6 +136,13 @@ public class WeekMealServiceImpl implements WeekMealService {
         dayRes.getMeal2().setCarbs(day.getMeal2().getNutrition().getCarbs());
         dayRes.getMeal2().setFat(day.getMeal2().getNutrition().getFat());
       }
+      dayRes.setMeal3(modelMapper.map(day.getMeal3(), MenuMealResponse.class));
+      if (day.getMeal3().getNutrition() != null) {
+        dayRes.getMeal3().setCalories(day.getMeal3().getNutrition().getCalories());
+        dayRes.getMeal3().setProtein(day.getMeal3().getNutrition().getProtein());
+        dayRes.getMeal3().setCarbs(day.getMeal3().getNutrition().getCarbs());
+        dayRes.getMeal3().setFat(day.getMeal3().getNutrition().getFat());
+      }
       dayResponses.add(dayRes);
     }
     response.setDays(dayResponses);
@@ -151,38 +166,38 @@ public class WeekMealServiceImpl implements WeekMealService {
   @Override
   public WeekMealResponse updateWeekMeal(WeekMealRequest request) {
     if (request.getId() == null) {
-        throw new IllegalArgumentException("WeekMeal id is required for update");
+      throw new IllegalArgumentException("WeekMeal id is required for update");
     }
 
     WeekMeal weekMeal = weekMealRepository.findById(request.getId())
         .orElseThrow(() -> new IllegalArgumentException("WeekMeal not found with id: " + request.getId()));
 
     // So sánh dữ liệu cơ bản
-    boolean isSame =
-        weekMeal.getType().name().equalsIgnoreCase(request.getType()) &&
+    boolean isSame = weekMeal.getType().name().equalsIgnoreCase(request.getType()) &&
         weekMeal.getWeekStart().equals(request.getWeekStart()) &&
         weekMeal.getWeekEnd().equals(request.getWeekEnd());
 
     // So sánh days
     if (isSame && weekMeal.getDays().size() == request.getDays().size()) {
-        for (int i = 0; i < weekMeal.getDays().size(); i++) {
-            WeekMealDay dbDay = weekMeal.getDays().get(i);
-            WeekMealDayRequest reqDay = request.getDays().get(i);
-            if (!dbDay.getDay().equals(reqDay.getDay()) ||
-                !dbDay.getDate().equals(reqDay.getDate()) ||
-                !dbDay.getMeal1().getId().equals(reqDay.getMeal1()) ||
-                !dbDay.getMeal2().getId().equals(reqDay.getMeal2())) {
-                isSame = false;
-                break;
-            }
+      for (int i = 0; i < weekMeal.getDays().size(); i++) {
+        WeekMealDay dbDay = weekMeal.getDays().get(i);
+        WeekMealDayRequest reqDay = request.getDays().get(i);
+        if (!dbDay.getDay().equals(reqDay.getDay()) ||
+            !dbDay.getDate().equals(reqDay.getDate()) ||
+            !dbDay.getMeal1().getId().equals(reqDay.getMeal1()) ||
+            !dbDay.getMeal2().getId().equals(reqDay.getMeal2()) ||
+            !dbDay.getMeal3().getId().equals(reqDay.getMeal3())) {
+          isSame = false;
+          break;
         }
+      }
     } else {
-        isSame = false;
+      isSame = false;
     }
 
     if (isSame) {
-        // Không update, trả về dữ liệu hiện tại
-        return modelMapper.map(weekMeal, WeekMealResponse.class);
+      // Không update, trả về dữ liệu hiện tại
+      return modelMapper.map(weekMeal, WeekMealResponse.class);
     }
 
     weekMeal.setType(MenuMealType.valueOf(request.getType().toUpperCase()));
@@ -193,6 +208,7 @@ public class WeekMealServiceImpl implements WeekMealService {
     for (WeekMealDayRequest d : request.getDays()) {
       allMealIds.add(d.getMeal1());
       allMealIds.add(d.getMeal2());
+      allMealIds.add(d.getMeal3());
     }
     List<WeekMealDay> existingDays = weekMealRepository.findAll().stream()
         .flatMap(wm -> wm.getDays().stream())
@@ -200,7 +216,8 @@ public class WeekMealServiceImpl implements WeekMealService {
         .collect(Collectors.toList());
     for (Long mealId : allMealIds) {
       if (existingDays.stream().anyMatch(day -> (day.getMeal1() != null && day.getMeal1().getId().equals(mealId)) ||
-          (day.getMeal2() != null && day.getMeal2().getId().equals(mealId)))) {
+          (day.getMeal2() != null && day.getMeal2().getId().equals(mealId)) ||
+          (day.getMeal3() != null && day.getMeal3().getId().equals(mealId)))) {
         throw new IllegalArgumentException("MenuMeal with id " + mealId + " is already used in another WeekMealDay");
       }
     }
@@ -217,6 +234,8 @@ public class WeekMealServiceImpl implements WeekMealService {
           .orElseThrow(() -> new IllegalArgumentException("MenuMeal not found with id: " + d.getMeal1())));
       day.setMeal2(menuMealRepository.findById(d.getMeal2())
           .orElseThrow(() -> new IllegalArgumentException("MenuMeal not found with id: " + d.getMeal2())));
+      day.setMeal3(menuMealRepository.findById(d.getMeal3())
+          .orElseThrow(() -> new IllegalArgumentException("MenuMeal not found with id: " + d.getMeal3())));
       day.setWeekMeal(weekMeal);
       updatedDays.add(day);
     }
