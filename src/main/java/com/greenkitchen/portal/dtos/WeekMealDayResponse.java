@@ -11,4 +11,5 @@ public class WeekMealDayResponse {
   private LocalDate date;
   private MenuMealResponse meal1; // Trả về luôn entity hoặc DTO của MenuMeal
   private MenuMealResponse meal2;
+  private MenuMealResponse meal3;
 }

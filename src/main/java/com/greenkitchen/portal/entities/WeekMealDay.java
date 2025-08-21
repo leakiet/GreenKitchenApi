@@ -36,4 +36,8 @@ public class WeekMealDay extends AbstractEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "meal2_id")
   private MenuMeal meal2;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "meal3_id")
+  private MenuMeal meal3;
 }
