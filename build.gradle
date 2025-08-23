@@ -67,8 +67,8 @@ implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'com.google.firebase:firebase-admin:9.2.0'
 
 	// Spring AI
-	implementation platform("org.springframework.ai:spring-ai-bom:1.0.0-M6")
-	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M6'
+	implementation platform("org.springframework.ai:spring-ai-bom:1.0.1")
+	implementation "org.springframework.ai:spring-ai-starter-model-openai"
 	//WebSocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	
