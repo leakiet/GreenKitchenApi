@@ -75,6 +75,13 @@ public class MenuMealServiceImpl implements MenuMealService {
         existingMenuMeal.getNutrition().setCarbs(dto.getCarbs());
         existingMenuMeal.getNutrition().setFat(dto.getFat());
 
+        // Chỉ update image nếu dữ liệu mới khác dữ liệu cũ và không null/rỗng
+        if (dto.getImage() != null && !dto.getImage().isEmpty()
+                && !dto.getImage().equals(existingMenuMeal.getImage())) {
+            existingMenuMeal.setImage(dto.getImage());
+        }
+
+        // Update các trường khác
         modelMapper.map(dto, existingMenuMeal);
         existingMenuMeal.setId(id);
 

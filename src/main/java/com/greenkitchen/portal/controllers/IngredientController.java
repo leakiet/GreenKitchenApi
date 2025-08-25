@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.greenkitchen.portal.dtos.IngredientRequest;
 import com.greenkitchen.portal.dtos.IngredientResponse;
 import com.greenkitchen.portal.entities.Ingredients;
+import com.greenkitchen.portal.entities.NutritionInfo;
 import com.greenkitchen.portal.services.IngredientService;
 import com.greenkitchen.portal.utils.ImageUtils;
 
@@ -67,54 +68,99 @@ public class IngredientController {
         return ResponseEntity.ok(grouped);
     }
 
-    @PostMapping("/")
-    public ResponseEntity<Ingredients> addIngredient(@ModelAttribute IngredientRequest ingredientRequest,
+    @PostMapping()
+    public ResponseEntity<?> addIngredient(@ModelAttribute IngredientRequest ingredientRequest,
             @RequestParam("imageFile") MultipartFile file) {
-
-        Ingredients ingredient = modelMapper.map(ingredientRequest, Ingredients.class);
-        if (file != null && !file.isEmpty()) {
-            String imageUrl = ImageUtils.uploadImage(file);
-            ingredient.setImage(imageUrl);
+        try {
+            Ingredients ingredient = modelMapper.map(ingredientRequest, Ingredients.class);
+            NutritionInfo nutrition = new NutritionInfo();
+            nutrition.setCalories(ingredientRequest.getCalories());
+            nutrition.setProtein(ingredientRequest.getProtein());
+            nutrition.setCarbs(ingredientRequest.getCarbs());
+            nutrition.setFat(ingredientRequest.getFat());
+            ingredient.setNutrition(nutrition);
+            if (file != null && !file.isEmpty()) {
+                String imageUrl = ImageUtils.uploadImage(file);
+                ingredient.setImage(imageUrl);
+            }
+            Ingredients saved = ingredientService.save(ingredient);
+            return ResponseEntity.status(201).body(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
-        Ingredients saved = ingredientService.save(ingredient);
-        return ResponseEntity.status(201).body(saved);
+    }
+
+    @PutMapping("/{id}/image")
+    public ResponseEntity<?> updateIngredientImage(
+            @PathVariable("id") Long id,
+            @RequestParam("imageFile") MultipartFile file) {
+        try {
+            Ingredients existing = ingredientService.findById(id);
+            if (existing == null) {
+                return ResponseEntity.status(404).body("Ingredient not found");
+            }
+            String oldImage = existing.getImage();
+            if (file != null && !file.isEmpty()) {
+                if (oldImage != null && !oldImage.isEmpty()) {
+                    ImageUtils.deleteImage(oldImage);
+                }
+                String imageUrl = ImageUtils.uploadImage(file);
+                existing.setImage(imageUrl);
+                ingredientService.update(existing);
+                return ResponseEntity.ok("Image updated successfully");
+            } else {
+                return ResponseEntity.badRequest().body("No image file provided");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Ingredients> updateIngredient(
+    public ResponseEntity<?> updateIngredient(
             @PathVariable("id") Long id,
-            @ModelAttribute IngredientRequest ingredientRequest,
-            @RequestParam("imageFile") MultipartFile file) {
-
-        Ingredients existing = ingredientService.findById(id);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        boolean isSame = existing.getTitle().equals(ingredientRequest.getTitle()) &&
-                existing.getType() == ingredientRequest.getType() &&
-                existing.getNutrition().getCalories().equals(ingredientRequest.getCalories()) &&
-                existing.getNutrition().getProtein().equals(ingredientRequest.getProtein()) &&
-                existing.getNutrition().getCarbs().equals(ingredientRequest.getCarbs()) &&
-                existing.getNutrition().getFat().equals(ingredientRequest.getFat()) &&
-                (file == null || file.isEmpty());
-
-        if (isSame) {
-            return ResponseEntity.ok(existing);
-        }
-
-        modelMapper.map(ingredientRequest, existing);
-
-        if (file != null && !file.isEmpty()) {
-            if (existing.getImage() != null && !existing.getImage().isEmpty()) {
-                ImageUtils.deleteImage(existing.getImage());
+            @ModelAttribute IngredientRequest ingredientRequest) {
+        try {
+            Ingredients existing = ingredientService.findById(id);
+            if (existing == null) {
+                return ResponseEntity.status(404).body("Ingredient not found");
             }
-            String imageUrl = ImageUtils.uploadImage(file);
-            existing.setImage(imageUrl);
-        }
 
-        Ingredients updated = ingredientService.update(existing);
-        return ResponseEntity.ok(updated);
+            boolean isSame = existing.getTitle().equals(ingredientRequest.getTitle()) &&
+                    existing.getType() == ingredientRequest.getType() &&
+                    existing.getNutrition().getCalories().equals(ingredientRequest.getCalories()) &&
+                    existing.getNutrition().getProtein().equals(ingredientRequest.getProtein()) &&
+                    existing.getNutrition().getCarbs().equals(ingredientRequest.getCarbs()) &&
+                    existing.getNutrition().getFat().equals(ingredientRequest.getFat());
+
+            if (isSame) {
+                return ResponseEntity.ok(existing);
+            }
+
+            modelMapper.map(ingredientRequest, existing);
+
+            if (existing.getNutrition() == null) {
+                existing.setNutrition(new NutritionInfo());
+            }
+            existing.getNutrition().setCalories(ingredientRequest.getCalories());
+            existing.getNutrition().setProtein(ingredientRequest.getProtein());
+            existing.getNutrition().setCarbs(ingredientRequest.getCarbs());
+            existing.getNutrition().setFat(ingredientRequest.getFat());
+
+            existing.setPrice(ingredientRequest.getPrice());
+            existing.setStock(ingredientRequest.getStock());
+
+            // Không xử lý file/image ở đây nữa
+
+            Ingredients updated = ingredientService.update(existing);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
@@ -133,8 +179,14 @@ public class IngredientController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteById(@PathVariable("id") Long id) {
-        ingredientService.deleteById(id);
-        return ResponseEntity.ok("Ingredient deleted successfully");
+    public ResponseEntity<?> deleteById(@PathVariable("id") Long id) {
+        try {
+            ingredientService.deleteById(id);
+            return ResponseEntity.ok("Ingredient deleted successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
+        }
     }
 }

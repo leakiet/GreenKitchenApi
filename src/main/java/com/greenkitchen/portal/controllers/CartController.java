@@ -29,12 +29,17 @@ public class CartController {
      * Get cart by customer ID
      */
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<CartResponse> getCartByCustomer(@PathVariable("customerId") Long customerId) {
+    public ResponseEntity<?> getCartByCustomer(@PathVariable("customerId") Long customerId) {
         try {
             CartResponse cart = cartService.getCartByCustomerId(customerId);
+            if (cart == null) {
+                return ResponseEntity.status(404).body("Cart not found for customer: " + customerId);
+            }
             return ResponseEntity.ok(cart);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error retrieving cart for customer: " + customerId);
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -42,18 +47,17 @@ public class CartController {
      * Sync cart from FE Redux to BE Database
      */
     @PostMapping("/sync")
-    public ResponseEntity<CartResponse> syncCart(@RequestBody CartRequest request) {
+    public ResponseEntity<?> syncCart(@RequestBody CartRequest request) {
         try {
             if (request.getCustomerId() == null) {
-                return ResponseEntity.badRequest().body(null);
+                return ResponseEntity.badRequest().body("CustomerId is required");
             }
             CartResponse cart = cartService.syncCart(request.getCustomerId(), request);
             return ResponseEntity.ok(cart);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            // Log chi tiết lỗi để debug
-            System.err.println("Error syncing cart: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Error syncing cart: " + e.getMessage(), e);
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -61,17 +65,19 @@ public class CartController {
      * Add item to cart
      */
     @PostMapping("/customer/items/{customerId}")
-    public ResponseEntity<CartItemResponse> addItemToCart(
+    public ResponseEntity<?> addItemToCart(
             @PathVariable("customerId") Long customerId,
             @RequestBody CartItemRequest itemRequest) {
         try {
             if (itemRequest.getQuantity() == null || itemRequest.getUnitPrice() == null) {
-                return ResponseEntity.badRequest().body(null);
+                return ResponseEntity.badRequest().body("Quantity and UnitPrice are required");
             }
             CartItemResponse item = cartService.addItemToCart(customerId, itemRequest);
             return ResponseEntity.ok(item);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error adding item to cart");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -79,17 +85,22 @@ public class CartController {
      * Update cart item
      */
     @PutMapping("/items/{itemId}")
-    public ResponseEntity<CartItemResponse> updateCartItem(
+    public ResponseEntity<?> updateCartItem(
             @PathVariable("itemId") Long itemId,
             @RequestBody CartItemRequest itemRequest) {
         try {
             if (itemRequest.getQuantity() == null || itemRequest.getUnitPrice() == null) {
-                return ResponseEntity.badRequest().body(null);
+                return ResponseEntity.badRequest().body("Quantity and UnitPrice are required");
             }
             CartItemResponse item = cartService.updateCartItem(itemId, itemRequest);
+            if (item == null) {
+                return ResponseEntity.status(404).body("Cart item not found with id: " + itemId);
+            }
             return ResponseEntity.ok(item);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error updating cart item");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -97,14 +108,16 @@ public class CartController {
      * Remove item from cart
      */
     @DeleteMapping("/customer/{customerId}/items/{itemId}")
-    public ResponseEntity<String> removeItemFromCart(
+    public ResponseEntity<?> removeItemFromCart(
             @PathVariable("customerId") Long customerId,
             @PathVariable("itemId") Long itemId) {
         try {
             cartService.removeItemFromCart(customerId, itemId);
             return ResponseEntity.ok("Item removed successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error removing item from cart");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -112,12 +125,14 @@ public class CartController {
      * Clear entire cart
      */
     @DeleteMapping("/customer/{customerId}")
-    public ResponseEntity<String> clearCart(@PathVariable("customerId") Long customerId) {
+    public ResponseEntity<?> clearCart(@PathVariable("customerId") Long customerId) {
         try {
             cartService.clearCart(customerId);
             return ResponseEntity.ok("Cart cleared successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error clearing cart");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -125,27 +140,31 @@ public class CartController {
      * Create or update entire cart
      */
     @PostMapping
-    public ResponseEntity<CartResponse> createOrUpdateCart(@RequestBody CartRequest request) {
+    public ResponseEntity<?> createOrUpdateCart(@RequestBody CartRequest request) {
         try {
             if (request.getCustomerId() == null) {
-                return ResponseEntity.badRequest().body(null);
+                return ResponseEntity.badRequest().body("CustomerId is required");
             }
             CartResponse cart = cartService.createOrUpdateCart(request);
             return ResponseEntity.ok(cart);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error creating/updating cart");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
     @PostMapping("/customer/{customerId}/items/{itemId}/increase")
-    public ResponseEntity<CartItemResponse> increaseItemQuantity(
+    public ResponseEntity<?> increaseItemQuantity(
             @PathVariable("customerId") Long customerId,
             @PathVariable("itemId") Long itemId) {
         try {
             CartItemResponse item = cartService.increaseItemQuantity(customerId, itemId);
             return ResponseEntity.ok(item);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error increasing item quantity: " + e.getMessage());
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
@@ -153,14 +172,16 @@ public class CartController {
      * Decrease item quantity
      */
     @PostMapping("/customer/{customerId}/items/{itemId}/decrease")
-    public ResponseEntity<CartItemResponse> decreaseItemQuantity(
+    public ResponseEntity<?> decreaseItemQuantity(
             @PathVariable("customerId") Long customerId,
             @PathVariable("itemId") Long itemId) {
         try {
             CartItemResponse item = cartService.decreaseItemQuantity(customerId, itemId);
             return ResponseEntity.ok(item);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Error decreasing item quantity: " + e.getMessage());
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 }

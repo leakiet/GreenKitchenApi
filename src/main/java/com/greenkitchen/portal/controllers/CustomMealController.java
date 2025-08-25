@@ -30,54 +30,68 @@ public class CustomMealController {
     }
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<CustomMealResponse>> getByCustomer(@PathVariable("customerId") Long customerId) {
+    public ResponseEntity<?> getByCustomer(@PathVariable("customerId") Long customerId) {
         try {
             List<CustomMealResponse> res = customMealService.getCustomMealsByCustomerId(customerId);
             if (res.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(404).body("No custom meals found for customer id: " + customerId);
             }
             return ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Custom meal not found with id: " + customerId);
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
     @PostMapping
-    public ResponseEntity<CustomMealResponse> create(@RequestBody CustomMealRequest request) {
+    public ResponseEntity<?> create(@RequestBody CustomMealRequest request) {
         try {
             if (request.getCustomerId() == null || request.getTitle() == null) {
-                return ResponseEntity.badRequest().body(null);
+                return ResponseEntity.badRequest().body("CustomerId and Title are required");
             }
-            return ResponseEntity.ok(customMealService.createCustomMeal(request));
+            CustomMealResponse created = customMealService.createCustomMeal(request);
+            return ResponseEntity.status(201).body(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Invalid request data");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomMealResponse> update(@PathVariable("id") Long id,
+    public ResponseEntity<?> update(@PathVariable("id") Long id,
             @RequestBody CustomMealRequest request) {
         try {
             if (request.getCustomerId() == null || request.getTitle() == null) {
-                return ResponseEntity.badRequest().body(null);
+                return ResponseEntity.badRequest().body("CustomerId and Title are required");
             }
-            return ResponseEntity.ok(customMealService.updateCustomMeal(id, request));
+            CustomMealResponse updated = customMealService.updateCustomMeal(id, request);
+            if (updated == null) {
+                return ResponseEntity.status(404).body("Custom meal not found with id: " + id);
+            }
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Invalid request data");
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("id") Long id) {
+    public ResponseEntity<?> delete(@PathVariable("id") Long id) {
         try {
-            if (!customMealService.getAllCustomMeals().stream()
-                    .anyMatch(meal -> meal.getId().equals(id))) {
-                return ResponseEntity.notFound().build();
+            boolean exists = customMealService.getAllCustomMeals().stream()
+                    .anyMatch(meal -> meal.getId().equals(id));
+            if (!exists) {
+                return ResponseEntity.status(404).body("Custom meal not found with id: " + id);
             }
             customMealService.deleteCustomMeal(id);
             return ResponseEntity.ok("Deleted successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            throw new RuntimeException("Custom meal not found with id: " + id);
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
 }
