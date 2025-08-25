@@ -10,9 +10,9 @@ import com.greenkitchen.portal.services.CloudinaryService;
 
 import jakarta.servlet.annotation.MultipartConfig;
 
-@MultipartConfig(
-    maxFileSize = 2 * 1024 * 1024
-)
+// @MultipartConfig(
+//     maxFileSize = 10 * 1024 * 1024
+// )
 @Component
 public class ImageUtils {
   @Autowired

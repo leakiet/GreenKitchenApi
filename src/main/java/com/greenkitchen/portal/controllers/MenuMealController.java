@@ -7,11 +7,14 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,7 +49,8 @@ public class MenuMealController {
   }
 
   @PostMapping("/customers")
-  public ResponseEntity<MenuMeal> createMenuMeal(@ModelAttribute MenuMealRequest request,
+  @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
+  public ResponseEntity<?> createMenuMeal(@ModelAttribute MenuMealRequest request,
       @RequestParam("imageFile") MultipartFile file) {
     try {
       String baseSlug = SlugUtils.toSlug(request.getTitle());
@@ -59,7 +63,6 @@ public class MenuMealController {
         request.setImage(imageUrl);
       }
 
-      // Parse allergensString thành Set<MenuIngredients>
       if (request.getMenuIngredientsString() != null && !request.getMenuIngredientsString().isEmpty()) {
         Set<MenuIngredients> allergenSet = Arrays.stream(request.getMenuIngredientsString().split(","))
             .map(String::trim)
@@ -71,36 +74,76 @@ public class MenuMealController {
 
       MenuMeal menuMeal = menuMealService.createMenuMeal(request);
       return ResponseEntity.ok(menuMeal);
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
     } catch (Exception e) {
-      return ResponseEntity.status(500).build();
+      return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
     }
   }
 
-  @PutMapping("/{id}")
-  public ResponseEntity<MenuMeal> updateMenuMeal(@PathVariable("id") Long id, @ModelAttribute MenuMealRequest request,
+  @PutMapping("/customers/{id}/image")
+  @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
+  public ResponseEntity<?> updateMenuMealImage(
+      @PathVariable("id") Long id,
       @RequestParam("imageFile") MultipartFile file) {
+    try {
+      MenuMealResponse existingMenuMeal = menuMealService.getMenuMealById(id);
+      if (existingMenuMeal == null) {
+        return ResponseEntity.status(404).body("MenuMeal not found");
+      }
 
-    MenuMealResponse existingMenuMeal = menuMealService.getMenuMealById(id);
-    if (existingMenuMeal == null) {
-      return ResponseEntity.notFound().build();
-    }
+      // Xóa ảnh cũ nếu có
+      if (existingMenuMeal.getImage() != null && !existingMenuMeal.getImage().isEmpty()) {
+        imageUtils.deleteImage(existingMenuMeal.getImage());
+      }
 
-    if (!existingMenuMeal.getTitle().equals(request.getTitle())) {
-      String baseSlug = SlugUtils.toSlug(request.getTitle());
-      String uniqueSlug = SlugUtils.generateUniqueSlug(baseSlug,
-          slug -> !slug.equals(existingMenuMeal.getSlug()) && menuMealService.existsBySlug(slug));
-      request.setSlug(uniqueSlug);
-    } else {
-      request.setSlug(existingMenuMeal.getSlug());
-    }
-
-    if (file != null && !file.isEmpty()) {
+      // Upload ảnh mới
       String imageUrl = imageUtils.uploadImage(file);
-      request.setImage(imageUrl);
-    }
 
-    MenuMeal menuMeal = menuMealService.updateMenuMeal(id, request);
-    return ResponseEntity.ok(menuMeal);
+      // Tạo request chỉ chứa ảnh mới
+      MenuMealRequest request = new MenuMealRequest();
+      request.setImage(imageUrl);
+
+      // Cập nhật ảnh cho MenuMeal
+      MenuMeal menuMeal = menuMealService.updateMenuMeal(id, request);
+      return ResponseEntity.ok(menuMeal);
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    } catch (Exception e) {
+      return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
+    }
+  }
+
+  @PutMapping("/customers/{id}")
+  @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
+  public ResponseEntity<?> updateMenuMeal(
+      @PathVariable("id") Long id,
+      @RequestBody MenuMealRequest request) {
+    try {
+      MenuMealResponse existingMenuMeal = menuMealService.getMenuMealById(id);
+      if (existingMenuMeal == null) {
+        return ResponseEntity.status(404).body("MenuMeal not found");
+      }
+
+      if (!existingMenuMeal.getTitle().equals(request.getTitle())) {
+        String baseSlug = SlugUtils.toSlug(request.getTitle());
+        String uniqueSlug = SlugUtils.generateUniqueSlug(baseSlug,
+            slug -> !slug.equals(existingMenuMeal.getSlug()) && menuMealService.existsBySlug(slug));
+        request.setSlug(uniqueSlug);
+      } else {
+        request.setSlug(existingMenuMeal.getSlug());
+      }
+
+      // Giữ nguyên ảnh cũ
+      request.setImage(existingMenuMeal.getImage());
+
+      MenuMeal menuMeal = menuMealService.updateMenuMeal(id, request);
+      return ResponseEntity.ok(menuMeal);
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    } catch (Exception e) {
+      return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
+    }
   }
 
   @GetMapping("/customers/{id}")
@@ -121,13 +164,16 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeal);
   }
 
-  @GetMapping("/delete/{id}")
-  public ResponseEntity<String> deleteMenuMeal(@PathVariable("id") Long id) {
+  @DeleteMapping("/customers/{id}")
+  @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
+  public ResponseEntity<?> deleteMenuMeal(@PathVariable("id") Long id) {
     try {
       menuMealService.deleteMenuMeal(id);
+      return ResponseEntity.ok("MenuMeal deleted successfully");
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.status(404).body(e.getMessage());
     } catch (Exception e) {
-      return ResponseEntity.status(500).body("Error deleting MenuMeal: " + e.getMessage());
+      return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
     }
-    return ResponseEntity.ok("MenuMeal deleted successfully");
   }
 }

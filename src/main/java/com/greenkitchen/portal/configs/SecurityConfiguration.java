@@ -3,6 +3,7 @@ package com.greenkitchen.portal.configs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -22,7 +23,7 @@ import com.greenkitchen.portal.security.MyUserDetailService;
 public class SecurityConfiguration {
   @Autowired
   private MyUserDetailService myDetailsService;
-  
+
   @Bean
   public AuthTokenFilter authenticationJwtTokenFilter() {
     return new AuthTokenFilter();
@@ -34,11 +35,14 @@ public class SecurityConfiguration {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             // Public endpoints - không cần authentication
-        		.requestMatchers("/apis/v1/ws/**").permitAll()
-            .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
-            .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
+            .requestMatchers("/apis/v1/ws/**").permitAll()
+            .requestMatchers("/apis/v1/auth/**").permitAll() // Login, register, refresh-token
+            .requestMatchers("/apis/v1/chat/**").permitAll() // Chat endpoints
             .requestMatchers("/apis/v1/ingredients/**").permitAll() // ingredients
-            .requestMatchers("/apis/v1/menu-meals/**").permitAll()    
+            // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers/**").permitAll()
+            // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers").permitAll()
+            .requestMatchers("/apis/v1/menu-meals/customers/**").permitAll()
+
             .requestMatchers("/apis/v1/carts/**").permitAll()
             .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll() // Custom meals
             .requestMatchers("/apis/v1/paypal/**").permitAll() // PayPal endpoints
@@ -55,19 +59,17 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/coupons/**").permitAll()
             .requestMatchers("/apis/v1/customer-coupons/**").permitAll()
 
-
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
             .requestMatchers("/apis/v1/posts/**").permitAll() // Posts endpoints
-            
+
             // Default: require authentication for everything else
-            .anyRequest().authenticated()
-        )
+            .anyRequest().authenticated())
         .formLogin(form -> form.disable());
-        
+
     // Add JWT filter before UsernamePasswordAuthenticationFilter
     http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
-    
+
     return http.build();
   }
 
