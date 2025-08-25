@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.persistence.PrePersist;
 
 @Entity
 @Getter @Setter @NoArgsConstructor
@@ -63,8 +64,14 @@ public class ChatMessage extends AbstractEntity {
 
     @Version
     @JsonIgnore
-    private Long version;
+    private Long version = 0L;
 
+    @PrePersist
+    protected void onPersist() {
+        if (this.version == null) {
+            this.version = 0L;
+        }
+    }
 
 
 }
