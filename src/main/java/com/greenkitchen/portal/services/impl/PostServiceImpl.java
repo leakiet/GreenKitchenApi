@@ -6,14 +6,21 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 import com.greenkitchen.portal.dtos.PostRequest;
 import com.greenkitchen.portal.dtos.PostResponse;
+import com.greenkitchen.portal.dtos.PagedResponse;
 import com.greenkitchen.portal.entities.Post;
 import com.greenkitchen.portal.entities.PostCategory;
+import com.greenkitchen.portal.enums.PostStatus;
 import com.greenkitchen.portal.repositories.PostCategoryRepository;
 import com.greenkitchen.portal.repositories.PostRepository;
 import com.greenkitchen.portal.services.PostService;
+import com.greenkitchen.portal.utils.ImageUtils;
 import com.greenkitchen.portal.utils.SlugUtils;
 
 @Service
@@ -25,10 +32,44 @@ public class PostServiceImpl implements PostService {
     @Autowired
     private PostCategoryRepository postCategoryRepository;
 
+    @Autowired
+    private ImageUtils imageUtils;
+
     @Override
     public List<PostResponse> listAll() {
-        List<Post> posts = postRepository.findAllActive();
-        return posts.stream().map(this::toResponse).collect(Collectors.toList());
+        return postRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList()) ;
+    }
+
+    @Override
+    public PagedResponse<PostResponse> listPaged(int page, int size) {
+        Pageable pg = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+        Page<Post> p = postRepository.findAllActivePaged(pg);
+        PagedResponse<PostResponse> resp = new PagedResponse<>();
+        resp.setItems(p.stream().map(this::toResponse).collect(Collectors.toList()));
+        resp.setTotal(p.getTotalElements());
+        resp.setPage(page);
+        resp.setSize(size);
+        return resp;
+    }
+
+    @Override
+    public PagedResponse<PostResponse> listFilteredPaged(int page, int size, String status, Long categoryId, String q) {
+        Pageable pg = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+        PostStatus st = null;
+        if (status != null && !status.isEmpty()) {
+            try {
+                st = PostStatus.valueOf(status);
+            } catch (IllegalArgumentException ex) {
+                st = null;
+            }
+        }
+        Page<Post> p = postRepository.findFilteredPaged(st, categoryId, q == null || q.isEmpty() ? null : q, pg);
+        PagedResponse<PostResponse> resp = new PagedResponse<>();
+        resp.setItems(p.stream().map(this::toResponse).collect(Collectors.toList()));
+        resp.setTotal(p.getTotalElements());
+        resp.setPage(page);
+        resp.setSize(size);
+        return resp;
     }
 
     @Override
@@ -41,7 +82,6 @@ public class PostServiceImpl implements PostService {
         String uniqueSlug = SlugUtils.generateUniqueSlug(baseSlug, slug -> postRepository.existsBySlug(slug));
         p.setSlug(uniqueSlug);
 
-        p.setExcerpt(req.getExcerpt());
         p.setAuthorId(req.getAuthorId());
         if (req.getCategoryId() != null) {
             PostCategory cat = postCategoryRepository.findById(req.getCategoryId()).orElse(null);
@@ -49,7 +89,16 @@ public class PostServiceImpl implements PostService {
         }
         p.setImageUrl(req.getImageUrl());
         p.setPublishedAt(req.getPublishedAt());
-        p.setStatus(req.getStatus() == null ? com.greenkitchen.portal.enums.PostStatus.DRAFT : req.getStatus());
+        // parse status string from request, default to DRAFT
+        if (req.getStatus() == null) {
+            p.setStatus(PostStatus.DRAFT);
+        } else {
+            try {
+                p.setStatus(PostStatus.valueOf(req.getStatus()));
+            } catch (IllegalArgumentException ex) {
+                p.setStatus(PostStatus.DRAFT);
+            }
+        }
 
         return postRepository.save(p);
     }
@@ -68,14 +117,20 @@ public class PostServiceImpl implements PostService {
             existing.setSlug(uniqueSlug);
         }
 
-        existing.setExcerpt(req.getExcerpt() != null ? req.getExcerpt() : existing.getExcerpt());
         if (req.getCategoryId() != null) {
             PostCategory cat = postCategoryRepository.findById(req.getCategoryId()).orElse(null);
             existing.setCategory(cat);
         }
         existing.setImageUrl(req.getImageUrl() != null ? req.getImageUrl() : existing.getImageUrl());
         existing.setPublishedAt(req.getPublishedAt() != null ? req.getPublishedAt() : existing.getPublishedAt());
-        existing.setStatus(req.getStatus() != null ? req.getStatus() : existing.getStatus());
+        // update status from string in request if provided
+        if (req.getStatus() != null) {
+            try {
+                existing.setStatus(PostStatus.valueOf(req.getStatus()));
+            } catch (IllegalArgumentException ex) {
+                // ignore invalid status and keep existing
+            }
+        }
 
         existing.setUpdatedAt(LocalDateTime.now());
         return postRepository.save(existing);
@@ -92,13 +147,19 @@ public class PostServiceImpl implements PostService {
         return p == null ? null : toResponse(p);
     }
 
+    @Override
+    public PostResponse getBySlug(String slug) {
+        if (slug == null || slug.isEmpty()) return null;
+        Post p = postRepository.findBySlug(slug);
+        return p == null ? null : toResponse(p);
+    }
+
     private PostResponse toResponse(Post p) {
         PostResponse r = new PostResponse();
         r.setId(p.getId());
         r.setTitle(p.getTitle());
         r.setContent(p.getContent());
         r.setSlug(p.getSlug());
-        r.setExcerpt(p.getExcerpt());
         r.setAuthorId(p.getAuthorId());
         if (p.getCategory() != null) {
             r.setCategoryId(p.getCategory().getId());
@@ -106,9 +167,19 @@ public class PostServiceImpl implements PostService {
         }
         r.setImageUrl(p.getImageUrl());
         r.setPublishedAt(p.getPublishedAt());
-        r.setStatus(p.getStatus());
+    // send status as string for easier frontend handling
+    r.setStatus(p.getStatus() != null ? p.getStatus().name() : null);
         r.setCreatedAt(p.getCreatedAt());
         r.setUpdatedAt(p.getUpdatedAt());
         return r;
+    }
+
+    @Override
+    public String uploadImage(MultipartFile file) {
+        if(file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Invalid file");
+        }
+
+        return imageUtils.uploadImage(file);
     }
 }
