@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.controllers;
 
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +33,7 @@ public class OrderController {
 
     // Tạo đơn hàng mới
     @PostMapping
-    public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {
         //Tao order
         Order order = orderService.createOrder(request);
 
@@ -43,7 +42,7 @@ public class OrderController {
             membershipService.updateMembershipAfterPurchase(request.getCustomerId(), order.getTotalAmount(), order.getPointEarn(), order.getId());
         }
 
-        return new ResponseEntity<>(order, HttpStatus.CREATED);
+        return ResponseEntity.ok(order);
     }
 
     // Lấy thông tin đơn hàng theo ID
