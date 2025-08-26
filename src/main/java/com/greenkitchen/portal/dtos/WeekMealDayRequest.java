@@ -12,4 +12,6 @@ public class WeekMealDayRequest {
   private LocalDate date;
   private Long meal1;
   private Long meal2;
+  private Long meal3;
+
 }

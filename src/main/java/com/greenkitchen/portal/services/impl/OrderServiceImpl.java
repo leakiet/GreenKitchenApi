@@ -96,7 +96,7 @@ public class OrderServiceImpl implements OrderService {
     Double pointEarn = Math.round(request.getTotalAmount() * 0.001 * 100.0) / 100.0;
     order.setPointEarn(pointEarn);
 
-    // Tạo OrderItems manually
+    // Tạo OrderItems
     List<OrderItem> orderItems = request.getOrderItems().stream()
         .map(itemRequest -> {
           OrderItem orderItem = new OrderItem();
@@ -120,9 +120,9 @@ public class OrderServiceImpl implements OrderService {
               CustomMeal customMeal = customMealRepository.findById(itemRequest.getCustomMealId())
                   .orElseThrow(() -> new RuntimeException("CustomMeal not found"));
               orderItem.setCustomMeal(customMeal);
-              // orderItem.setTitle(customMeal.getTitle());
-              // orderItem.setDescription(customMeal.getDescription());
-              // orderItem.setImage(customMeal.getImage());
+              orderItem.setTitle(customMeal.getTitle());
+              orderItem.setDescription(customMeal.getDescription());
+              orderItem.setImage(customMeal.getImage());
             case WEEK_MEAL:
               // WeekMeal weekMeal = weekMealRepository.findById(itemRequest.getWeekMealId())
               //     .orElseThrow(() -> new RuntimeException("WeekMeal not found"));
