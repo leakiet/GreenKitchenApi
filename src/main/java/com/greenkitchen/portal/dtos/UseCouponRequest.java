@@ -3,7 +3,6 @@ package com.greenkitchen.portal.dtos;
 import java.time.LocalDateTime;
 
 import com.greenkitchen.portal.enums.CustomerCouponStatus;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

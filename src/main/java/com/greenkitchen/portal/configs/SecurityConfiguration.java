@@ -63,6 +63,8 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
             .requestMatchers("/apis/v1/posts/**").permitAll() // Posts endpoints
 
+            .requestMatchers("/apis/v1/uploads/**").permitAll()
+            
             // Default: require authentication for everything else
             .anyRequest().authenticated())
         .formLogin(form -> form.disable());

@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
@@ -26,14 +28,11 @@ public class Post extends AbstractEntity {
     private String title;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
     @Column(nullable = false, length = 255, unique = true)
     private String slug;
-
-    @Lob
-    private String excerpt;
 
     // keep simple: store author id (could be customer/employee id)
     @Column(name = "author_id", nullable = false)
@@ -49,6 +48,7 @@ public class Post extends AbstractEntity {
     private LocalDateTime publishedAt;
 
     @Column(nullable = false, length = 50)
+    @Enumerated(EnumType.STRING)
     private PostStatus status = PostStatus.DRAFT;
 
 }

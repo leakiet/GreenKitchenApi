@@ -1,7 +1,5 @@
 package com.greenkitchen.portal.dtos;
 
-import org.checkerframework.checker.units.qual.A;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
