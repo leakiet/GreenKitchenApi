@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenkitchen.portal.dtos.ChatResponse;
 import com.greenkitchen.portal.dtos.ConversationResponse;
-import com.greenkitchen.portal.dtos.MenuMealResponse;
+import com.greenkitchen.portal.dtos.MenuMealLiteResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.entities.Customer;
@@ -56,7 +56,7 @@ public class ChatQueryServiceImpl implements ChatQueryService {
             if (m.getMenuJson() != null) {
                 try {
                     ObjectMapper om = new ObjectMapper();
-                    List<MenuMealResponse> menuList = om.readerForListOf(MenuMealResponse.class)
+                    List<MenuMealLiteResponse> menuList = om.readerForListOf(MenuMealLiteResponse.class)
                             .readValue(m.getMenuJson());
                     resp.setMenu(menuList);
                 } catch (Exception ex) {
@@ -86,7 +86,7 @@ public class ChatQueryServiceImpl implements ChatQueryService {
             if (m.getMenuJson() != null) {
                 try {
                     ObjectMapper om = new ObjectMapper();
-                    List<MenuMealResponse> menuList = om.readerForListOf(MenuMealResponse.class)
+                    List<MenuMealLiteResponse> menuList = om.readerForListOf(MenuMealLiteResponse.class)
                             .readValue(m.getMenuJson());
                     resp.setMenu(menuList);
                 } catch (Exception ex) {

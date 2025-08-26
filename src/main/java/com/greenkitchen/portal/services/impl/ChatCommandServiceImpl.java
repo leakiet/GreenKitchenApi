@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
-import com.greenkitchen.portal.dtos.MenuMealResponse;
+import com.greenkitchen.portal.dtos.MenuMealLiteResponse;
 import com.greenkitchen.portal.dtos.MenuMealsAiResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
@@ -244,34 +244,49 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	// Transaction riêng cho việc xử lý AI và cập nhật message
 	@Transactional(timeout = 45) // 45 giây timeout cho AI processing
 	private ChatResponse processAIResponse(String context, String lang, ChatMessage userMsg, ChatMessage aiMsg, Conversation conv) {
+		long startTime = System.currentTimeMillis();
+		log.info("🚀 Starting AI processing for conversation: {}", conv.getId());
+		
 		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
 		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 		
 		return txTemplate.execute(status -> {
 			try {
-				// 4. Gọi AI → đã trả về DTO (MenuMealsAiResponse)
+				// 1. AI call
+				long aiStartTime = System.currentTimeMillis();
+				log.info("🤖 Calling AI with context length: {} characters", context.length());
+				
 				MenuMealsAiResponse aiResp = callAi(context, lang);
+				
+				long aiDuration = System.currentTimeMillis() - aiStartTime;
+				log.info("✅ AI response received in {}ms", aiDuration);
+				
+				// 2. Process AI response
+				long processStartTime = System.currentTimeMillis();
 				String respContent = aiResp.getContent();
-				List<MenuMealResponse> menuList = aiResp.getMenu();
+				List<MenuMealLiteResponse> menuList = aiResp.getMenu();
 				boolean isJson = (menuList != null && !menuList.isEmpty());
 
-				// 5. Cập nhật message AI
+				// Update AI message
 				aiMsg.setContent(respContent);
 				if (isJson) {
 					try {
 						aiMsg.setMenuJson(om.writeValueAsString(menuList));
 					} catch (JsonProcessingException e) {
-						log.warn("Không lưu được menu JSON: {}", e.getMessage());
+						log.warn("⚠️ Failed to save menu JSON: {}", e.getMessage());
 					}
 				}
 				aiMsg.setStatus(MessageStatus.SENT);
 				ChatMessage finalizedAiMsg = chatMessageRepo.saveAndFlush(aiMsg);
 
-				// Cập nhật status của user message thành SENT
+				// Update user message status
 				userMsg.setStatus(MessageStatus.SENT);
 				chatMessageRepo.saveAndFlush(userMsg);
 
-				// 6. Emit kết quả cuối
+				long processDuration = System.currentTimeMillis() - processStartTime;
+				log.info("⚙️ Message processing completed in {}ms", processDuration);
+
+				// 3. Final response
 				ChatResponse resp = mapper.map(finalizedAiMsg, ChatResponse.class);
 				resp.setSenderRole(SenderType.AI.name());
 				if (isJson) {
@@ -279,10 +294,16 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				}
 
 				messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
+				
+				long totalDuration = System.currentTimeMillis() - startTime;
+				log.info("🎯 AI processing completed in {}ms (AI: {}ms, Processing: {}ms) - Conversation: {}", 
+						totalDuration, aiDuration, processDuration, conv.getId());
+
 				return resp;
 				
 			} catch (Exception e) {
-				log.error("Lỗi khi xử lý AI response cho conversation {}: {}", conv.getId(), e.getMessage(), e);
+				long totalDuration = System.currentTimeMillis() - startTime;
+				log.error("❌ AI processing failed after {}ms for conversation {}: {}", totalDuration, conv.getId(), e.getMessage(), e);
 				
 				// Cập nhật status của AI message thành FAILED nếu có lỗi
 				aiMsg.setStatus(MessageStatus.FAILED);
@@ -324,7 +345,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	    ChatMessage aiMsg = pendingResult.getAiMsg();
 
 	    // 4. Lấy 20 tin nhắn để build context cho AI
-	    List<ChatMessage> last20Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
+	    List<ChatMessage> last20Msgs = chatMessageRepo.findTop10ByConversationOrderByTimestampDesc(conv);
 	    Collections.reverse(last20Msgs);
 
 	    // 5. Lấy health info
