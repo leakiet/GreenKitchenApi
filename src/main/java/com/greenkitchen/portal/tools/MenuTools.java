@@ -42,7 +42,6 @@ public class MenuTools {
 
 			# PARAMETERS
 			- limit (integer, optional): số món tối đa cần trả. Mặc định 10. Nếu vượt số món hiện có → giới hạn theo số món hiện có.
-
 			
 			# ERROR HANDLING
 			- Nếu DB rỗng: trả {"content": "Hiện chưa có món phù hợp.", "menu": []}.
@@ -50,7 +49,7 @@ public class MenuTools {
 			""")
 	public MenuMealsAiResponse getMenuMeals(Integer limit) {
 		long startTime = System.currentTimeMillis();
-		log.info("�� Starting getMenuMeals with limit: {}", limit);
+		log.info(" Starting getMenuMeals with limit: {}", limit);
 		
 		try {
 			// 1. Database query
@@ -89,8 +88,11 @@ public class MenuTools {
 			long processDuration = System.currentTimeMillis() - processStartTime;
 			
 			long totalDuration = System.currentTimeMillis() - startTime;
-			log.info("✅ getMenuMeals completed in {}ms (DB: {}ms, Processing: {}ms) - Returned {} meals", 
-					totalDuration, dbDuration, processDuration, limited.size());
+			// Thêm log độ dài content và số phần tử menu để theo dõi kích thước response
+			int contentChars = content != null ? content.length() : 0;
+			int menuSize = limited.size();
+			log.info("✅ getMenuMeals completed in {}ms (DB: {}ms, Processing: {}ms) - Returned {} meals, contentChars={}", 
+					totalDuration, dbDuration, processDuration, menuSize, contentChars);
 
 			return new MenuMealsAiResponse(content, limited);
 		} catch (Exception ex) {
@@ -130,7 +132,7 @@ public class MenuTools {
 			""")
 	public MenuMealsAiResponse getMenuMealsByType(String type, Integer limit) {
 		long startTime = System.currentTimeMillis();
-		log.info("�� Starting getMenuMealsByType with type: {}, limit: {}", type, limit);
+		log.info(" Starting getMenuMealsByType with type: {}, limit: {}", type, limit);
 		
 		try {
 			// 1. Type validation
@@ -185,8 +187,10 @@ public class MenuTools {
 			long filterDuration = System.currentTimeMillis() - filterStartTime;
 			
 			long totalDuration = System.currentTimeMillis() - startTime;
-			log.info("✅ getMenuMealsByType completed in {}ms (Validation: {}ms, DB: {}ms, Filter: {}ms) - Returned {} meals for type {}", 
-					totalDuration, validationDuration, dbDuration, filterDuration, limited.size(), type);
+			int contentChars = content != null ? content.length() : 0;
+			int menuSize = limited.size();
+			log.info("✅ getMenuMealsByType completed in {}ms (Validation: {}ms, DB: {}ms, Filter: {}ms) - Returned {} meals for type {}, contentChars={}", 
+					totalDuration, validationDuration, dbDuration, filterDuration, menuSize, type, contentChars);
 
 			return new MenuMealsAiResponse(content, limited);
 		} catch (Exception ex) {
@@ -225,7 +229,7 @@ public class MenuTools {
 			""")
 	public MenuMealsAiResponse getMenuMealsForBodyType(String bodyType, String goal, Integer limit) {
 		long startTime = System.currentTimeMillis();
-		log.info("�� Starting getMenuMealsForBodyType with bodyType: {}, goal: {}, limit: {}", bodyType, goal, limit);
+		log.info(" Starting getMenuMealsForBodyType with bodyType: {}, goal: {}, limit: {}", bodyType, goal, limit);
 		
 		try {
 			// 1. Parameter validation

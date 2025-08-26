@@ -66,7 +66,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private final MenuTools menuTools;
 	private final PlatformTransactionManager transactionManager;
 
-	ObjectMapper om = new ObjectMapper();
+	ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
 
 	@Override
 	@Transactional
@@ -267,15 +267,8 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				List<MenuMealLiteResponse> menuList = aiResp.getMenu();
 				boolean isJson = (menuList != null && !menuList.isEmpty());
 
-				// Update AI message
+				// Update AI message (bỏ serialize menuJson để giảm overhead)
 				aiMsg.setContent(respContent);
-				if (isJson) {
-					try {
-						aiMsg.setMenuJson(om.writeValueAsString(menuList));
-					} catch (JsonProcessingException e) {
-						log.warn("⚠️ Failed to save menu JSON: {}", e.getMessage());
-					}
-				}
 				aiMsg.setStatus(MessageStatus.SENT);
 				ChatMessage finalizedAiMsg = chatMessageRepo.saveAndFlush(aiMsg);
 
