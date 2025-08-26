@@ -86,4 +86,66 @@ public class EmailServiceImpl implements EmailService {
     mailSender.send(message);
   }
 
+  @Override
+  @Async
+  public void sendFeedbackEmail(String from, String type, Integer rating, String title, String description, String contactEmail) {
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setFrom(fromEmail);
+    message.setTo(fromEmail);
+    message.setSubject("[Feedback] " + title);
+    String body = String.format(
+        """
+        New customer feedback received
+
+        Type: %s
+        Rating: %s
+        Title: %s
+        Description:
+        %s
+
+        From: %s
+        Contact Email: %s
+        """,
+        type,
+        rating == null ? "N/A" : rating.toString(),
+        title,
+        description,
+        from,
+        contactEmail == null ? "(not provided)" : contactEmail
+    );
+    message.setText(body);
+    mailSender.send(message);
+  }
+
+  @Override
+  @Async
+  public void sendSupportRequestEmail(String issueType, String priority, String subject, String description, String contactMethod, String contactValue) {
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setFrom(fromEmail);
+    message.setTo(fromEmail);
+    message.setSubject("[Support] " + subject);
+    String body = String.format(
+        """
+        New support request received
+
+        Issue Type: %s
+        Priority: %s
+        Subject: %s
+        Description:
+        %s
+
+        Preferred Contact Method: %s
+        Contact: %s
+        """,
+        issueType,
+        priority,
+        subject,
+        description,
+        contactMethod,
+        contactValue
+    );
+    message.setText(body);
+    mailSender.send(message);
+  }
+
 }
