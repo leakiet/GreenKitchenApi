@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -155,22 +156,15 @@ public class PostServiceImpl implements PostService {
     }
 
     private PostResponse toResponse(Post p) {
-        PostResponse r = new PostResponse();
-        r.setId(p.getId());
-        r.setTitle(p.getTitle());
-        r.setContent(p.getContent());
-        r.setSlug(p.getSlug());
-        r.setAuthorId(p.getAuthorId());
+        ModelMapper modelMapper = new ModelMapper();
+        PostResponse r = modelMapper.map(p, PostResponse.class);
+        // Manually set categoryId and categoryName if category exists
         if (p.getCategory() != null) {
             r.setCategoryId(p.getCategory().getId());
             r.setCategoryName(p.getCategory().getName());
         }
-        r.setImageUrl(p.getImageUrl());
-        r.setPublishedAt(p.getPublishedAt());
-    // send status as string for easier frontend handling
-    r.setStatus(p.getStatus() != null ? p.getStatus().name() : null);
-        r.setCreatedAt(p.getCreatedAt());
-        r.setUpdatedAt(p.getUpdatedAt());
+        // Send status as string for easier frontend handling
+        r.setStatus(p.getStatus() != null ? p.getStatus().name() : null);
         return r;
     }
 
