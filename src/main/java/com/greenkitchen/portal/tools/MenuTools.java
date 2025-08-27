@@ -76,11 +76,12 @@ public class MenuTools {
 					m.getTitle(),
 					m.getSlug(),
 					m.getImage(),
-					m.getCarbs(),
-					m.getCalories(),
+					m.getCarbs(), // carbs → carb
+					m.getCalories(), // calories → calo
+					m.getProtein(), // protein
 					m.getFat(),
 					m.getPrice(),
-					m.getMenuIngredients()
+					m.getMenuIngredients() // menuIngredients → menuIngredient
 				))
 				.toList();
 
@@ -175,11 +176,12 @@ public class MenuTools {
 					m.getTitle(),
 					m.getSlug(),
 					m.getImage(),
-					m.getCarbs(),
-					m.getCalories(),
+					m.getCarbs(), // carbs → carb
+					m.getCalories(), // calories → calo
+					m.getProtein(), // protein
 					m.getFat(),
 					m.getPrice(),
-					m.getMenuIngredients()
+					m.getMenuIngredients() // menuIngredients → menuIngredient
 				))
 				.toList();
 

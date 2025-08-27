@@ -2,6 +2,7 @@ package com.greenkitchen.portal.dtos;
 
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.greenkitchen.portal.enums.MenuIngredients;
 
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MenuMealLiteResponse {
 	private Long id;
 	private String title;
@@ -20,6 +22,7 @@ public class MenuMealLiteResponse {
 	private String image;
 	private Double carb; // carbs
 	private Double calo; // calories
+	private Double protein; // protein
 	private Double fat;
 	private Double price;
 	private Set<MenuIngredients> menuIngredient; // menuIngredients

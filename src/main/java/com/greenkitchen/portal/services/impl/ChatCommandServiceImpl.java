@@ -241,8 +241,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		});
 	}
 
-	// Transaction riêng cho việc xử lý AI và cập nhật message
-	@Transactional(timeout = 45) // 45 giây timeout cho AI processing
+	// Xử lý AI: gọi AI ngoài transaction, chỉ mở transaction ngắn để ghi DB
 	private ChatResponse processAIResponse(String context, String lang, ChatMessage userMsg, ChatMessage aiMsg, Conversation conv) {
 		long startTime = System.currentTimeMillis();
 		log.info("🚀 Starting AI processing for conversation: {}", conv.getId());
