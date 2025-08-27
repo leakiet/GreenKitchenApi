@@ -58,25 +58,32 @@ public class Order extends AbstractEntity {
     private String recipientPhone;
     private LocalDateTime deliveryTime;
 
+    // Timestamps for status changes
+    private LocalDateTime confirmedAt;
+    private LocalDateTime preparingAt;
+    private LocalDateTime shippingAt;
+    private LocalDateTime deliveredAt;
+    private LocalDateTime canceledAt;
+
     // Thông tin giá cả
     @Column(nullable = false)
     private Double subtotal = 0.0;
 
     private Double shippingFee = 0.0;
-    
+
     private Double membershipDiscount = 0.0; // Giảm giá membership thay vì pointsUsed
-    
+
     private Double couponDiscount = 0.0; // Giảm giá coupon
-    
+
     @Column(nullable = false)
     private Double totalAmount = 0.0;
-    
+
     // Điểm thưởng kiếm được từ đơn hàng này
     private Double pointEarn = 0.0;
 
     // Ghi chú
     private String notes;
-    
+
     // Phương thức thanh toán
     @Column(nullable = false)
     private String paymentMethod;
@@ -85,7 +92,7 @@ public class Order extends AbstractEntity {
     @Column(name = "paypal_order_id")
     @JsonIgnore
     private String paypalOrderId;
-    
+
     // Quan hệ với OrderItem
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
