@@ -1,5 +1,6 @@
 package com.greenkitchen.portal.controllers;
 
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.greenkitchen.portal.dtos.CreateOrderRequest;
+import com.greenkitchen.portal.dtos.OrderResponse;
 import com.greenkitchen.portal.dtos.UpdateOrderRequest;
+import com.greenkitchen.portal.dtos.UpdateOrderStatusRequest;
 import com.greenkitchen.portal.entities.Order;
 import com.greenkitchen.portal.enums.OrderStatus;
 import com.greenkitchen.portal.enums.PaymentStatus;
@@ -24,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/apis/v1/orders")
 public class OrderController {
+    @Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Autowired
     private OrderService orderService;
@@ -37,12 +42,35 @@ public class OrderController {
         //Tao order
         Order order = orderService.createOrder(request);
 
-        // Update Customer Point
+        // Update Customer Point if payment is completed
         if (order.getPaymentStatus().equals(PaymentStatus.COMPLETED)) {
-            membershipService.updateMembershipAfterPurchase(request.getCustomerId(), order.getTotalAmount(), order.getPointEarn(), order.getId());
+            membershipService.updateMembershipAfterPurchase(
+                request.getCustomerId(),
+                order.getTotalAmount(),
+                order.getPointEarn(),
+                order.getId()
+            );
         }
 
+    // Gửi notification tới staff qua WebSocket
+    messagingTemplate.convertAndSend("/topic/order/new", order);
+
         return ResponseEntity.ok(order);
+    }
+    
+    @GetMapping("/filter")
+    public ResponseEntity<?> listFilteredOrders(@RequestParam(value = "page", required = false) Integer page,
+                                                @RequestParam(value = "size", required = false) Integer size,
+                                                @RequestParam(value = "status", required = false) String status,
+                                                @RequestParam(value = "q", required = false) String q,
+                                                @RequestParam(value = "fromDate", required = false) String fromDate,
+                                                @RequestParam(value = "toDate", required = false) String toDate) {
+            if (page != null && size != null) {
+                var res = orderService.listFilteredPaged(page, size, status, q, fromDate, toDate);
+                return ResponseEntity.ok(res);
+            }
+            var list = orderService.listAll();
+            return ResponseEntity.ok(list);
     }
 
     // Lấy thông tin đơn hàng theo ID
@@ -59,24 +87,18 @@ public class OrderController {
     @GetMapping("/search/{orderCode}")
     public ResponseEntity<?> getOrderByCode(@PathVariable("orderCode") String orderCode) {
         try {
-            Order order = orderService.getOrderByCode(orderCode);
-            return new ResponseEntity<>(order, HttpStatus.OK);
+            OrderResponse order = orderService.getOrderByCode(orderCode);
+            return ResponseEntity.ok(order);
         } catch (Exception e) {
-            return new ResponseEntity<>("Order not found", HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Order not found");
         }
     }
 
-    // Cập nhật đơn hàng
-    @PutMapping("/{orderId}")
-    public ResponseEntity<Order> updateOrder(
-            @PathVariable Long orderId,
-            @RequestBody UpdateOrderRequest request) {
-        try {
-            Order order = orderService.updateOrder(orderId, request);
-            return new ResponseEntity<>(order, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        }
+    //Update Status
+    @PutMapping("/updateStatus")
+    public ResponseEntity<String> updateStatus(@RequestBody UpdateOrderStatusRequest request){
+        orderService.updateOrderStatus(request.getId(), request.getStatus());
+        return ResponseEntity.ok("Update successful");
     }
     
     // Complete COD payment khi delivery thành công
@@ -90,16 +112,4 @@ public class OrderController {
         }
     }
     
-    // Update order status trong workflow
-    @PutMapping("/{orderId}/status/{newStatus}")
-    public ResponseEntity<?> updateOrderStatus(
-            @PathVariable Long orderId, 
-            @PathVariable String newStatus) {
-        try {
-            Order order = orderService.updateOrderStatus(orderId, newStatus);
-            return new ResponseEntity<>(order, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
-    }
 }
