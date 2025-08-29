@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import com.greenkitchen.portal.entities.Coupon;
 import com.greenkitchen.portal.enums.CouponStatus;
-import java.math.BigDecimal;
 
 @Repository
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
@@ -24,6 +23,6 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     // Tìm coupon theo points required range
     @Query("SELECT c FROM Coupon c WHERE c.pointsRequired >= :minPoints " +
            "AND c.pointsRequired <= :maxPoints AND c.isDeleted = false")
-    List<Coupon> findByPointsRequiredBetween(@Param("minPoints") BigDecimal minPoints, 
-                                           @Param("maxPoints") BigDecimal maxPoints);
+    List<Coupon> findByPointsRequiredBetween(@Param("minPoints") Double minPoints, 
+                                           @Param("maxPoints") Double maxPoints);
 }

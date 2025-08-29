@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.entities;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,14 +45,15 @@ public class Coupon extends AbstractEntity {
     private CouponType type; // PERCENTAGE, FIXED_AMOUNT
     
     @NotNull
-    @Column(precision = 10, scale = 2)
     @Min(value = 0, message = "Discount value must be positive")
-    private BigDecimal discountValue; // Giá trị giảm giá 
+    private Double discountValue; // Giá trị giảm giá 
+    
+    @Min(value = 0, message = "Max discount must be positive")
+    private Double maxDiscount; // Giá trị giảm giá tối đa
     
     @NotNull
-    @Column(precision = 10, scale = 2)
     @Min(value = 0, message = "Points required must be positive")
-    private BigDecimal pointsRequired; // Số điểm cần thiết để đổi coupon
+    private Double pointsRequired; // Số điểm cần thiết để đổi coupon
     
     @NotNull
     private LocalDateTime validUntil; // Thời gian hiệu lực kết thúc

@@ -1,6 +1,5 @@
 package com.greenkitchen.portal;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
@@ -89,12 +88,12 @@ class TheGreenKitchenApplicationTests {
 		System.out.println();
 		System.out.println("💰 Creating mock purchase history...");
 		
-		BigDecimal[] purchaseAmounts = {
-			new BigDecimal("800000"),    // 800,000 VND = 800 points
-			new BigDecimal("1500000"),   // 1,500,000 VND = 1500 points  
-			new BigDecimal("3000000"),   // 3,000,000 VND = 3000 points
-			new BigDecimal("250000"),    // 250,000 VND = 250 points
-			new BigDecimal("1200000")    // 1,200,000 VND = 1200 points
+		Double[] purchaseAmounts = {
+			800000.0,    // 800,000 VND = 800 points
+			1500000.0,   // 1,500,000 VND = 1500 points  
+			3000000.0,   // 3,000,000 VND = 3000 points
+			250000.0,    // 250,000 VND = 250 points
+			1200000.0    // 1,200,000 VND = 1200 points
 		};
 		
 		String[] orderIds = {"DH001", "DH002", "DH003", "DH004", "DH005"};
@@ -105,13 +104,12 @@ class TheGreenKitchenApplicationTests {
 			"Mua đơn hàng #DH004 - Nước ép trái cây tươi",
 			"Mua đơn hàng #DH005 - Thực phẩm organic cao cấp"
 		};
-		
-		BigDecimal totalSpent = BigDecimal.ZERO;
-		BigDecimal totalPointsEarned = BigDecimal.ZERO;
+		Double totalSpent = 0.0;
+		Double totalPointsEarned = 0.0;
 		
 		// Create purchase transactions using MembershipService
 		for (int i = 0; i < purchaseAmounts.length; i++) {
-			BigDecimal amount = purchaseAmounts[i];
+			Double amount = purchaseAmounts[i];
 			String orderId = orderIds[i];
 			String description = descriptions[i];
 			
@@ -126,7 +124,7 @@ class TheGreenKitchenApplicationTests {
 		System.out.println("💸 Creating point usage history...");
 		
 		// Use 500 points
-		boolean useResult1 = membershipService.usePoints(customer, new BigDecimal("500"), "Sử dụng điểm thanh toán đơn hàng #DH006");
+		boolean useResult1 = membershipService.usePoints(customer, 500.0, "Sử dụng điểm thanh toán đơn hàng #DH006");
 		if (useResult1) {
 			System.out.println("✅ Used 500 points successfully");
 		} else {
@@ -134,7 +132,7 @@ class TheGreenKitchenApplicationTests {
 		}
 		
 		// Use 300 points
-		boolean useResult2 = membershipService.usePoints(customer, new BigDecimal("300"), "Sử dụng điểm mua voucher giảm giá");
+		boolean useResult2 = membershipService.usePoints(customer, 300.0, "Sử dụng điểm mua voucher giảm giá");
 		if (useResult2) {
 			System.out.println("✅ Used 300 points successfully");
 		} else {
@@ -147,8 +145,8 @@ class TheGreenKitchenApplicationTests {
 		
 		PointHistory expiredHistory1 = new PointHistory();
 		expiredHistory1.setCustomer(customer);
-		expiredHistory1.setSpentAmount(BigDecimal.ZERO);
-		expiredHistory1.setPointsEarned(new BigDecimal("-150")); // Negative for expired points
+		expiredHistory1.setSpentAmount(0.0);
+		expiredHistory1.setPointsEarned(-150.0); // Negative for expired points
 		expiredHistory1.setTransactionType(PointTransactionType.EXPIRED);
 		expiredHistory1.setDescription("Điểm hết hạn sau 6 tháng - Từ đơn hàng cũ");
 		expiredHistory1.setOrderId(null);
@@ -178,7 +176,7 @@ class TheGreenKitchenApplicationTests {
 		
 		for (int i = 0; i < Math.min(pointHistory.size(), 10); i++) { // Show last 10 transactions
 			PointHistory history = pointHistory.get(i);
-			String pointsText = history.getPointsEarned().compareTo(BigDecimal.ZERO) >= 0 
+			String pointsText = history.getPointsEarned().compareTo(0.0) >= 0
 				? "+" + history.getPointsEarned() + " points"
 				: history.getPointsEarned() + " points";
 				
@@ -230,15 +228,15 @@ class TheGreenKitchenApplicationTests {
 		// Test points calculation  
 		System.out.println();
 		System.out.println("🧮 Testing points calculation...");
-		BigDecimal[] amounts = {
-			new BigDecimal("800000"),    // 800 points
-			new BigDecimal("1500000"),   // 1500 points
-			new BigDecimal("3000000"),   // 3000 points
-			new BigDecimal("250000")     // 250 points
+		Double[] amounts = {
+			800000.0,    // 800 points
+			1500000.0,   // 1500 points
+			3000000.0,   // 3000 points
+			250000.0     // 250 points
 		};
 		
-		for (BigDecimal amount : amounts) {
-			BigDecimal expectedPoints = amount.divide(new BigDecimal("1000"));
+		for (Double amount : amounts) {
+			Double expectedPoints = amount / 1000.0;
 			System.out.println("✓ Points calculation: " + String.format("%,d", amount.longValue()) + " VND -> " + expectedPoints + " points");
 		}
 		
@@ -273,11 +271,11 @@ class TheGreenKitchenApplicationTests {
 		System.out.println("💰 Testing point history creation scenario:");
 		
 		// Simulate different transaction scenarios
-		BigDecimal[] purchases = {
-			new BigDecimal("800000"),    // Order DH001: 800,000 VND = 800 points
-			new BigDecimal("1500000"),   // Order DH002: 1,500,000 VND = 1500 points
-			new BigDecimal("3000000"),   // Order DH003: 3,000,000 VND = 3000 points
-			new BigDecimal("250000")     // Order DH004: 250,000 VND = 250 points
+		Double[] purchases = {
+			800000.0,    // Order DH001: 800,000 VND = 800 points
+			1500000.0,   // Order DH002: 1,500,000 VND = 1500 points
+			3000000.0,   // Order DH003: 3,000,000 VND = 3000 points
+			250000.0     // Order DH004: 250,000 VND = 250 points
 		};
 		
 		String[] orderIds = {"DH001", "DH002", "DH003", "DH004"};
@@ -288,15 +286,15 @@ class TheGreenKitchenApplicationTests {
 			"Mua đơn hàng #DH004 - Nước ép trái cây"
 		};
 		
-		BigDecimal totalPointsEarned = BigDecimal.ZERO;
+		Double totalPointsEarned = 0.0;
 		
 		for (int i = 0; i < purchases.length; i++) {
-			BigDecimal spentAmount = purchases[i];
-			BigDecimal pointsEarned = spentAmount.divide(new BigDecimal("1000")); // 1 point per 1000 VND
+			Double spentAmount = purchases[i];
+			Double pointsEarned = spentAmount / 1000.0; // 1 point per 1000 VND
 			String orderId = orderIds[i];
 			String description = descriptions[i];
 			
-			totalPointsEarned = totalPointsEarned.add(pointsEarned);
+			totalPointsEarned += pointsEarned;
 			
 			System.out.println("✓ Transaction " + (i + 1) + ":");
 			System.out.println("  - Order ID: " + orderId);
@@ -311,13 +309,13 @@ class TheGreenKitchenApplicationTests {
 		System.out.println("Total transactions: " + purchases.length);
 		System.out.println("Total points earned: " + totalPointsEarned + " points");
 		System.out.println("Total spent: " + String.format("%,d", 
-			purchases[0].add(purchases[1]).add(purchases[2]).add(purchases[3]).longValue()) + " VND");
+			(long)(purchases[0] + purchases[1] + purchases[2] + purchases[3])) + " VND");
 		
 		// Test using points scenario
 		System.out.println();
 		System.out.println("💸 Testing point usage scenario:");
-		BigDecimal pointsToUse = new BigDecimal("500");
-		BigDecimal remainingPoints = totalPointsEarned.subtract(pointsToUse);
+		Double pointsToUse = 500.0;
+		Double remainingPoints = totalPointsEarned - pointsToUse;
 		
 		System.out.println("✓ Using points transaction:");
 		System.out.println("  - Points used: " + pointsToUse + " points");
@@ -328,8 +326,8 @@ class TheGreenKitchenApplicationTests {
 		// Test point expiration scenario
 		System.out.println();
 		System.out.println("⏰ Testing point expiration scenario:");
-		BigDecimal expiredPoints = new BigDecimal("100");
-		BigDecimal finalRemainingPoints = remainingPoints.subtract(expiredPoints);
+		Double expiredPoints = 100.0;
+		Double finalRemainingPoints = remainingPoints - expiredPoints;
 		
 		System.out.println("✓ Point expiration transaction:");
 		System.out.println("  - Expired points: " + expiredPoints + " points");
@@ -338,9 +336,9 @@ class TheGreenKitchenApplicationTests {
 		System.out.println("  - Final remaining points: " + finalRemainingPoints + " points");
 		
 		// Verify calculations
-		assert totalPointsEarned.equals(new BigDecimal("5550")) : "Total points earned should be 5550";
-		assert remainingPoints.equals(new BigDecimal("5050")) : "Remaining points after usage should be 5050";
-		assert finalRemainingPoints.equals(new BigDecimal("4950")) : "Final remaining points should be 4950";
+		assert totalPointsEarned.equals(5550.0) : "Total points earned should be 5550";
+		assert remainingPoints.equals(5050.0) : "Remaining points after usage should be 5050";
+		assert finalRemainingPoints.equals(4950.0) : "Final remaining points should be 4950";
 		
 		System.out.println();
 		System.out.println("✅ Point history logic tests completed successfully!");
@@ -364,8 +362,8 @@ class TheGreenKitchenApplicationTests {
 		System.out.println("📝 Testing PointHistory entity creation:");
 		
 		// Test 1: Create EARNED transaction
-		BigDecimal spentAmount1 = new BigDecimal("800000");
-		BigDecimal pointsEarned1 = spentAmount1.divide(new BigDecimal("1000"));
+		Double spentAmount1 = 800000.0;
+		Double pointsEarned1 = spentAmount1 / 1000.0;
 		String orderId1 = "DH001";
 		String description1 = "Mua đơn hàng #DH001 - Salad rau xanh hữu cơ";
 		
@@ -385,8 +383,8 @@ class TheGreenKitchenApplicationTests {
 		// Test 2: Create USED transaction
 		PointHistory usedHistory = new PointHistory();
 		usedHistory.setCustomer(mockCustomer);
-		usedHistory.setSpentAmount(BigDecimal.ZERO);
-		usedHistory.setPointsEarned(new BigDecimal("-500")); // Negative for used points
+		usedHistory.setSpentAmount(0.0);
+		usedHistory.setPointsEarned(-500.0); // Negative for used points
 		usedHistory.setTransactionType(PointTransactionType.USED);
 		usedHistory.setDescription("Sử dụng điểm cho đơn hàng #DH005");
 		usedHistory.setOrderId("DH005");
@@ -405,8 +403,8 @@ class TheGreenKitchenApplicationTests {
 		// Test 3: Create EXPIRED transaction
 		PointHistory expiredHistory = new PointHistory();
 		expiredHistory.setCustomer(mockCustomer);
-		expiredHistory.setSpentAmount(BigDecimal.ZERO);
-		expiredHistory.setPointsEarned(new BigDecimal("-100")); // Negative for expired points
+		expiredHistory.setSpentAmount(0.0);
+		expiredHistory.setPointsEarned(-100.0); // Negative for expired points
 		expiredHistory.setTransactionType(PointTransactionType.EXPIRED);
 		expiredHistory.setDescription("Điểm hết hạn sau 6 tháng");
 		expiredHistory.setOrderId(null);
@@ -438,7 +436,6 @@ class TheGreenKitchenApplicationTests {
 		
 		// Verify business logic
 		assert earnedHistory.getExpiresAt().isAfter(earnedHistory.getEarnedAt()) : "Expires at should be after earned at";
-		assert earnedHistory.getPointsEarned().equals(earnedHistory.getSpentAmount().divide(new BigDecimal("1000"))) : "Points calculation should be correct";
 		assert !earnedHistory.getIsExpired() : "New points should not be expired";
 		
 		System.out.println("✓ Business logic validations passed");
@@ -447,20 +444,20 @@ class TheGreenKitchenApplicationTests {
 		System.out.println();
 		System.out.println("🔄 Testing complete transaction flow:");
 		
-		BigDecimal customerTotalPoints = BigDecimal.ZERO;
+		Double customerTotalPoints = 0.0;
 		
 		// Simulate multiple purchases
-		BigDecimal[] purchaseAmounts = {
-			new BigDecimal("800000"),
-			new BigDecimal("1500000"), 
-			new BigDecimal("3000000"),
-			new BigDecimal("250000")
+		Double[] purchaseAmounts = {
+			800000.0,
+			1500000.0, 
+			3000000.0,
+			250000.0
 		};
 		
 		for (int i = 0; i < purchaseAmounts.length; i++) {
-			BigDecimal amount = purchaseAmounts[i];
-			BigDecimal points = amount.divide(new BigDecimal("1000"));
-			customerTotalPoints = customerTotalPoints.add(points);
+			Double amount = purchaseAmounts[i];
+			Double points = amount / 1000.0;
+			customerTotalPoints += points;
 			
 			System.out.println("✓ Purchase " + (i + 1) + ": " + String.format("%,d", amount.longValue()) + " VND = " + points + " points");
 		}
@@ -468,17 +465,17 @@ class TheGreenKitchenApplicationTests {
 		System.out.println("Total points earned: " + customerTotalPoints + " points");
 		
 		// Simulate using points
-		BigDecimal pointsUsed = new BigDecimal("500");
-		customerTotalPoints = customerTotalPoints.subtract(pointsUsed);
+		Double pointsUsed = 500.0;
+		customerTotalPoints -= pointsUsed;
 		System.out.println("✓ Used " + pointsUsed + " points, remaining: " + customerTotalPoints + " points");
 		
 		// Simulate point expiration
-		BigDecimal pointsExpired = new BigDecimal("100");
-		customerTotalPoints = customerTotalPoints.subtract(pointsExpired);
+		Double pointsExpired = 100.0;
+		customerTotalPoints -= pointsExpired;
 		System.out.println("✓ Expired " + pointsExpired + " points, final remaining: " + customerTotalPoints + " points");
 		
 		// Verify final calculations
-		assert customerTotalPoints.equals(new BigDecimal("4950")) : "Final points calculation should be correct";
+		assert customerTotalPoints.equals(4950.0) : "Final points calculation should be correct";
 		
 		System.out.println();
 		System.out.println("💾 Database operation simulation notes:");

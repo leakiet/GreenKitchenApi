@@ -25,4 +25,24 @@ public interface CouponService {
      * Lấy coupon theo code
      */
     Coupon getCouponByCode(String code);
+    
+    /**
+     * ADMIN: Lấy tất cả coupons
+     */
+    List<Coupon> getAllCoupons();
+    
+    /**
+     * ADMIN: Tạo coupon mới
+     */
+    Coupon createCoupon(Coupon coupon);
+    
+    /**
+     * ADMIN: Cập nhật coupon
+     */
+    Coupon updateCoupon(Long couponId, Coupon coupon);
+    
+    /**
+     * ADMIN: Xóa coupon
+     */
+    void deleteCoupon(Long couponId);
 }

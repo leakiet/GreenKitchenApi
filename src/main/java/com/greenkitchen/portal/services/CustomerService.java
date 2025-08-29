@@ -2,8 +2,12 @@ package com.greenkitchen.portal.services;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.greenkitchen.portal.dtos.CustomerResponse;
+import com.greenkitchen.portal.dtos.PagedResponse;
 import com.greenkitchen.portal.dtos.UpdateAvatarResponse;
 import com.greenkitchen.portal.entities.Customer;
 
@@ -11,6 +15,7 @@ public interface CustomerService {
   Customer findByEmail(String email);
   Customer findOrCreateCustomerByPhone(String phoneNumber);
   List<Customer> listAll();
+  PagedResponse<CustomerResponse> listFilteredPaged(String q, int page, int size);
   Customer update(Customer customer);
   Customer save(Customer customer);
   Customer findById(Long id);

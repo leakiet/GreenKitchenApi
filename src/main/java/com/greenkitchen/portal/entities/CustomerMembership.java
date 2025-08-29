@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.entities;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -36,17 +35,13 @@ public class CustomerMembership extends AbstractEntity {
     @NotNull
     private MembershipTier currentTier = MembershipTier.ENERGY; // Hạng hiện tại
     
-    @Column(precision = 15, scale = 2)
-    private BigDecimal totalSpentLast6Months = BigDecimal.ZERO; // Tổng chi tiêu 6 tháng qua
+    private Double totalSpentLast6Months = 0.0; // Tổng chi tiêu 6 tháng qua
     
-    @Column(precision = 10, scale = 2)
-    private BigDecimal availablePoints = BigDecimal.ZERO; // Điểm còn lại (chưa hết hạn)
+    private Double availablePoints = 0.0; // Điểm còn lại (chưa hết hạn)
     
-    @Column(precision = 10, scale = 2)
-    private BigDecimal totalPointsEarned = BigDecimal.ZERO; // Tổng điểm đã nhận
+    private Double totalPointsEarned = 0.0; // Tổng điểm đã nhận
     
-    @Column(precision = 10, scale = 2)
-    private BigDecimal totalPointsUsed = BigDecimal.ZERO; // Tổng điểm đã sử dụng
+    private Double totalPointsUsed = 0.0; // Tổng điểm đã sử dụng
     
     private LocalDateTime lastUpdatedAt; // Lần cập nhật cuối
     
@@ -55,10 +50,10 @@ public class CustomerMembership extends AbstractEntity {
     public CustomerMembership(Customer customer) {
         this.customer = customer;
         this.currentTier = MembershipTier.ENERGY;
-        this.totalSpentLast6Months = BigDecimal.ZERO;
-        this.availablePoints = BigDecimal.ZERO;
-        this.totalPointsEarned = BigDecimal.ZERO;
-        this.totalPointsUsed = BigDecimal.ZERO;
+        this.totalSpentLast6Months = 0.0;
+        this.availablePoints = 0.0;
+        this.totalPointsEarned = 0.0;
+        this.totalPointsUsed = 0.0;
         this.lastUpdatedAt = LocalDateTime.now();
         this.tierAchievedAt = LocalDateTime.now();
     }

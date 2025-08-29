@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.entities;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -67,7 +66,8 @@ public class CustomerCoupon extends AbstractEntity {
     private CouponType couponType; // PERCENTAGE, FIXED_AMOUNT
     
     @NotNull
-    @Column(precision = 10, scale = 2)
-    private BigDecimal couponDiscountValue; // Giá trị giảm giá
+    private Double couponDiscountValue; // Giá trị giảm giá
+    
+    private Double maxDiscount; // Giá trị giảm giá tối đa
     
 }
