@@ -355,34 +355,46 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	        }
 	    }
 
-	    // 6. Build context cho AI
-	    StringBuilder sb = new StringBuilder();
-	    sb.append("<<<HISTORY>>>\n");
-	    for (ChatMessage msg : last20Msgs) {
-	        String role = switch (msg.getSenderType().name()) {
-	            case "CUSTOMER" -> "user";
-	            case "AI" -> "assistant";
-	            case "EMP" -> "employee";
-	            default -> "other";
-	        };
-	        sb.append(role).append("|").append(msg.getSenderName()).append("| ")
-	                .append(msg.getContent().replace("\n", " ").trim()).append("\n");
-	    }
-	    sb.append("<<<END_HISTORY>>>\n\n");
 
-	    if (actorId != null) {
-	        sb.append("<<<HEALTH_INFO>>>\n")
-	          .append(healthInfoJson)
-	          .append("\n<<<END_HEALTH_INFO>>>\n\n");
-	    }
+		// 6. Build context cho AI
+		StringBuilder sb = new StringBuilder();
+		sb.append("<<<HISTORY>>>\n");
+		for (ChatMessage msg : last20Msgs) {
+			String role = switch (msg.getSenderType().name()) {
+				case "CUSTOMER" -> "user";
+				case "AI" -> "assistant";
+				case "EMP" -> "employee";
+				default -> "other";
+			};
+			sb.append(role).append("|").append(msg.getSenderName()).append("| ")
+					.append(msg.getContent().replace("\n", " ").trim()).append("\n");
+		}
+		sb.append("<<<END_HISTORY>>>\n\n");
 
-	    sb.append("<<<CURRENT_USER_MESSAGE>>>\n").append(request.getContent().trim())
-	            .append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
+		if (actorId != null) {
+			sb.append("<<<HEALTH_INFO>>>\n")
+			  .append(healthInfoJson)
+			  .append("\n<<<END_HEALTH_INFO>>>\n\n");
+		}
 
-	    String context = sb.toString();
+		sb.append("<<<CURRENT_USER_MESSAGE>>>\n").append(request.getContent().trim())
+				.append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
 
-	    // 7. Xử lý AI response trong transaction riêng biệt
-	    return processAIResponse(context, request.getLang(), userMsg, aiMsg, conv);
+		// Thêm hướng dẫn cho AI: Chỉ gọi tool menu nếu user hiện tại hỏi về menu
+		if (!isMenuIntent(request.getContent())) {
+			sb.append("\nLưu ý cho AI: User hiện tại không hỏi về menu, KHÔNG gọi tool menu.\n");
+		}
+
+		String context = sb.toString();
+
+		// 7. Xử lý AI response trong transaction riêng biệt
+		return processAIResponse(context, request.getLang(), userMsg, aiMsg, conv);
+	}
+	// Helper: Kiểm tra intent menu
+	private boolean isMenuIntent(String message) {
+		if (message == null) return false;
+		String lower = message.toLowerCase();
+		return lower.contains("menu") || lower.contains("món") || lower.contains("giá") || lower.contains("calorie") || lower.contains("nguyên liệu") || lower.contains("khẩu phần") || lower.contains("loại món");
 	}
 
 
