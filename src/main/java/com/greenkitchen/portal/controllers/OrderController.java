@@ -53,8 +53,8 @@ public class OrderController {
             );
         }
 
-    // Gửi notification tới staff qua WebSocket
-    messagingTemplate.convertAndSend("/topic/order/new", order);
+        // Gửi notification tới staff qua WebSocket
+        messagingTemplate.convertAndSend("/topic/order/new", order);
 
         return ResponseEntity.ok(order);
     }

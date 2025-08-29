@@ -33,6 +33,18 @@ public class CustomerController {
   @Autowired
   private ModelMapper modelMapper;
 
+  @GetMapping("/filter")
+  public ResponseEntity<?> getAllCustomers(@RequestParam(value = "page", required = false) Integer page,
+                                           @RequestParam(value = "size", required = false) Integer size,
+                                           @RequestParam(value = "q", required = false) String q) {
+    if (page != null && size != null) {
+      var res = customerService.listFilteredPaged(q, page, size);
+      return ResponseEntity.ok(res);
+    }
+    var list = customerService.listAll();
+    return ResponseEntity.ok(list);
+  }
+
   @GetMapping("/email/{email}")
   public ResponseEntity<Customer> getCustomerByEmail(@PathVariable("email") String email) {
     try {

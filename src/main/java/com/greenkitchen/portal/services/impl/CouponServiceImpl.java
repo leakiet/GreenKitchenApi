@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.services.impl;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -64,8 +63,8 @@ public class CouponServiceImpl implements CouponService {
             throw new IllegalStateException("Customer chưa có thông tin membership");
         }
         
-        BigDecimal availablePoints = membership.getAvailablePoints();
-        if (availablePoints.compareTo(coupon.getPointsRequired()) < 0) {
+        Double availablePoints = membership.getAvailablePoints();
+        if (availablePoints < coupon.getPointsRequired()) {
             throw new IllegalStateException("Không đủ điểm để đổi coupon này");
         }
 
@@ -73,9 +72,9 @@ public class CouponServiceImpl implements CouponService {
         createPointHistory(customer, coupon.getPointsRequired(), coupon.getName());
         
         // Trừ điểm của customer
-        BigDecimal newPoints = availablePoints.subtract(coupon.getPointsRequired());
+        Double newPoints = availablePoints - coupon.getPointsRequired();
         membership.setAvailablePoints(newPoints);
-        membership.setTotalPointsUsed(membership.getTotalPointsUsed().add(coupon.getPointsRequired()));
+        membership.setTotalPointsUsed(membership.getTotalPointsUsed() + coupon.getPointsRequired());
         membership.setUpdatedAt(LocalDateTime.now());
         
         // Tạo CustomerCoupon mới
@@ -100,6 +99,66 @@ public class CouponServiceImpl implements CouponService {
     public Coupon getCouponByCode(String code) {
         return couponRepository.findByCode(code)
             .orElseThrow(() -> new IllegalArgumentException("Coupon not found"));
+    }
+    
+    @Override
+    public List<Coupon> getAllCoupons() {
+        return couponRepository.findAll();
+    }
+    
+    @Override
+    @Transactional
+    public Coupon createCoupon(Coupon coupon) {
+        // Validate coupon code uniqueness
+        if (couponRepository.findByCode(coupon.getCode()).isPresent()) {
+            throw new IllegalArgumentException("Coupon code already exists");
+        }
+        
+        coupon.setCreatedAt(LocalDateTime.now());
+        coupon.setUpdatedAt(LocalDateTime.now());
+        coupon.setIsDeleted(false);
+        
+        return couponRepository.save(coupon);
+    }
+    
+    @Override
+    @Transactional
+    public Coupon updateCoupon(Long couponId, Coupon coupon) {
+        Coupon existingCoupon = couponRepository.findById(couponId)
+            .orElseThrow(() -> new IllegalArgumentException("Coupon not found"));
+        
+        // Check if code is being changed and if it's unique
+        if (!existingCoupon.getCode().equals(coupon.getCode()) && 
+            couponRepository.findByCode(coupon.getCode()).isPresent()) {
+            throw new IllegalArgumentException("Coupon code already exists");
+        }
+        
+        // Update fields
+        existingCoupon.setCode(coupon.getCode());
+        existingCoupon.setName(coupon.getName());
+        existingCoupon.setDescription(coupon.getDescription());
+        existingCoupon.setType(coupon.getType());
+        existingCoupon.setDiscountValue(coupon.getDiscountValue());
+        existingCoupon.setMaxDiscount(coupon.getMaxDiscount());
+        existingCoupon.setPointsRequired(coupon.getPointsRequired());
+        existingCoupon.setValidUntil(coupon.getValidUntil());
+        existingCoupon.setExchangeLimit(coupon.getExchangeLimit());
+        existingCoupon.setStatus(coupon.getStatus());
+        existingCoupon.setUpdatedAt(LocalDateTime.now());
+        
+        return couponRepository.save(existingCoupon);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteCoupon(Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+            .orElseThrow(() -> new IllegalArgumentException("Coupon not found"));
+        
+        // Soft delete
+        coupon.setIsDeleted(true);
+        coupon.setUpdatedAt(LocalDateTime.now());
+        couponRepository.save(coupon);
     }
     
     // Helper methods
@@ -139,6 +198,7 @@ public class CouponServiceImpl implements CouponService {
         customerCoupon.setCouponDescription(coupon.getDescription());
         customerCoupon.setCouponType(coupon.getType());
         customerCoupon.setCouponDiscountValue(coupon.getDiscountValue());
+        customerCoupon.setMaxDiscount(coupon.getMaxDiscount());
         
         customerCoupon.setCreatedAt(LocalDateTime.now());
         customerCoupon.setUpdatedAt(LocalDateTime.now());
@@ -147,11 +207,11 @@ public class CouponServiceImpl implements CouponService {
         return customerCoupon;
     }
     
-    private void createPointHistory(Customer customer, BigDecimal pointsUsed, String couponName) {
+    private void createPointHistory(Customer customer, Double pointsUsed, String couponName) {
         PointHistory pointHistory = new PointHistory();
         pointHistory.setCustomer(customer);
-        pointHistory.setSpentAmount(BigDecimal.ZERO); // Không có tiền chi tiêu
-        pointHistory.setPointsEarned(pointsUsed.negate()); // Điểm âm = điểm đã sử dụng
+        pointHistory.setSpentAmount(0.0); // Không có tiền chi tiêu
+        pointHistory.setPointsEarned(-pointsUsed); // Điểm âm = điểm đã sử dụng
         pointHistory.setEarnedAt(LocalDateTime.now());
         pointHistory.setExpiresAt(LocalDateTime.now().plusYears(1)); // Lịch sử không hết hạn
         pointHistory.setTransactionType(PointTransactionType.USED);

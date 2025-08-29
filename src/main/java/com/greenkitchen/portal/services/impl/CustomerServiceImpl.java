@@ -5,14 +5,18 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.OtpRecords;
+import com.greenkitchen.portal.dtos.CustomerResponse;
+import com.greenkitchen.portal.dtos.PagedResponse;
 import com.greenkitchen.portal.dtos.UpdateAvatarResponse;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.OtpRecordsRepository;
 import com.greenkitchen.portal.utils.ImageUtils;
 
-import java.util.List;
-import java.util.Random;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -21,6 +25,8 @@ import com.greenkitchen.portal.services.EmailService;
 import com.greenkitchen.portal.services.GoogleAuthService;
 import java.util.UUID;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Random;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
@@ -73,6 +79,46 @@ public class CustomerServiceImpl implements CustomerService {
   @Override
   public List<Customer> listAll() {
     return customerRepository.findAll();
+  }
+
+
+  @Override
+  public PagedResponse<CustomerResponse> listFilteredPaged(String q, int page, int size) {
+    Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+    
+    Page<Customer> customerPage = customerRepository.findFilteredPaged(q, pageable);
+
+    PagedResponse<CustomerResponse> response = new PagedResponse<>();
+    response.setItems(customerPage.getContent().stream()
+        .map(this::toCustomerResponse)
+        .collect(Collectors.toList()));
+    response.setTotal(customerPage.getTotalElements());
+    response.setPage(page);
+    response.setSize(size);
+
+    return response;
+  }
+
+  private CustomerResponse toCustomerResponse(Customer customer) {
+    CustomerResponse response = new CustomerResponse();
+    response.setId(customer.getId());
+    response.setFirstName(customer.getFirstName());
+    response.setLastName(customer.getLastName());
+    response.setFullName(customer.getFullName());
+    response.setAvatar(customer.getAvatar());
+    response.setEmail(customer.getEmail());
+    response.setBirthDate(customer.getBirthDate());
+    response.setGender(customer.getGender());
+    response.setPhone(customer.getPhone());
+    response.setIsActive(customer.getIsActive());
+    response.setIsPhoneLogin(customer.getIsPhoneLogin());
+    response.setIsEmailLogin(customer.getIsEmailLogin());
+    response.setOauthProvider(customer.getOauthProvider());
+    response.setIsOauthUser(customer.getIsOauthUser());
+    response.setCreatedAt(customer.getCreatedAt());
+    response.setUpdatedAt(customer.getUpdatedAt());
+
+    return response;
   }
 
   @Override

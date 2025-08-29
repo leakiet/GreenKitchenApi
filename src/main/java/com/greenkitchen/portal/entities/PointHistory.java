@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.entities;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -33,12 +32,10 @@ public class PointHistory extends AbstractEntity {
     private Customer customer;
     
     @NotNull
-    @Column(precision = 15, scale = 2)
-    private BigDecimal spentAmount; // Số tiền đã chi tiêu
+    private Double spentAmount; // Số tiền đã chi tiêu
     
     @NotNull
-    @Column(precision = 10, scale = 2)
-    private BigDecimal pointsEarned; // Điểm thưởng nhận được
+    private Double pointsEarned; // Điểm thưởng nhận được
     
     @NotNull
     private LocalDateTime earnedAt; // Thời gian nhận điểm
@@ -55,7 +52,7 @@ public class PointHistory extends AbstractEntity {
     
     private Boolean isExpired = false; // Đã hết hạn chưa
     
-    public PointHistory(Customer customer, BigDecimal spentAmount, BigDecimal pointsEarned, String description, String orderId) {
+    public PointHistory(Customer customer, Double spentAmount, Double pointsEarned, String description, String orderId) {
         this.customer = customer;
         this.spentAmount = spentAmount;
         this.pointsEarned = pointsEarned;

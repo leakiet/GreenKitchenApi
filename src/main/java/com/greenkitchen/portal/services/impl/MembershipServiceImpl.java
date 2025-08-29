@@ -1,11 +1,8 @@
 package com.greenkitchen.portal.services.impl;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,21 +39,17 @@ public class MembershipServiceImpl implements MembershipService {
         // Lấy hoặc tạo membership
         CustomerMembership membership = getOrCreateMembership(customer);  
         
-        // Convert double to BigDecimal
-        BigDecimal spentAmountBD = new BigDecimal(String.valueOf(spentAmount));
-        BigDecimal pointEarnedBD = new BigDecimal(String.valueOf(pointEarned));
-        
         // Tạo point history
-        PointHistory pointHistory = new PointHistory(customer, spentAmountBD, pointEarnedBD,
+        PointHistory pointHistory = new PointHistory(customer, spentAmount, pointEarned,
             "Earned from order: " + orderId, String.valueOf(orderId));
         pointHistoryRepository.save(pointHistory);
         
         // Cập nhật membership
-        membership.setTotalPointsEarned(membership.getTotalPointsEarned().add(pointEarnedBD));
-        membership.setAvailablePoints(membership.getAvailablePoints().add(pointEarnedBD));
+        membership.setTotalPointsEarned(membership.getTotalPointsEarned() + pointEarned);
+        membership.setAvailablePoints(membership.getAvailablePoints() + pointEarned);
 
         // Tính lại tổng chi tiêu 6 tháng qua
-        BigDecimal totalSpent6Months = calculateTotalSpentLast6Months(customer);
+        Double totalSpent6Months = calculateTotalSpentLast6Months(customer);
         membership.setTotalSpentLast6Months(totalSpent6Months);
         
         // Cập nhật tier
@@ -82,7 +75,7 @@ public class MembershipServiceImpl implements MembershipService {
         updateAvailablePoints(membership);
         
         // Cập nhật tier dựa trên chi tiêu 6 tháng qua
-        BigDecimal totalSpent6Months = calculateTotalSpentLast6Months(customer);
+        Double totalSpent6Months = calculateTotalSpentLast6Months(customer);
         membership.setTotalSpentLast6Months(totalSpent6Months);
         
         MembershipTier currentTier = MembershipTier.getTierBySpending(totalSpent6Months.longValue());
@@ -96,23 +89,20 @@ public class MembershipServiceImpl implements MembershipService {
         return membershipRepository.save(membership);
     }
     
-    /**
-     * Sử dụng điểm thưởng
-     */
     @Override
-    public boolean usePoints(Customer customer, BigDecimal pointsToUse, String description) {
+    public boolean usePoints(Customer customer, Double pointsToUse, String description) {
         CustomerMembership membership = getOrCreateMembership(customer);
         updateAvailablePoints(membership);
         
-        if (membership.getAvailablePoints().compareTo(pointsToUse) < 0) {
+        if (membership.getAvailablePoints() < pointsToUse) {
             return false; // Không đủ điểm
         }
         
         // Tạo point history cho việc sử dụng điểm
         PointHistory pointHistory = new PointHistory();
         pointHistory.setCustomer(customer);
-        pointHistory.setSpentAmount(BigDecimal.ZERO);
-        pointHistory.setPointsEarned(pointsToUse.negate()); // Âm vì đang sử dụng
+        pointHistory.setSpentAmount(0.0);
+        pointHistory.setPointsEarned(-pointsToUse); // Âm vì đang sử dụng
         pointHistory.setEarnedAt(LocalDateTime.now());
         pointHistory.setExpiresAt(LocalDateTime.now().plusYears(1)); // Không hết hạn cho record sử dụng
         pointHistory.setTransactionType(PointTransactionType.USED);
@@ -122,8 +112,8 @@ public class MembershipServiceImpl implements MembershipService {
         pointHistoryRepository.save(pointHistory);
         
         // Cập nhật membership
-        membership.setAvailablePoints(membership.getAvailablePoints().subtract(pointsToUse));
-        membership.setTotalPointsUsed(membership.getTotalPointsUsed().add(pointsToUse));
+        membership.setAvailablePoints(membership.getAvailablePoints() - pointsToUse);
+        membership.setTotalPointsUsed(membership.getTotalPointsUsed() + pointsToUse);
         membership.setLastUpdatedAt(LocalDateTime.now());
         
         membershipRepository.save(membership);
@@ -154,14 +144,14 @@ public class MembershipServiceImpl implements MembershipService {
     /**
      * Tính tổng chi tiêu trong 6 tháng qua
      */
-    private BigDecimal calculateTotalSpentLast6Months(Customer customer) {
+    private Double calculateTotalSpentLast6Months(Customer customer) {
         LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
         List<PointHistory> recentTransactions = pointHistoryRepository
             .findByCustomerAndEarnedAtAfterAndTransactionType(customer, sixMonthsAgo, PointTransactionType.EARNED);
         
         return recentTransactions.stream()
-            .map(PointHistory::getSpentAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            .mapToDouble(PointHistory::getSpentAmount)
+            .sum();
     }
     
     /**
@@ -175,7 +165,7 @@ public class MembershipServiceImpl implements MembershipService {
             .findByCustomerAndExpiresAtBeforeAndIsExpiredFalseAndTransactionType(
                 membership.getCustomer(), now, PointTransactionType.EARNED);
         
-        BigDecimal totalExpiredPoints = BigDecimal.ZERO;
+        Double totalExpiredPoints = 0.0;
         
         for (PointHistory expiredPoint : expiredPoints) {
             expiredPoint.setIsExpired(true);
@@ -183,8 +173,8 @@ public class MembershipServiceImpl implements MembershipService {
             // Tạo record cho điểm hết hạn
             PointHistory expiredRecord = new PointHistory();
             expiredRecord.setCustomer(membership.getCustomer());
-            expiredRecord.setSpentAmount(BigDecimal.ZERO);
-            expiredRecord.setPointsEarned(expiredPoint.getPointsEarned().negate());
+            expiredRecord.setSpentAmount(0.0);
+            expiredRecord.setPointsEarned(-expiredPoint.getPointsEarned());
             expiredRecord.setEarnedAt(now);
             expiredRecord.setExpiresAt(now);
             expiredRecord.setTransactionType(PointTransactionType.EXPIRED);
@@ -192,15 +182,15 @@ public class MembershipServiceImpl implements MembershipService {
             expiredRecord.setIsExpired(true);
             
             pointHistoryRepository.save(expiredRecord);
-            totalExpiredPoints = totalExpiredPoints.add(expiredPoint.getPointsEarned());
+            totalExpiredPoints += expiredPoint.getPointsEarned();
         }
         
         pointHistoryRepository.saveAll(expiredPoints);
         
         // Cập nhật available points
-        if (totalExpiredPoints.compareTo(BigDecimal.ZERO) > 0) {
+        if (totalExpiredPoints > 0.0) {
             membership.setAvailablePoints(
-                membership.getAvailablePoints().subtract(totalExpiredPoints));
+                membership.getAvailablePoints() - totalExpiredPoints);
         }
     }
 }

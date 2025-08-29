@@ -1,7 +1,5 @@
 package com.greenkitchen.portal.services;
 
-import java.math.BigDecimal;
-
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.CustomerMembership;
 import com.greenkitchen.portal.enums.MembershipTier;
@@ -21,7 +19,7 @@ public interface MembershipService {
     /**
      * Sử dụng điểm thưởng
      */
-    boolean usePoints(Customer customer, BigDecimal pointsToUse, String description);
+    boolean usePoints(Customer customer, Double pointsToUse, String description);
     
     /**
      * Lấy hạng membership hiện tại
