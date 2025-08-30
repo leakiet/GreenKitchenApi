@@ -29,6 +29,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class MenuMeal extends AbstractEntity {
     private static final long serialVersionUID = 1L;
 

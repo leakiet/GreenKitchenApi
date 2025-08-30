@@ -1,8 +1,11 @@
 package com.greenkitchen.portal.services;
 
+import com.greenkitchen.portal.dtos.WeekMealDayResponse;
+import com.greenkitchen.portal.dtos.WeekMealDayUpdateRequest;
 import com.greenkitchen.portal.dtos.WeekMealRequest;
 import com.greenkitchen.portal.dtos.WeekMealResponse;
 import com.greenkitchen.portal.entities.WeekMeal;
+import com.greenkitchen.portal.entities.WeekMealDay;
 
 public interface WeekMealService {
   WeekMeal createWeekMeal(WeekMealRequest request);
@@ -14,4 +17,9 @@ public interface WeekMealService {
   WeekMealResponse getWeekMealById(Long id);
 
   void deleteWeekMeal(Long id);
+
+  WeekMealDay updateWeekMealDay(Long weekMealId, Long dayId, WeekMealDayUpdateRequest request);
+
+  WeekMealDayResponse getWeekMealDayById(Long weekMealId, Long dayId);
+
 }

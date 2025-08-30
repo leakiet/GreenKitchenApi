@@ -15,12 +15,15 @@ import org.springframework.stereotype.Service;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.dtos.WeekMealDayRequest;
 import com.greenkitchen.portal.dtos.WeekMealDayResponse;
+import com.greenkitchen.portal.dtos.WeekMealDayUpdateRequest;
 import com.greenkitchen.portal.dtos.WeekMealRequest;
 import com.greenkitchen.portal.dtos.WeekMealResponse;
+import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.WeekMeal;
 import com.greenkitchen.portal.entities.WeekMealDay;
 import com.greenkitchen.portal.enums.MenuMealType;
 import com.greenkitchen.portal.repositories.MenuMealRepository;
+import com.greenkitchen.portal.repositories.WeekMealDayRepository;
 import com.greenkitchen.portal.repositories.WeekMealRepository;
 import com.greenkitchen.portal.services.WeekMealService;
 
@@ -33,7 +36,54 @@ public class WeekMealServiceImpl implements WeekMealService {
   private MenuMealRepository menuMealRepository;
 
   @Autowired
+  private WeekMealDayRepository weekMealDayRepository; // Thêm nếu chưa có
+
+  @Autowired
   private ModelMapper modelMapper;
+
+  @Override
+  public WeekMealDayResponse getWeekMealDayById(Long weekMealId, Long dayId) {
+    WeekMealDay day = weekMealDayRepository.findById(dayId)
+        .orElseThrow(() -> new RuntimeException("WeekMealDay not found"));
+
+    if (!day.getWeekMeal().getId().equals(weekMealId)) {
+      throw new RuntimeException("Day does not belong to the specified WeekMeal");
+    }
+
+    // Map to response (sử dụng ModelMapper hoặc manual)
+    WeekMealDayResponse response = modelMapper.map(day, WeekMealDayResponse.class);
+    response.setId(day.getId());
+    response.setType(day.getWeekMeal().getType().name()); // Convert enum thành String
+    return response;
+  }
+
+  @Override
+  public WeekMealDay updateWeekMealDay(Long weekMealId, Long dayId, WeekMealDayUpdateRequest request) {
+    WeekMealDay day = weekMealDayRepository.findById(dayId)
+        .orElseThrow(() -> new RuntimeException("WeekMealDay not found"));
+
+    if (!day.getWeekMeal().getId().equals(weekMealId)) {
+      throw new RuntimeException("Day does not belong to the specified WeekMeal");
+    }
+
+    if (request.getMeal1Id() != null) {
+      MenuMeal meal1 = menuMealRepository.findById(request.getMeal1Id())
+          .orElseThrow(() -> new RuntimeException("Meal1 not found"));
+      day.setMeal1(meal1);
+    }
+    if (request.getMeal2Id() != null) {
+      MenuMeal meal2 = menuMealRepository.findById(request.getMeal2Id())
+          .orElseThrow(() -> new RuntimeException("Meal2 not found"));
+      day.setMeal2(meal2);
+    }
+    if (request.getMeal3Id() != null) {
+      MenuMeal meal3 = menuMealRepository.findById(request.getMeal3Id())
+          .orElseThrow(() -> new RuntimeException("Meal3 not found"));
+      day.setMeal3(meal3);
+    }
+
+    return weekMealDayRepository.save(day);
+  }
 
   @Override
   public WeekMealResponse getWeekMealByTypeAndDate(String type, String date) {
@@ -52,6 +102,7 @@ public class WeekMealServiceImpl implements WeekMealService {
     var dayResponses = new ArrayList<WeekMealDayResponse>();
     for (WeekMealDay day : weekMeal.getDays()) {
       var dayRes = new WeekMealDayResponse();
+      dayRes.setId(day.getId());
       dayRes.setDay(day.getDay());
       dayRes.setDate(day.getDate());
       dayRes.setMeal1(modelMapper.map(day.getMeal1(), MenuMealResponse.class));
