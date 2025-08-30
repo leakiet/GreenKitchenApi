@@ -50,6 +50,8 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll() // Custom meals
             .requestMatchers("/apis/v1/paypal/**").permitAll() // PayPal endpoints
             .requestMatchers("/apis/v1/week-meals/**").permitAll() // Week meals endpoints
+            .requestMatchers("/apis/v1/cart-scan/**").permitAll() // Cart scan endpoints
+            .requestMatchers("/apis/v1/email-scheduler/**").permitAll() // Statistics endpoints
 
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").authenticated()
