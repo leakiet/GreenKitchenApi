@@ -1,11 +1,24 @@
 package com.greenkitchen.portal.controllers;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import com.greenkitchen.portal.dtos.WeekMealDayResponse;
+import com.greenkitchen.portal.dtos.WeekMealDayUpdateRequest;
 import com.greenkitchen.portal.dtos.WeekMealRequest;
 import com.greenkitchen.portal.entities.WeekMeal;
+import com.greenkitchen.portal.entities.WeekMealDay;
 import com.greenkitchen.portal.services.WeekMealService;
 
 @RestController
@@ -22,6 +35,31 @@ public class WeekMealController {
       return ResponseEntity.ok(created);
     } catch (Exception e) {
       return ResponseEntity.status(500).body("create week meal failed: " + e.getMessage());
+    }
+  }
+
+  @GetMapping("/{weekMealId}/days/{dayId}")
+  public ResponseEntity<?> getWeekMealDayById(
+      @PathVariable("weekMealId") Long weekMealId,
+      @PathVariable("dayId") Long dayId) {
+    try {
+      WeekMealDayResponse response = weekMealService.getWeekMealDayById(weekMealId, dayId);
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      return ResponseEntity.status(404).body("Day not found: " + e.getMessage());
+    }
+  }
+
+  @PutMapping("/{weekMealId}/days/{dayId}")
+  public ResponseEntity<?> updateWeekMealDay(
+      @PathVariable("weekMealId") Long weekMealId,
+      @PathVariable("dayId") Long dayId,
+      @RequestBody WeekMealDayUpdateRequest request) {
+    try {
+      WeekMealDay updatedDay = weekMealService.updateWeekMealDay(weekMealId, dayId, request);
+      return ResponseEntity.ok(updatedDay);
+    } catch (Exception e) {
+      return ResponseEntity.status(400).body("Update day failed: " + e.getMessage());
     }
   }
 

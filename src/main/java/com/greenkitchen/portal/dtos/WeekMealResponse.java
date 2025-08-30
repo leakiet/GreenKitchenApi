@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class WeekMealResponse {
+  private Long id; 
   private String type;
   private LocalDate weekStart;
   private LocalDate weekEnd;
