@@ -40,6 +40,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 			|| path.startsWith("/apis/v1/auth/")
 			|| path.startsWith("/apis/v1/ws/")
 			|| path.startsWith("/apis/v1/chat/")
+			|| path.startsWith("/apis/v1/support/")
 			|| path.startsWith("/apis/v1/ingredients/")
 			|| path.startsWith("/apis/v1/ingredient-act-his/")
 			|| path.startsWith("/apis/v1/menu-meals/")

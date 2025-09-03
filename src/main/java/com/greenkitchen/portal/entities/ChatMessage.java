@@ -14,9 +14,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.persistence.PrePersist;
 
 @Entity
 @Getter @Setter @NoArgsConstructor
@@ -59,6 +62,16 @@ public class ChatMessage extends AbstractEntity {
     @Column(name = "menu_json", columnDefinition = "TEXT")
     private String menuJson;
 
+    @Version
+    @JsonIgnore
+    private Long version = 0L;
+
+    @PrePersist
+    protected void onPersist() {
+        if (this.version == null) {
+            this.version = 0L;
+        }
+    }
 
 
 }

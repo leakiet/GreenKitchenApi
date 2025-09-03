@@ -23,7 +23,7 @@ import lombok.AllArgsConstructor;
 	    private String senderRole;        // "CUSTOMER", "EMP", "AI"
 	    private String senderName;        // tên hiển thị người gửi hoặc AI
 	    private String content;           // nội dung tin nhắn
-	    private List<MenuMealResponse> menu;
+	    private List<MenuMealLiteResponse> menu;
 	    private LocalDateTime timestamp;  // thời điểm
 	    private MessageStatus  status; // "PENDING", "SENT", "FAILED"
 

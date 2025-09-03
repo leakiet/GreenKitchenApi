@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bạn quên gì đó trong giỏ hàng!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 20px;
+            color: #28a745;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .message {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: #666;
+        }
+        
+        .cart-summary {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .cart-summary h3 {
+            color: #28a745;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .cart-items {
+            margin-bottom: 20px;
+        }
+        
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .item-details {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .item-price {
+            font-weight: 600;
+            color: #28a745;
+            font-size: 16px;
+        }
+        
+        .total-section {
+            background-color: #e8f5e8;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        
+        .total-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .cta-buttons {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 0 10px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .social-links {
+            margin-bottom: 20px;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #28a745;
+            text-decoration: none;
+        }
+        
+        .unsubscribe {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+            }
+            
+            .header, .content, .footer {
+                padding: 20px;
+            }
+            
+            .btn {
+                display: block;
+                margin: 10px 0;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Bạn quên gì đó trong giỏ hàng!</h1>
+            <p>Hoàn thành đơn hàng của bạn ngay hôm nay</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Xin chào <span th:text="${customerName}">Khách hàng</span>!</div>
+            
+            <div class="message">
+                Chúng tôi nhận thấy bạn đã thêm một số sản phẩm vào giỏ hàng nhưng chưa hoàn thành đơn hàng. 
+                Đừng để những món ăn ngon này bị bỏ lỡ!
+            </div>
+            
+            <div class="cart-summary">
+                <h3>📋 Giỏ hàng của bạn</h3>
+                <div class="cart-items">
+                    <div class="cart-item" th:each="item : ${cartItems}">
+                        <div class="item-info">
+                            <div class="item-name" th:text="${item.title}">Tên sản phẩm</div>
+                            <div class="item-details">Số lượng: <span th:text="${item.quantity}">0</span> | <span th:text="${item.description}">Mô tả</span></div>
+                        </div>
+                        <div class="item-price" th:text="${item.totalPrice} + ' VNĐ'">0 VNĐ</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="total-section">
+                <div class="total-amount" th:text="${totalAmount} + ' VNĐ'">0 VNĐ</div>
+                <div class="total-label">Tổng giá trị giỏ hàng</div>
+            </div>
+            
+            <div class="cta-buttons">
+                <a th:href="${frontendUrl} + '/cart'" class="btn btn-primary">🛒 Xem giỏ hàng</a>
+                <a th:href="${frontendUrl} + '/checkout'" class="btn btn-secondary">💳 Thanh toán ngay</a>
+            </div>
+            
+            <div style="text-align: center; color: #666; font-size: 14px; margin-top: 20px;">
+                <p>⏰ Ưu đãi có thể kết thúc sớm!</p>
+                <p>🚚 Giao hàng miễn phí cho đơn hàng trên 200.000 VNĐ</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="social-links">
+                <a href="#">📱 Facebook</a>
+                <a href="#">📸 Instagram</a>
+                <a href="#">🐦 Twitter</a>
+            </div>
+            
+            <p>Green Kitchen - Nơi ẩm thực xanh gặp gỡ sức khỏe</p>
+            <p>📍 123 Đường ABC, Quận XYZ, TP.HCM</p>
+            <p>📞 1900-xxxx | 📧 info@greenkitchen.com</p>
+            
+            <div class="unsubscribe">
+                <a th:href="${unsubscribeUrl}">Hủy đăng ký email</a> | 
+                <a th:href="${preferencesUrl}">Cập nhật tùy chọn</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

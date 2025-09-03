@@ -16,5 +16,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class MenuMealsAiResponse {
     private String content;
-    private List<MenuMealResponse> menu;
+    private List<MenuMealLiteResponse> menu;
 }

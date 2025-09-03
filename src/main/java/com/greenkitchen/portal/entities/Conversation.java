@@ -14,9 +14,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.persistence.PrePersist;
 
 @Entity
 @Getter @Setter @NoArgsConstructor
@@ -41,4 +44,15 @@ public class Conversation extends AbstractEntity {
                cascade = CascadeType.ALL,
                orphanRemoval = true)
     private List<ChatMessage> messages;
+
+    @Version
+    @JsonIgnore
+    private Long version = 0L;
+
+    @PrePersist
+    protected void onPersist() {
+        if (this.version == null) {
+            this.version = 0L;
+        }
+    }
 }

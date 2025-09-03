@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "properties": {
+    "content": { "type": "string" },
+    "menu": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "calories": { "type": ["number", "null"] },
+          "protein": { "type": ["number", "null"] },
+          "carbs": { "type": ["number", "null"] },
+          "fat": { "type": ["number", "null"] },
+          "image": { "type": "string" },
+          "price": { "type": "number" },
+          "slug": { "type": "string" },
+          "type": { "type": "string" },
+          "menuIngredients": { "type": "array" },
+          "reviews": { "type": "array" }
+        },
+        "required": [
+          "id", "title", "description", "price",
+          "slug", "type", "menuIngredients", "reviews"
+        ]
+      }
+    }
+  },
+  "required": ["content", "menu"]
+}

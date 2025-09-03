@@ -35,9 +35,12 @@ public class SecurityConfiguration {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             // Public endpoints - không cần authentication
-            .requestMatchers("/apis/v1/ws/**").permitAll()
-            .requestMatchers("/apis/v1/auth/**").permitAll() // Login, register, refresh-token
-            .requestMatchers("/apis/v1/chat/**").permitAll() // Chat endpoints
+
+        		.requestMatchers("/apis/v1/ws/**").permitAll()
+            .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
+            .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
+            .requestMatchers("/apis/v1/support/**").permitAll()       // Feedback/Support endpoints
+
             .requestMatchers("/apis/v1/ingredients/**").permitAll() // ingredients
             // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers/**").permitAll()
             // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers").permitAll()
@@ -48,6 +51,8 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll() // Custom meals
             .requestMatchers("/apis/v1/paypal/**").permitAll() // PayPal endpoints
             .requestMatchers("/apis/v1/week-meals/**").permitAll() // Week meals endpoints
+            .requestMatchers("/apis/v1/cart-scan/**").permitAll() // Cart scan endpoints
+            .requestMatchers("/apis/v1/email-scheduler/**").permitAll() // Statistics endpoints
 
             // Protected endpoints - cần authentication
             .requestMatchers("/apis/v1/customers/**").authenticated()

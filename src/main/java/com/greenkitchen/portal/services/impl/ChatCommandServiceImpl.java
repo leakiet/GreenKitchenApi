@@ -12,6 +12,7 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -20,14 +21,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StreamUtils;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
-import com.greenkitchen.portal.dtos.MenuMealResponse;
+import com.greenkitchen.portal.dtos.MenuMealLiteResponse;
+import com.greenkitchen.portal.dtos.MenuMealsAiResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
 import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.entities.Customer;
@@ -62,235 +64,373 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private final ModelMapper mapper;
 	private final SimpMessagingTemplate messagingTemplate;
 	private final MenuTools menuTools;
-    private final PlatformTransactionManager transactionManager;
+	private final PlatformTransactionManager transactionManager;
 
-	ObjectMapper om = new ObjectMapper();
+	ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
 
 	@Override
+	@Transactional
 	public ChatResponse sendMessage(Long actorId, ChatRequest request) {
 		validateRequest(request);
 		SenderType senderType = SenderType.valueOf(request.getSenderRole().toUpperCase());
+		
+		// Tạo hoặc lấy conversation trong transaction chính
 		Conversation conv = createOrGetConversation(actorId, senderType, request.getConversationId());
 
 		return switch (senderType) {
 		case CUSTOMER -> handleCustomerMessage(actorId, request, conv);
-		case EMP -> handleEmployeeMessage(actorId, request, conv);
+		case EMP -> handleEmployeeMessageFromEmployee(actorId, request, conv);
 		default -> throw new IllegalArgumentException("SenderRole không hợp lệ: " + senderType);
 		};
 	}
 
-	private ChatResponse handleCustomerMessage(Long actorId, ChatRequest request, Conversation conv) {
-		String content = request.getContent();
-
-		if ("/meet_emp".equals(content)) {
-			conv.setStatus(ConversationStatus.WAITING_EMP);
-			conversationRepo.saveAndFlush(conv);
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-			return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM",
-					"Yêu cầu đã gửi, vui lòng chờ nhân viên.", null, LocalDateTime.now(),MessageStatus.SENT);
-		}
-
-		if ("/backtoAI".equals(content)) {
-			conv.setStatus(ConversationStatus.AI);
-			conv.setEmployee(null);
-			conversationRepo.saveAndFlush(conv);
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-			return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM", "Chuyển về AI thành công.",
-					null, LocalDateTime.now(),MessageStatus.SENT);
-		}
-
-		if (conv.getStatus() != ConversationStatus.AI) {
-			Customer customer = customerRepo.findById(actorId)
-					.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại"));
-			// Lưu bằng giao dịch REQUIRES_NEW để commit ngay
-			TransactionTemplate tmpl = new TransactionTemplate(transactionManager);
-			tmpl.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-			ChatMessage msg = tmpl.execute(status -> {
-				ChatMessage m = buildMessage(customer, null, conv, customer.getFirstName(), SenderType.CUSTOMER, false, content);
-				m.setStatus(MessageStatus.SENT);
-				return chatMessageRepo.saveAndFlush(m);
-			});
-			ChatResponse resp = mapper.map(msg, ChatResponse.class);
-			resp.setSenderRole(SenderType.CUSTOMER.name());
-			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-			return resp;
-		}
-
-		Customer customer = (actorId != null) ? customerRepo.findById(actorId)
-				.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại")) : null;
-
-		// 1) Lưu CUSTOMER PENDING và AI PENDING trong giao dịch REQUIRES_NEW để commit ngay
-		TransactionTemplate tmpl = new TransactionTemplate(transactionManager);
-		tmpl.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-		final ChatMessage[] pendingMsgs = tmpl.execute(status -> {
-			ChatMessage u = buildMessage(customer, null, conv, customer != null ? customer.getFirstName() : "Guest",
-					SenderType.CUSTOMER, false, content);
-			u.setStatus(MessageStatus.PENDING);
-			u = chatMessageRepo.saveAndFlush(u);
-
-			ChatMessage a = buildMessage(null, null, conv, "AI", SenderType.AI, true, "");
-			a.setStatus(MessageStatus.PENDING);
-			a = chatMessageRepo.saveAndFlush(a);
-
-			return new ChatMessage[] { u, a };
-		});
-
-		if (pendingMsgs == null || pendingMsgs.length < 2 || pendingMsgs[0] == null || pendingMsgs[1] == null) {
-			throw new IllegalStateException("Không lưu được tin nhắn PENDING cho CUSTOMER/AI");
-		}
-		ChatMessage userMsg = pendingMsgs[0];
-		ChatMessage aiMsg = pendingMsgs[1];
-
-		// Emit sau khi commit
-		ChatResponse userResp = mapper.map(userMsg, ChatResponse.class);
-		userResp.setSenderRole(SenderType.CUSTOMER.name());
-		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
-		ChatResponse aiPendingResp = mapper.map(aiMsg, ChatResponse.class);
-		aiPendingResp.setSenderRole(SenderType.AI.name());
-		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), aiPendingResp);
-		//Lấy 20 tin nhắn
-		List<ChatMessage> last20Msgs = chatMessageRepo.findTop20ByConversationOrderByTimestampDesc(conv);
-		Collections.reverse(last20Msgs);
-		//Halthy info
-		List<CustomerReference> refs = customerReferenceService.getCustomerReferencesByCustomerId(actorId);
-		String healthInfoJson = "[]"; // mặc định rỗng
-		try {
-		    if (refs != null && !refs.isEmpty()) {
-		        // Nếu chỉ cần 1 hồ sơ → dùng refs.get(0)
-		    	ObjectMapper objectMapper = new ObjectMapper();
-		    	objectMapper.registerModule(new JavaTimeModule());
-		        healthInfoJson = objectMapper.writeValueAsString(refs);
-		    }
-		} catch (JsonProcessingException e) {
-		    log.warn("Không convert được health info sang JSON", e);
-		}
-
-		StringBuilder sb = new StringBuilder();
-		sb.append("<<<HISTORY>>>\n"); // start sentinel
-		for (ChatMessage msg : last20Msgs) {
-			String role = switch (msg.getSenderType().name()) {
-			case "CUSTOMER" -> "user";
-			case "AI" -> "assistant";
-			case "EMP" -> "employee";
-			default -> "other";
-			};
-			sb.append(role).append("|").append(msg.getSenderName()).append("| ")
-					.append(msg.getContent().replace("\n", " ").trim()).append("\n");
-		}
-		sb.append("<<<END_HISTORY>>>\n\n");
-		//Healthy info
-		sb.append("<<<HEALTH_INFO>>>\n")
-		  .append(healthInfoJson)
-		  .append("\n<<<END_HEALTH_INFO>>>\n\n");
-
-
-		sb.append("<<<CURRENT_USER_MESSAGE>>>\n").append(request.getContent().trim())
-				.append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
-
-		String context = sb.toString();
-
-		// 2) Gọi AI để lấy nội dung trả lời thực tế
-		String aiContent = callAi(context, request.getLang());
-
-		String respContent = aiContent;
-		List<MenuMealResponse> menuList = null;
-		boolean isJson = false;
-
-		try {
-			String trimmed = aiContent.trim();
-
-			if (trimmed.startsWith("```") ) {
-				trimmed = trimmed.replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
-			}
-			JsonNode root = om.readTree(trimmed);
-
-			// Chỉ khi có key menu mới parse tiếp
-			if (root.has("menu") && root.get("menu").isArray()) {
-				respContent = root.path("content").asText(""); // fallback nếu thiếu content
-				menuList = om.readerForListOf(MenuMealResponse.class).readValue(root.get("menu"));
-				isJson = true;
-			}
-			log.debug("JSON sau khi clean:\n{}", trimmed);
-
-		} catch (Exception e) {
-			log.warn("Không phải JSON hợp lệ, trả về như text thông thường.");
-		}
-
-		// Chuẩn bị biến final để dùng trong lambda giao dịch
-		final String fRespContent = respContent;
-		final boolean fIsJson = isJson;
-		final List<MenuMealResponse> fMenuList = menuList;
-
-		// 3) Cập nhật AI -> SENT và CUSTOMER -> SENT trong giao dịch REQUIRES_NEW
-		ChatMessage finalizedAiMsg = null;
-		TransactionTemplate finalizeTmpl = new TransactionTemplate(transactionManager);
-		finalizeTmpl.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-		finalizedAiMsg = finalizeTmpl.execute(status -> {
-			ChatMessage aiToUpdate = chatMessageRepo.findById(aiMsg.getId())
-					.orElseThrow(() -> new EntityNotFoundException("AI message không tồn tại"));
-			aiToUpdate.setContent(fRespContent);
-			if (fIsJson && fMenuList != null && !fMenuList.isEmpty()) {
-				try {
-					aiToUpdate.setMenuJson(om.writeValueAsString(fMenuList));
-				} catch (JsonProcessingException e) {
-					log.warn("Không lưu được menu JSON: {}", e.getMessage());
-				}
-			}
-			aiToUpdate.setStatus(MessageStatus.SENT);
-			aiToUpdate = chatMessageRepo.saveAndFlush(aiToUpdate);
-
-			ChatMessage userToUpdate = chatMessageRepo.findById(userMsg.getId())
-					.orElseThrow(() -> new EntityNotFoundException("User message không tồn tại"));
-			userToUpdate.setStatus(MessageStatus.SENT);
-			chatMessageRepo.saveAndFlush(userToUpdate);
-			return aiToUpdate;
-		});
-
-		ChatResponse resp = mapper.map(finalizedAiMsg, ChatResponse.class);
-		resp.setSenderRole(SenderType.AI.name());
-		if (isJson)
-			resp.setMenu(menuList);
-
-		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
-
-		return resp;
-	}
-
-	private ChatResponse handleEmployeeMessage(Long actorId, ChatRequest request, Conversation conv) {
-		Employee emp = employeeRepo.findById(actorId)
-				.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
-
-		conv.setStatus(ConversationStatus.EMP);
-		conv.setEmployee(emp);
-		conversationRepo.saveAndFlush(conv);
-		messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-
-		ChatMessage empMsg = buildMessage(null, emp, conv, emp.getFirstName(), SenderType.EMP, false,
-				request.getContent());
-		chatMessageRepo.save(empMsg);
-
-		ChatResponse resp = mapper.map(empMsg, ChatResponse.class);
-		resp.setSenderRole(SenderType.EMP.name());
-		messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
-		return resp;
-	}
-
+	// Tạo hoặc lấy conversation trong transaction chính
 	private Conversation createOrGetConversation(Long actorId, SenderType senderType, Long convId) {
 		if (convId != null) {
 			return conversationRepo.findById(convId)
 					.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
 		}
+		
 		Conversation conv = new Conversation();
 		conv.setStartTime(LocalDateTime.now());
 		conv.setStatus(ConversationStatus.AI);
+		
+		// Hỗ trợ cả Customer đã đăng nhập và Guest chưa đăng nhập
 		if (senderType == SenderType.CUSTOMER && actorId != null) {
 			Customer customer = customerRepo.findById(actorId)
 					.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại"));
 			conv.setCustomer(customer);
 		}
-		return conversationRepo.save(conv);
+		
+		return conversationRepo.saveAndFlush(conv); // Cần ID ngay để sử dụng
 	}
+
+	// Transaction riêng cho command /meet_emp
+	@Transactional(timeout = 30) // Tăng từ 15 lên 30 giây
+	private ChatResponse handleMeetEmpCommand(Conversation conv) {
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		
+		try {
+			return txTemplate.execute(status -> {
+				// Kiểm tra trạng thái trước khi update để tránh update trùng
+				Conversation currentConv = conversationRepo.findById(conv.getId())
+						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+				
+				if (currentConv.getStatus() != ConversationStatus.WAITING_EMP) {
+					currentConv.setStatus(ConversationStatus.WAITING_EMP);
+					conversationRepo.save(currentConv);
+				}
+				
+				messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+				return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM",
+						"Yêu cầu đã gửi, vui lòng chờ nhân viên.", null, LocalDateTime.now(), MessageStatus.SENT);
+			});
+		} catch (OptimisticLockingFailureException e) {
+			log.warn("Optimistic locking conflict in handleMeetEmpCommand for conversation {}", conv.getId());
+			throw new IllegalStateException("Conversation đang được cập nhật bởi người dùng khác, vui lòng thử lại");
+		}
+	}
+
+	// Transaction riêng cho command /backtoAI
+	@Transactional(timeout = 30) // Tăng từ 15 lên 30 giây
+	private ChatResponse handleBackToAICommand(Conversation conv) {
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		
+		try {
+			return txTemplate.execute(status -> {
+				// Kiểm tra trạng thái trước khi update để tránh update trùng
+				Conversation currentConv = conversationRepo.findById(conv.getId())
+						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+				
+				if (currentConv.getStatus() != ConversationStatus.AI) {
+					currentConv.setStatus(ConversationStatus.AI);
+					currentConv.setEmployee(null);
+					conversationRepo.save(currentConv);
+				}
+				
+				messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+				return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM",
+						"Chuyển về AI thành công.", null, LocalDateTime.now(), MessageStatus.SENT);
+			});
+		} catch (OptimisticLockingFailureException e) {
+			log.warn("Optimistic locking conflict in handleBackToAICommand for conversation {}", conv.getId());
+			throw new IllegalStateException("Conversation đang được cập nhật bởi người dùng khác, vui lòng thử lại");
+		}
+	}
+
+	// Transaction riêng cho message gửi đến employee
+	private ChatResponse handleEmployeeMessage(Long actorId, String content, Conversation conv) {
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		
+		return txTemplate.execute(status -> {
+			// Chỉ kiểm tra customer nếu actorId không null (đã đăng nhập)
+			final Customer customer = (actorId != null) ? customerRepo.findById(actorId)
+					.orElse(null) : null;
+			
+			String senderName = (customer != null) ? customer.getFirstName() : "Guest";
+			ChatMessage m = buildMessage(customer, null, conv, senderName,
+					SenderType.CUSTOMER, false, content);
+			m.setStatus(MessageStatus.SENT);
+			ChatMessage msg = chatMessageRepo.save(m); // Không dùng saveAndFlush
+			
+			ChatResponse resp = mapper.map(msg, ChatResponse.class);
+			resp.setSenderRole(SenderType.CUSTOMER.name());
+			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
+			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+			return resp;
+		});
+	}
+
+	// Wrapper class để trả về kết quả từ saveCustomerPendingMessage
+	private static class PendingMessageResult {
+		private final ChatResponse userResp;
+		private final ChatResponse aiPendingResp;
+		private final ChatMessage userMsg;
+		private final ChatMessage aiMsg;
+		
+		public PendingMessageResult(ChatResponse userResp, ChatResponse aiPendingResp, 
+								  ChatMessage userMsg, ChatMessage aiMsg) {
+			this.userResp = userResp;
+			this.aiPendingResp = aiPendingResp;
+			this.userMsg = userMsg;
+			this.aiMsg = aiMsg;
+		}
+		
+		public ChatResponse getUserResp() { return userResp; }
+		public ChatResponse getAiPendingResp() { return aiPendingResp; }
+		public ChatMessage getUserMsg() { return userMsg; }
+		public ChatMessage getAiMsg() { return aiMsg; }
+	}
+	
+	// Transaction riêng cho việc lưu message PENDING của CUSTOMER
+	// Đảm bảo message PENDING luôn được lưu vào DB ngay cả khi có lỗi xảy ra phía sau
+	private PendingMessageResult saveCustomerPendingMessage(Long actorId, ChatRequest request, Conversation conv) {
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		
+		return txTemplate.execute(status -> {
+			final Customer customer = (actorId != null) ? customerRepo.findById(actorId)
+					.orElse(null) : null;
+
+			// Lưu CUSTOMER PENDING trong transaction riêng
+			ChatMessage userMsg = buildMessage(customer, null, conv,
+					customer != null ? customer.getFirstName() : "Guest",
+					SenderType.CUSTOMER, false, request.getContent());
+			userMsg.setStatus(MessageStatus.PENDING);
+			userMsg = chatMessageRepo.saveAndFlush(userMsg); // Cần ID để emit
+
+			// Lưu AI PENDING cũng trong transaction này để đảm bảo tính nhất quán
+			ChatMessage aiMsg = buildMessage(null, null, conv, "AI", SenderType.AI, true, "");
+			aiMsg.setStatus(MessageStatus.PENDING);
+			aiMsg = chatMessageRepo.saveAndFlush(aiMsg); // Cần ID để emit và update sau
+
+			// Emit ngay lập tức sau khi commit transaction
+			ChatResponse userResp = mapper.map(userMsg, ChatResponse.class);
+			userResp.setSenderRole(SenderType.CUSTOMER.name());
+			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
+
+			ChatResponse aiPendingResp = mapper.map(aiMsg, ChatResponse.class);
+			aiPendingResp.setSenderRole(SenderType.AI.name());
+			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), aiPendingResp);
+
+			// Trả về wrapper object chứa cả 2 message
+			return new PendingMessageResult(userResp, aiPendingResp, userMsg, aiMsg);
+		});
+	}
+
+	// Xử lý AI: gọi AI ngoài transaction, chỉ mở transaction ngắn để ghi DB
+	private ChatResponse processAIResponse(String context, String lang, ChatMessage userMsg, ChatMessage aiMsg, Conversation conv) {
+		long startTime = System.currentTimeMillis();
+		log.info("🚀 Starting AI processing for conversation: {}", conv.getId());
+		
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		
+		return txTemplate.execute(status -> {
+			try {
+				// 1. AI call
+				long aiStartTime = System.currentTimeMillis();
+				log.info("🤖 Calling AI with context length: {} characters", context.length());
+				
+				MenuMealsAiResponse aiResp = callAi(context, lang);
+				
+				long aiDuration = System.currentTimeMillis() - aiStartTime;
+				log.info("✅ AI response received in {}ms", aiDuration);
+				
+				// 2. Process AI response
+				long processStartTime = System.currentTimeMillis();
+				String respContent = aiResp.getContent();
+				List<MenuMealLiteResponse> menuList = aiResp.getMenu();
+				boolean isJson = (menuList != null && !menuList.isEmpty());
+
+				// Update AI message (bỏ serialize menuJson để giảm overhead)
+				aiMsg.setContent(respContent);
+				aiMsg.setStatus(MessageStatus.SENT);
+				ChatMessage finalizedAiMsg = chatMessageRepo.saveAndFlush(aiMsg);
+
+				// Update user message status
+				userMsg.setStatus(MessageStatus.SENT);
+				chatMessageRepo.saveAndFlush(userMsg);
+
+				long processDuration = System.currentTimeMillis() - processStartTime;
+				log.info("⚙️ Message processing completed in {}ms", processDuration);
+
+				// 3. Final response
+				ChatResponse resp = mapper.map(finalizedAiMsg, ChatResponse.class);
+				resp.setSenderRole(SenderType.AI.name());
+				if (isJson) {
+					resp.setMenu(menuList);
+				}
+
+				messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
+				
+				long totalDuration = System.currentTimeMillis() - startTime;
+				log.info("🎯 AI processing completed in {}ms (AI: {}ms, Processing: {}ms) - Conversation: {}", 
+						totalDuration, aiDuration, processDuration, conv.getId());
+
+				return resp;
+				
+			} catch (Exception e) {
+				long totalDuration = System.currentTimeMillis() - startTime;
+				log.error("❌ AI processing failed after {}ms for conversation {}: {}", totalDuration, conv.getId(), e.getMessage(), e);
+				
+				// Cập nhật status của AI message thành FAILED nếu có lỗi
+				aiMsg.setStatus(MessageStatus.FAILED);
+				aiMsg.setContent("Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.");
+				chatMessageRepo.saveAndFlush(aiMsg);
+				
+				// Emit message lỗi
+				ChatResponse errorResp = mapper.map(aiMsg, ChatResponse.class);
+				errorResp.setSenderRole(SenderType.AI.name());
+				messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), errorResp);
+				
+				return errorResp;
+			}
+		});
+	}
+
+	private ChatResponse handleCustomerMessage(Long actorId, ChatRequest request, Conversation conv) {
+	    String content = request.getContent();
+
+	    // 1. Các command đặc biệt - xử lý trong transaction riêng
+	    if ("/meet_emp".equals(content)) {
+	        return handleMeetEmpCommand(conv);
+	    }
+
+	    if ("/backtoAI".equals(content)) {
+	        return handleBackToAICommand(conv);
+	    }
+
+	    // 2. Nếu hội thoại không ở trạng thái AI → gửi thẳng cho EMP
+	    if (conv.getStatus() != ConversationStatus.AI) {
+	        return handleEmployeeMessage(actorId, content, conv);
+	    }
+
+	    // 3. Lưu message PENDING trong transaction riêng biệt - ĐẢM BẢO LUÔN ĐƯỢC LƯU
+	    PendingMessageResult pendingResult = saveCustomerPendingMessage(actorId, request, conv);
+	    ChatResponse userResp = pendingResult.getUserResp();
+	    ChatResponse aiPendingResp = pendingResult.getAiPendingResp();
+	    ChatMessage userMsg = pendingResult.getUserMsg();
+	    ChatMessage aiMsg = pendingResult.getAiMsg();
+
+	    // 4. Lấy 20 tin nhắn để build context cho AI
+	    List<ChatMessage> last20Msgs = chatMessageRepo.findTop10ByConversationOrderByTimestampDesc(conv);
+	    Collections.reverse(last20Msgs);
+
+	    // 5. Lấy health info
+	    String healthInfoJson = "[]";
+	    if (actorId != null) {
+	        List<CustomerReference> refs = customerReferenceService.getCustomerReferencesByCustomerId(actorId);
+	        try {
+	            if (refs != null && !refs.isEmpty()) {
+	                ObjectMapper objectMapper = new ObjectMapper();
+	                objectMapper.registerModule(new JavaTimeModule());
+	                healthInfoJson = objectMapper.writeValueAsString(refs);
+	            }
+	        } catch (JsonProcessingException e) {
+	            log.warn("Không convert được health info sang JSON", e);
+	        }
+	    }
+
+
+		// 6. Build context cho AI
+		StringBuilder sb = new StringBuilder();
+		sb.append("<<<HISTORY>>>\n");
+		for (ChatMessage msg : last20Msgs) {
+			String role = switch (msg.getSenderType().name()) {
+				case "CUSTOMER" -> "user";
+				case "AI" -> "assistant";
+				case "EMP" -> "employee";
+				default -> "other";
+			};
+			sb.append(role).append("|").append(msg.getSenderName()).append("| ")
+					.append(msg.getContent().replace("\n", " ").trim()).append("\n");
+		}
+		sb.append("<<<END_HISTORY>>>\n\n");
+
+		if (actorId != null) {
+			sb.append("<<<HEALTH_INFO>>>\n")
+			  .append(healthInfoJson)
+			  .append("\n<<<END_HEALTH_INFO>>>\n\n");
+		}
+
+		sb.append("<<<CURRENT_USER_MESSAGE>>>\n").append(request.getContent().trim())
+				.append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
+
+		// Thêm hướng dẫn cho AI: Chỉ gọi tool menu nếu user hiện tại hỏi về menu
+		if (!isMenuIntent(request.getContent())) {
+			sb.append("\nLưu ý cho AI: User hiện tại không hỏi về menu, KHÔNG gọi tool menu.\n");
+		}
+
+		String context = sb.toString();
+
+		// 7. Xử lý AI response trong transaction riêng biệt
+		return processAIResponse(context, request.getLang(), userMsg, aiMsg, conv);
+	}
+	// Helper: Kiểm tra intent menu
+	private boolean isMenuIntent(String message) {
+		if (message == null) return false;
+		String lower = message.toLowerCase();
+		return lower.contains("menu") || lower.contains("món") || lower.contains("giá") || lower.contains("calorie") || lower.contains("nguyên liệu") || lower.contains("khẩu phần") || lower.contains("loại món");
+	}
+
+
+	private ChatResponse handleEmployeeMessageFromEmployee(Long actorId, ChatRequest request, Conversation conv) {
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		
+		return txTemplate.execute(status -> {
+			Employee emp = employeeRepo.findById(actorId)
+					.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
+
+			// Kiểm tra trạng thái trước khi update
+			Conversation currentConv = conversationRepo.findById(conv.getId())
+					.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+			
+			if (currentConv.getStatus() != ConversationStatus.EMP || !emp.equals(currentConv.getEmployee())) {
+				currentConv.setStatus(ConversationStatus.EMP);
+				currentConv.setEmployee(emp);
+				conversationRepo.save(currentConv);
+			}
+			
+			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+
+			ChatMessage empMsg = buildMessage(null, emp, conv, emp.getFirstName(), SenderType.EMP, false,
+					request.getContent());
+			empMsg.setStatus(MessageStatus.SENT);
+			chatMessageRepo.save(empMsg); // Không dùng saveAndFlush
+
+			ChatResponse resp = mapper.map(empMsg, ChatResponse.class);
+			resp.setSenderRole(SenderType.EMP.name());
+			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
+			return resp;
+		});
+	}
+
+
 
 	private ChatMessage buildMessage(Customer customer, Employee employee, Conversation conv, String senderName,
 			SenderType senderType, boolean isFromAI, String content) {
@@ -320,16 +460,24 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	}
 
 	// Gọi AI với prompt và ngôn ngữ (tái sử dụng menuTools)
-	private String callAi(String prompt, String lang) {
-		String systemPrompt;
-		try {
-			systemPrompt = loadPrompt("PromtAIGreenKitchen.md");
-		} catch (IOException e) {
-			log.error("Không thể tải prompt từ file: " + e.getMessage());
-			systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của thương hiệu thực phẩm sạch Green Kitchen...";
-		}
-		return chatClient.prompt().system(systemPrompt).tools(menuTools).user(prompt).call().content();
+	private MenuMealsAiResponse callAi(String prompt, String lang) {
+	    String systemPrompt;
+	    try {
+	        systemPrompt = loadPrompt("PromtAIGreenKitchen.md");
+	    } catch (IOException e) {
+	        log.error("Không thể tải prompt từ file: " + e.getMessage());
+	        systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của Green Kitchen...";
+	    }
+
+	    return chatClient.prompt()
+	            .system(systemPrompt)
+	            .tools(menuTools)
+	            .user(prompt)
+	            .call()
+	            .entity(new ParameterizedTypeReference<MenuMealsAiResponse>() {});
+	    
 	}
+
 
 	private String loadPrompt(String fileName) throws IOException {
 		ClassPathResource resource = new ClassPathResource("prompts/" + fileName);
