@@ -275,9 +275,18 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				List<MenuMealLiteResponse> menuList = aiResp.getMenu();
 				boolean isJson = (menuList != null && !menuList.isEmpty());
 
-				// Update AI message (bỏ serialize menuJson để giảm overhead)
+				// Update AI message: lưu kèm menuJson để FE có thể backfill/pagination hiển thị menu
 				aiMsg.setContent(respContent);
 				aiMsg.setStatus(MessageStatus.SENT);
+				if (isJson) {
+					try {
+						aiMsg.setMenuJson(om.writeValueAsString(menuList));
+					} catch (Exception ex) {
+						aiMsg.setMenuJson(null);
+					}
+				} else {
+					aiMsg.setMenuJson(null);
+				}
 				ChatMessage finalizedAiMsg = chatMessageRepo.saveAndFlush(aiMsg);
 
 				// Update user message status
