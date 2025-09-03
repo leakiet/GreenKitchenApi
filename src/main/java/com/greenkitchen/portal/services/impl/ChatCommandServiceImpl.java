@@ -84,25 +84,32 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		};
 	}
 
-	// Tạo hoặc lấy conversation trong transaction chính
+	// Tạo hoặc lấy conversation: dùng transaction REQUIRES_NEW để đảm bảo có ID trước khi lưu message
 	private Conversation createOrGetConversation(Long actorId, SenderType senderType, Long convId) {
 		if (convId != null) {
 			return conversationRepo.findById(convId)
 					.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
 		}
-		
-		Conversation conv = new Conversation();
-		conv.setStartTime(LocalDateTime.now());
-		conv.setStatus(ConversationStatus.AI);
-		
-		// Hỗ trợ cả Customer đã đăng nhập và Guest chưa đăng nhập
-		if (senderType == SenderType.CUSTOMER && actorId != null) {
-			Customer customer = customerRepo.findById(actorId)
-					.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại"));
-			conv.setCustomer(customer);
-		}
-		
-		return conversationRepo.saveAndFlush(conv); // Cần ID ngay để sử dụng
+
+		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		// Conversation creation should be quick; set a short timeout
+		txTemplate.setTimeout(10);
+
+		return txTemplate.execute(status -> {
+			Conversation conv = new Conversation();
+			conv.setStartTime(LocalDateTime.now());
+			conv.setStatus(ConversationStatus.AI);
+
+			// Hỗ trợ cả Customer đã đăng nhập và Guest chưa đăng nhập
+			if (senderType == SenderType.CUSTOMER && actorId != null) {
+				Customer customer = customerRepo.findById(actorId)
+						.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại"));
+				conv.setCustomer(customer);
+			}
+
+			return conversationRepo.saveAndFlush(conv); // Cần ID ngay để sử dụng
+		});
 	}
 
 	// Transaction riêng cho command /meet_emp
@@ -110,6 +117,8 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private ChatResponse handleMeetEmpCommand(Conversation conv) {
 		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
 		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		// Tránh treo khi DB bận: giới hạn 15s cho việc lưu PENDING
+		txTemplate.setTimeout(15);
 		
 		try {
 			return txTemplate.execute(status -> {
