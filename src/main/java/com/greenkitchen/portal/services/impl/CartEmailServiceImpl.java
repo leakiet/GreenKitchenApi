@@ -47,6 +47,9 @@ public class CartEmailServiceImpl implements CartEmailService {
     @Autowired
     private CartRepository cartRepository;
     
+    @Autowired
+    private com.greenkitchen.portal.repositories.CartEmailLogRepository cartEmailLogRepository;
+    
     @Value("${spring.mail.username}")
     private String fromEmail;
     
@@ -100,6 +103,15 @@ public class CartEmailServiceImpl implements CartEmailService {
             
             // Gửi email
             mailSender.send(message);
+            
+            // Lưu log email đã gửi
+            com.greenkitchen.portal.entities.CartEmailLog emailLog = new com.greenkitchen.portal.entities.CartEmailLog(
+                cart.getCustomerId(),
+                cart.getCartItems().size(),
+                cart.getTotalAmount(),
+                "CART_ABANDONMENT"
+            );
+            cartEmailLogRepository.save(emailLog);
             
             log.info("✅ Đã gửi email cart abandonment thành công cho customer {} (email: {})", customerName, customerEmail);
             
@@ -359,7 +371,7 @@ public class CartEmailServiceImpl implements CartEmailService {
             log.warn("Cart không có total amount hợp lệ");
             return false;
         }
-        
+            
         return true;
     }
     

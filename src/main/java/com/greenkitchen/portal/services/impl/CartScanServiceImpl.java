@@ -33,6 +33,9 @@ public class CartScanServiceImpl implements CartScanService {
     
     @Autowired
     private CartEmailService cartEmailService;
+    
+    @Autowired
+    private com.greenkitchen.portal.repositories.CartEmailLogRepository cartEmailLogRepository;
 
     @Override
     public CartScanResponse scanAllCustomersWithCarts() {
@@ -46,9 +49,10 @@ public class CartScanServiceImpl implements CartScanService {
         int existingCustomersSkipped = 0;
         
         for (Long customerId : customerIdsWithCarts) {
-            if (isCustomerAlreadyScanned(customerId)) {
+            // Kiểm tra cooldown: chỉ gửi email nếu chưa nhận trong 7 ngày
+            if (!canReceiveCartEmail(customerId)) {
                 existingCustomersSkipped++;
-                log.debug("Customer {} đã được quét, bỏ qua", customerId);
+                log.debug("Customer {} đã nhận email cart abandonment trong 7 ngày gần đây, bỏ qua", customerId);
                 continue;
             }
             
@@ -177,6 +181,18 @@ public class CartScanServiceImpl implements CartScanService {
     @Override
     public boolean isCustomerAlreadyScanned(Long customerId) {
         return cartScanLogRepository.existsByCustomerId(customerId);
+    }
+    
+    // Kiểm tra khách hàng có thể nhận email cart abandonment (cooldown 7 ngày)
+    public boolean canReceiveCartEmail(Long customerId) {
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+        return !cartEmailLogRepository.hasReceivedCartEmailRecently(customerId, sevenDaysAgo);
+    }
+    
+    // Kiểm tra khách hàng có thể nhận email nhắc nhở (cooldown 14 ngày)
+    public boolean canReceiveReminderEmail(Long customerId) {
+        LocalDateTime fourteenDaysAgo = LocalDateTime.now().minusDays(14);
+        return !cartEmailLogRepository.hasReceivedCartEmailRecently(customerId, fourteenDaysAgo);
     }
     
     @Override
