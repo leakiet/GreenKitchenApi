@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.greenkitchen.portal.dtos.ExchangeCouponRequest;
+import com.greenkitchen.portal.dtos.CreateCouponRequest;
+import com.greenkitchen.portal.dtos.BulkCreateCustomerCouponsRequest;
 import com.greenkitchen.portal.entities.Coupon;
 import com.greenkitchen.portal.services.CouponService;
 
@@ -83,10 +85,23 @@ public class CouponController {
    * ADMIN: Tạo coupon mới
    */
   @PostMapping("/admin/create")
-  public ResponseEntity<Coupon> createCoupon(@Valid @RequestBody Coupon coupon) {
+  public ResponseEntity<Coupon> createCoupon(@Valid @RequestBody CreateCouponRequest request) {
     try {
-      Coupon createdCoupon = couponService.createCoupon(coupon);
+      Coupon createdCoupon = couponService.createCoupon(request);
       return ResponseEntity.ok(createdCoupon);
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().build();
+    }
+  }
+
+  /**
+   * ADMIN: Tạo bulk customer coupons
+   */
+  @PostMapping("/admin/bulk-create-customer-coupons")
+  public ResponseEntity<Void> createBulkCustomerCoupons(@Valid @RequestBody BulkCreateCustomerCouponsRequest request) {
+    try {
+      couponService.createBulkCustomerCoupons(request);
+      return ResponseEntity.ok().build();
     } catch (Exception e) {
       return ResponseEntity.badRequest().build();
     }

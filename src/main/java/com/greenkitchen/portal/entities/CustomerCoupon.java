@@ -5,8 +5,8 @@ import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.greenkitchen.portal.enums.CouponType;
 import com.greenkitchen.portal.enums.CustomerCouponStatus;
+import com.greenkitchen.portal.enums.CouponApplicability;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
@@ -64,6 +64,10 @@ public class CustomerCoupon extends AbstractEntity {
     @NotNull
     @Enumerated(EnumType.STRING)
     private CouponType couponType; // PERCENTAGE, FIXED_AMOUNT
+    
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    private CouponApplicability couponApplicability; // GENERAL, SPECIFIC_CUSTOMER
     
     @NotNull
     private Double couponDiscountValue; // Giá trị giảm giá

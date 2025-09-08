@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSpecificationExecutor<Customer> {
     Customer findByEmail(String email);
@@ -21,4 +23,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSp
         "OR c.phone LIKE CONCAT('%', :q, '%')) " +
         "ORDER BY c.createdAt DESC")
     Page<Customer> findFilteredPaged(@Param("q") String q, Pageable pageable);
+
+    @Query("SELECT c FROM Customer c WHERE c.isActive = true AND COALESCE(c.isDeleted, false) = false")
+    List<Customer> findActiveCustomers();
 }

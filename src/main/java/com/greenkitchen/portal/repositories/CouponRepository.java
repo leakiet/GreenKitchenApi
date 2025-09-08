@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import com.greenkitchen.portal.entities.Coupon;
 import com.greenkitchen.portal.enums.CouponStatus;
+import com.greenkitchen.portal.enums.CouponApplicability;
 
 @Repository
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
@@ -19,6 +20,9 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     
     // Lấy danh sách coupon có thể đổi (chỉ cần ACTIVE)
     List<Coupon> findByStatusAndIsDeletedFalse(CouponStatus status);
+    
+    // Lấy danh sách coupon có thể đổi (ACTIVE, không bị xóa, và là GENERAL)
+    List<Coupon> findByStatusAndIsDeletedFalseAndApplicability(CouponStatus status, CouponApplicability applicability);
     
     // Tìm coupon theo points required range
     @Query("SELECT c FROM Coupon c WHERE c.pointsRequired >= :minPoints " +

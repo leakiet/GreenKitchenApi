@@ -4,7 +4,7 @@ import com.greenkitchen.portal.enums.OrderStatus;
 import com.greenkitchen.portal.enums.PaymentStatus;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.greenkitchen.portal.entities.OrderItem;
+import com.greenkitchen.portal.dtos.OrderItemResponse;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -45,7 +45,7 @@ public class OrderResponse {
     private String paymentMethod;
     private String paypalOrderId;
 
-    private List<OrderItem> orderItems;
+    private List<OrderItemResponse> orderItems;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

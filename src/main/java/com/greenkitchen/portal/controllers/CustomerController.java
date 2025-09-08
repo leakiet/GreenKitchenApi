@@ -16,10 +16,14 @@ import com.greenkitchen.portal.dtos.ChangePasswordRequest;
 import com.greenkitchen.portal.dtos.EmailRequest;
 import com.greenkitchen.portal.dtos.GoogleLinkRequest;
 import com.greenkitchen.portal.dtos.UpdateAvatarResponse;
+import com.greenkitchen.portal.dtos.CustomerSummaryDto;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.services.CustomerService;
 
 import org.springframework.web.bind.annotation.PutMapping;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -32,6 +36,27 @@ public class CustomerController {
 
   @Autowired
   private ModelMapper modelMapper;
+
+  @GetMapping
+  public ResponseEntity<List<CustomerSummaryDto>> getAllUsers() {
+    try {
+      List<Customer> customers = customerService.findActiveCustomers();
+      List<CustomerSummaryDto> customerSummaries = customers.stream()
+                    .map(customer -> {
+            CustomerSummaryDto dto = modelMapper.map(customer, CustomerSummaryDto.class);
+            // Convert Gender enum to String
+            dto.setGender(customer.getGender() != null ? customer.getGender().toString() : null);
+            // Set email and phone explicitly
+            dto.setEmail(customer.getEmail());
+            dto.setPhone(customer.getPhone());
+            return dto;
+          })
+          .collect(Collectors.toList());
+      return ResponseEntity.ok(customerSummaries);
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().build();
+    }
+  }
 
   @GetMapping("/filter")
   public ResponseEntity<?> getAllCustomers(@RequestParam(value = "page", required = false) Integer page,

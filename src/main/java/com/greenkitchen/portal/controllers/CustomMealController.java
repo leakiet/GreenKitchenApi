@@ -44,6 +44,18 @@ public class CustomMealController {
         }
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable("id") Long id) {
+        try {
+            CustomMealResponse res = customMealService.findById(id);
+            return ResponseEntity.ok(res);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CustomMealRequest request) {
         try {

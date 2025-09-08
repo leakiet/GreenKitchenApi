@@ -2,17 +2,22 @@ package com.greenkitchen.portal.services.impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.greenkitchen.portal.dtos.CreateCouponRequest;
+import com.greenkitchen.portal.dtos.BulkCreateCustomerCouponsRequest;
 import com.greenkitchen.portal.entities.Coupon;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.CustomerCoupon;
 import com.greenkitchen.portal.entities.CustomerMembership;
 import com.greenkitchen.portal.entities.PointHistory;
 import com.greenkitchen.portal.enums.CouponStatus;
+import com.greenkitchen.portal.enums.CouponApplicability;
 import com.greenkitchen.portal.enums.CustomerCouponStatus;
 import com.greenkitchen.portal.enums.PointTransactionType;
 import com.greenkitchen.portal.repositories.CouponRepository;
@@ -38,7 +43,7 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public List<Coupon> getAvailableCouponsForExchange() {
-        return couponRepository.findByStatusAndIsDeletedFalse(CouponStatus.ACTIVE);
+        return couponRepository.findByStatusAndIsDeletedFalseAndApplicability(CouponStatus.ACTIVE, CouponApplicability.GENERAL);
     }
 
     @Override
@@ -108,17 +113,47 @@ public class CouponServiceImpl implements CouponService {
     
     @Override
     @Transactional
-    public Coupon createCoupon(Coupon coupon) {
+    public Coupon createCoupon(CreateCouponRequest request) {
         // Validate coupon code uniqueness
-        if (couponRepository.findByCode(coupon.getCode()).isPresent()) {
+        if (couponRepository.findByCode(request.getCode()).isPresent()) {
             throw new IllegalArgumentException("Coupon code already exists");
         }
-        
+
+        // Create coupon entity
+        Coupon coupon = new Coupon();
+        coupon.setCode(request.getCode());
+        coupon.setName(request.getName());
+        coupon.setDescription(request.getDescription());
+        coupon.setType(request.getType());
+        coupon.setDiscountValue(request.getDiscountValue());
+        coupon.setMaxDiscount(request.getMaxDiscount());
+        coupon.setPointsRequired(request.getPointsRequired());
+        coupon.setValidUntil(request.getValidUntil());
+        coupon.setExchangeLimit(request.getExchangeLimit());
+        coupon.setStatus(request.getStatus());
+        coupon.setApplicability(request.getApplicability());
         coupon.setCreatedAt(LocalDateTime.now());
         coupon.setUpdatedAt(LocalDateTime.now());
         coupon.setIsDeleted(false);
-        
-        return couponRepository.save(coupon);
+
+        // Save coupon first
+        Coupon savedCoupon = couponRepository.save(coupon);
+
+        // If specific customer coupon, create customer coupons
+        if (request.getApplicability() == CouponApplicability.SPECIFIC_CUSTOMER && request.getCustomerIds() != null) {
+            createBulkCustomerCouponsForCoupon(savedCoupon, request.getCustomerIds());
+        }
+
+        return savedCoupon;
+    }
+
+    @Override
+    @Transactional
+    public void createBulkCustomerCoupons(BulkCreateCustomerCouponsRequest request) {
+        Coupon coupon = couponRepository.findById(request.getCouponId())
+            .orElseThrow(() -> new IllegalArgumentException("Coupon not found"));
+
+        createBulkCustomerCouponsForCoupon(coupon, request.getCustomerIds());
     }
     
     @Override
@@ -170,6 +205,11 @@ public class CouponServiceImpl implements CouponService {
             return false;
         }
         
+        // Kiểm tra applicability phải là GENERAL
+        if (coupon.getApplicability() != CouponApplicability.GENERAL) {
+            return false;
+        }
+        
         // Kiểm tra thời gian hết hạn
         if (coupon.getValidUntil().isBefore(now)) {
             return false;
@@ -197,6 +237,7 @@ public class CouponServiceImpl implements CouponService {
         customerCoupon.setCouponName(coupon.getName());
         customerCoupon.setCouponDescription(coupon.getDescription());
         customerCoupon.setCouponType(coupon.getType());
+        customerCoupon.setCouponApplicability(coupon.getApplicability());
         customerCoupon.setCouponDiscountValue(coupon.getDiscountValue());
         customerCoupon.setMaxDiscount(coupon.getMaxDiscount());
         
@@ -205,6 +246,21 @@ public class CouponServiceImpl implements CouponService {
         customerCoupon.setIsDeleted(false);
         
         return customerCoupon;
+    }
+    
+    private void createBulkCustomerCouponsForCoupon(Coupon coupon, List<Long> customerIds) {
+        // Get customers by IDs
+        Set<Customer> customers = customerRepository.findAllById(customerIds).stream()
+            .collect(Collectors.toSet());
+
+        // Set specific customers for coupon
+        coupon.setSpecificCustomers(customers);
+
+                // Create customer coupons for each customer
+        for (Customer customer : customers) {
+            CustomerCoupon customerCoupon = createCustomerCoupon(customer, coupon);
+            customerCouponRepository.save(customerCoupon);
+        }
     }
     
     private void createPointHistory(Customer customer, Double pointsUsed, String couponName) {

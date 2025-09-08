@@ -81,6 +81,10 @@ public class CustomerServiceImpl implements CustomerService {
     return customerRepository.findAll();
   }
 
+  @Override
+  public List<Customer> findActiveCustomers() {
+    return customerRepository.findActiveCustomers();
+  }
 
   @Override
   public PagedResponse<CustomerResponse> listFilteredPaged(String q, int page, int size) {

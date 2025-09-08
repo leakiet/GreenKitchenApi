@@ -2,6 +2,8 @@ package com.greenkitchen.portal.services;
 
 import java.util.List;
 
+import com.greenkitchen.portal.dtos.CreateCouponRequest;
+import com.greenkitchen.portal.dtos.BulkCreateCustomerCouponsRequest;
 import com.greenkitchen.portal.entities.Coupon;
 
 public interface CouponService {
@@ -34,7 +36,12 @@ public interface CouponService {
     /**
      * ADMIN: Tạo coupon mới
      */
-    Coupon createCoupon(Coupon coupon);
+    Coupon createCoupon(CreateCouponRequest request);
+    
+    /**
+     * ADMIN: Tạo bulk customer coupons cho specific customers
+     */
+    void createBulkCustomerCoupons(BulkCreateCustomerCouponsRequest request);
     
     /**
      * ADMIN: Cập nhật coupon
@@ -46,3 +53,4 @@ public interface CouponService {
      */
     void deleteCoupon(Long couponId);
 }
+

@@ -1,11 +1,13 @@
 package com.greenkitchen.portal.services.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.greenkitchen.portal.dtos.CustomerCouponIdsResponse;
 import com.greenkitchen.portal.dtos.UseCouponRequest;
 import com.greenkitchen.portal.entities.CustomerCoupon;
 import com.greenkitchen.portal.enums.CustomerCouponStatus;
@@ -48,5 +50,11 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
         customerCoupon.setUpdatedAt(LocalDateTime.now());
         
         return customerCouponRepository.save(customerCoupon);
+    }
+
+    @Override
+    public CustomerCouponIdsResponse getCustomerIdsByCouponId(Long couponId) {
+        List<Long> customerIds = customerCouponRepository.findCustomerIdsByCouponId(couponId);
+        return new CustomerCouponIdsResponse(customerIds);
     }
 }
