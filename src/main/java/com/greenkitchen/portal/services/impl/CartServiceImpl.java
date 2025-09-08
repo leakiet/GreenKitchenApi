@@ -150,11 +150,10 @@ public class CartServiceImpl implements CartService {
             throw new RuntimeException("Unauthorized: Item does not belong to this customer");
         }
 
-        // Soft delete - chỉ đánh dấu isDeleted = true
-        cartItem.setIsDeleted(true);
-        cartItemRepository.save(cartItem);
+        cart.getCartItems().remove(cartItem);
 
-        // Update cart total (chỉ tính items không bị xóa)
+        cartItemRepository.delete(cartItem);
+
         cart.setTotalAmount(calculateTotalAmount(cart));
         cartRepository.save(cart);
     }
