@@ -23,7 +23,7 @@ import lombok.Setter;
 public class Cart extends AbstractEntity {
   private static final long serialVersionUID = 1L;
 
-  @Column(name = "customer_id")
+  @Column(name = "customer_id", unique = true)
   private Long customerId;
 
   @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
