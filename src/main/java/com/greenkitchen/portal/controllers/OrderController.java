@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.controllers;
 
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,10 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.greenkitchen.portal.dtos.CreateOrderRequest;
 import com.greenkitchen.portal.dtos.OrderResponse;
-import com.greenkitchen.portal.dtos.UpdateOrderRequest;
 import com.greenkitchen.portal.dtos.UpdateOrderStatusRequest;
 import com.greenkitchen.portal.entities.Order;
-import com.greenkitchen.portal.enums.OrderStatus;
 import com.greenkitchen.portal.enums.PaymentStatus;
 import com.greenkitchen.portal.services.OrderService;
 import com.greenkitchen.portal.services.impl.MembershipServiceImpl;

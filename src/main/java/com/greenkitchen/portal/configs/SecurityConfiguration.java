@@ -40,11 +40,14 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/auth/**").permitAll()          // Login, register, refresh-token
             .requestMatchers("/apis/v1/chat/**").permitAll()          // Chat endpoints
             .requestMatchers("/apis/v1/support/**").permitAll()       // Feedback/Support endpoints
+            .requestMatchers("/apis/v1/settings/**").permitAll()      // Settings endpoints
 
             .requestMatchers("/apis/v1/ingredients/**").permitAll() // ingredients
             // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers/**").permitAll()
             // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers").permitAll()
             .requestMatchers("/apis/v1/menu-meals/customers/**").permitAll()
+            .requestMatchers("/apis/v1/post-categories/**").permitAll()
+            .requestMatchers("/apis/v1/posts/**").permitAll()
 
             .requestMatchers("/apis/v1/carts/**").permitAll()
             .requestMatchers("/apis/v1/dashboard/**").permitAll()
@@ -67,7 +70,7 @@ public class SecurityConfiguration {
 
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
-            .requestMatchers("/apis/v1/posts/**").permitAll() // Posts endpoints
+             // Posts endpoints
 
             .requestMatchers("/apis/v1/uploads/**").permitAll()
             

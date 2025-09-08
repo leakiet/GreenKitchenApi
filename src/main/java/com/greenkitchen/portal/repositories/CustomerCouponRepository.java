@@ -15,4 +15,8 @@ public interface CustomerCouponRepository extends JpaRepository<CustomerCoupon, 
            "AND cc.coupon.id = :couponId AND cc.isDeleted = false")
     boolean existsByCustomerIdAndCouponId(@Param("customerId") Long customerId, 
                                         @Param("couponId") Long couponId);
+    
+    // Tìm tất cả customer IDs theo coupon ID
+    @Query("SELECT cc.customer.id FROM CustomerCoupon cc WHERE cc.coupon.id = :couponId AND cc.isDeleted = false")
+    java.util.List<Long> findCustomerIdsByCouponId(@Param("couponId") Long couponId);
 }

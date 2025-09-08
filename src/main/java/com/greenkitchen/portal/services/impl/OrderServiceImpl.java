@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.modelmapper.ModelMapper;
 
 import com.greenkitchen.portal.dtos.CreateOrderRequest;
+import com.greenkitchen.portal.dtos.OrderItemResponse;
 import com.greenkitchen.portal.dtos.OrderResponse;
 import com.greenkitchen.portal.dtos.PagedResponse;
 import com.greenkitchen.portal.dtos.UpdateOrderRequest;
@@ -218,11 +219,34 @@ public class OrderServiceImpl implements OrderService {
   }
 
   private OrderResponse toResponse(Order order) {
-  ModelMapper modelMapper = new ModelMapper();
-  OrderResponse dto = modelMapper.map(order, OrderResponse.class);
-  // Add customerId manually
-  dto.setCustomerId(order.getCustomer() != null ? order.getCustomer().getId() : null);
-  return dto;
+    ModelMapper modelMapper = new ModelMapper();
+    OrderResponse dto = modelMapper.map(order, OrderResponse.class);
+
+    // Add customerId manually
+    dto.setCustomerId(order.getCustomer() != null ? order.getCustomer().getId() : null);
+
+    // Map OrderItems to OrderItemResponse manually
+    List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
+        .map(this::mapOrderItemToResponse)
+        .collect(Collectors.toList());
+    dto.setOrderItems(orderItemResponses);
+
+    return dto;
+  }
+
+  private OrderItemResponse mapOrderItemToResponse(OrderItem orderItem) {
+    ModelMapper modelMapper = new ModelMapper();
+    OrderItemResponse response = modelMapper.map(orderItem, OrderItemResponse.class);
+
+    // Set relationship IDs manually
+    if (orderItem.getMenuMeal() != null) {
+      response.setMenuMealId(orderItem.getMenuMeal().getId());
+    }
+    if (orderItem.getCustomMeal() != null) {
+      response.setCustomMealId(orderItem.getCustomMeal().getId());
+    }
+
+    return response;
   }
 
   @Override

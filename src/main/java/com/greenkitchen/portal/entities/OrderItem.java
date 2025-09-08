@@ -41,7 +41,7 @@ public class OrderItem extends AbstractEntity {
     private MenuMeal menuMeal;
 
     // Liên kết với CustomMeal (nullable vì có thể là MenuMeal)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "custom_meal_id")
     @JsonBackReference
     private CustomMeal customMeal;
