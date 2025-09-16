@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.Column;
 
 @Entity
 @Getter @Setter @NoArgsConstructor
@@ -48,6 +49,13 @@ public class Conversation extends AbstractEntity {
     @Version
     @JsonIgnore
     private Long version = 0L;
+
+    // Rolling summary cho hội thoại (tóm tắt dài hạn)
+    @Column(columnDefinition = "TEXT")
+    private String longTermSummary;
+
+    // ID tin nhắn cuối cùng đã được đưa vào summary
+    private Long lastSummarizedMessageId;
 
     @PrePersist
     protected void onPersist() {

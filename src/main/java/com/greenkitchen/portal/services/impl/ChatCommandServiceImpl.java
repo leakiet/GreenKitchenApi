@@ -44,6 +44,7 @@ import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.EmployeeRepository;
 import com.greenkitchen.portal.services.ChatCommandService;
 import com.greenkitchen.portal.services.CustomerReferenceService;
+import com.greenkitchen.portal.services.ChatSummaryService;
 import com.greenkitchen.portal.tools.MenuTools;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -65,6 +66,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private final SimpMessagingTemplate messagingTemplate;
 	private final MenuTools menuTools;
 	private final PlatformTransactionManager transactionManager;
+	private final ChatSummaryService chatSummaryService;
 
 	ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -349,8 +351,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 
 	    // 3. Lưu message PENDING trong transaction riêng biệt - ĐẢM BẢO LUÔN ĐƯỢC LƯU
 	    PendingMessageResult pendingResult = saveCustomerPendingMessage(actorId, request, conv);
-	    ChatResponse userResp = pendingResult.getUserResp();
-	    ChatResponse aiPendingResp = pendingResult.getAiPendingResp();
+	    // Emit đã được thực hiện trong saveCustomerPendingMessage; không cần giữ biến trả về
 	    ChatMessage userMsg = pendingResult.getUserMsg();
 	    ChatMessage aiMsg = pendingResult.getAiMsg();
 
@@ -374,39 +375,22 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	    }
 
 
-		// 6. Build context cho AI
-		StringBuilder sb = new StringBuilder();
-		sb.append("<<<HISTORY>>>\n");
-		for (ChatMessage msg : last20Msgs) {
-			String role = switch (msg.getSenderType().name()) {
-				case "CUSTOMER" -> "user";
-				case "AI" -> "assistant";
-				case "EMP" -> "employee";
-				default -> "other";
-			};
-			sb.append(role).append("|").append(msg.getSenderName()).append("| ")
-					.append(msg.getContent().replace("\n", " ").trim()).append("\n");
-		}
-		sb.append("<<<END_HISTORY>>>\n\n");
-
+		// 6. Build context bằng rolling summary + recent + health info
+		String context = chatSummaryService.buildContextForAi(conv.getId(), request.getContent().trim());
 		if (actorId != null) {
-			sb.append("<<<HEALTH_INFO>>>\n")
-			  .append(healthInfoJson)
-			  .append("\n<<<END_HEALTH_INFO>>>\n\n");
+			context = context + "\n<<<HEALTH_INFO>>>\n" + healthInfoJson + "\n<<<END_HEALTH_INFO>>>\n";
 		}
-
-		sb.append("<<<CURRENT_USER_MESSAGE>>>\n").append(request.getContent().trim())
-				.append("\n<<<END_CURRENT_USER_MESSAGE>>>\n");
-
-		// Thêm hướng dẫn cho AI: Chỉ gọi tool menu nếu user hiện tại hỏi về menu
 		if (!isMenuIntent(request.getContent())) {
-			sb.append("\nLưu ý cho AI: User hiện tại không hỏi về menu, KHÔNG gọi tool menu.\n");
+			context = context + "\nNote: Current user is not asking about menu. Do NOT call menu tool.\n";
 		}
-
-		String context = sb.toString();
 
 		// 7. Xử lý AI response trong transaction riêng biệt
-		return processAIResponse(context, request.getLang(), userMsg, aiMsg, conv);
+		ChatResponse result = processAIResponse(context, request.getLang(), userMsg, aiMsg, conv);
+		// 8. Non-blocking trigger summarize when window grows (best-effort)
+		new Thread(() -> {
+			try { chatSummaryService.summarizeIncrementally(conv.getId()); } catch (Exception ignored) {}
+		}).start();
+		return result;
 	}
 	// Helper: Kiểm tra intent menu
 	private boolean isMenuIntent(String message) {
