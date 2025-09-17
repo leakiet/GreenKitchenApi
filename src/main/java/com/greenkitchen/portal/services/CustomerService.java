@@ -20,6 +20,7 @@ public interface CustomerService {
   Customer findById(Long id);
   void deleteById(Long id);
   Customer registerCustomer(Customer customer);
+  Customer mobileRegisterCustomer(Customer customer);
   Customer verifyEmail(String email, String verifyToken);
   Customer resendVerifyEmail(String email);
   Customer checkLogin(String email, String password);

@@ -183,12 +183,47 @@ public class CustomerServiceImpl implements CustomerService {
     customer.setPassword(encoder.encode(customer.getPassword()));
     String verifyToken = UUID.randomUUID().toString();
     customer.setVerifyToken(verifyToken);
-    customer.setVerifyTokenExpireAt(LocalDateTime.now().plusMinutes(1));
+    customer.setVerifyTokenExpireAt(LocalDateTime.now().plusMinutes(5));
     Customer savedCustomer = customerRepository.save(customer);
     // Send verification email
     emailService.sendVerificationEmail(
         customer.getEmail(),
         verifyToken);
+    return savedCustomer;
+  }
+
+  @Override
+  public Customer mobileRegisterCustomer(Customer customer) {
+    Customer existingCustomer = customerRepository.findByEmail(customer.getEmail());
+    if (existingCustomer != null) {
+      throw new IllegalArgumentException("Email already registered: " + customer.getEmail());
+    }
+
+    // Encode password
+    customer.setPassword(encoder.encode(customer.getPassword()));
+
+    // Set customer as inactive initially (will be activated after OTP verification)
+    customer.setIsActive(false);
+
+    // Save customer
+    Customer savedCustomer = customerRepository.save(customer);
+
+    // Generate 6-digit random OTP
+    String otpCode = generateRandomOtp();
+
+    // Set expiration time (5 minutes from now)
+    LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5);
+
+    // Create and save OTP record
+    OtpRecords otpRecord = new OtpRecords();
+    otpRecord.setEmail(customer.getEmail());
+    otpRecord.setOtpCode(otpCode);
+    otpRecord.setExpiredAt(expiredAt);
+    otpRecordsRepository.save(otpRecord);
+
+    // Send OTP via email
+    emailService.sendOtpEmail(customer.getEmail(), otpCode);
+
     return savedCustomer;
   }
 

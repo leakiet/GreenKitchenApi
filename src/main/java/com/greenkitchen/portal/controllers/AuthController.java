@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.greenkitchen.portal.dtos.EmailRequest;
 import com.greenkitchen.portal.dtos.GoogleLoginRequest;
+import com.greenkitchen.portal.dtos.GoogleLoginMobileRequest;
 import com.greenkitchen.portal.dtos.LoginRequest;
 import com.greenkitchen.portal.dtos.LoginResponse;
 import com.greenkitchen.portal.dtos.PhoneLoginRequest;
@@ -163,6 +164,21 @@ public class AuthController {
     return ResponseEntity.ok(response);
   }
 
+  @PostMapping("/mobile-register")
+  public ResponseEntity<RegisterResponse> mobileRegisterCustomer(@Valid @RequestBody RegisterRequest registerRequest) {
+    Customer customer = mapper.map(registerRequest, Customer.class);
+
+    Customer registeredCustomer = customerService.mobileRegisterCustomer(customer);
+
+    RegisterResponse response = new RegisterResponse();
+    response.setEmail(registeredCustomer.getEmail());
+    response.setFirstName(registeredCustomer.getFirstName());
+    response.setLastName(registeredCustomer.getLastName());
+    response.setMessage("Registration successful. Please check your email for OTP verification.");
+
+    return ResponseEntity.ok(response);
+  }
+
   @PutMapping("/verify")
   public ResponseEntity<String> verifyAccount(@RequestBody VerifyRequest request) {
 
@@ -190,6 +206,57 @@ public class AuthController {
       throw new IllegalArgumentException("Invalid or expired OTP code");
     }
     return ResponseEntity.ok("OTP verified successfully");
+  }
+
+  @PostMapping("/verify-otp")
+  public ResponseEntity<LoginResponse> verifyOtp(@RequestBody VerifyRequest request,
+      HttpServletResponse httpResponse) {
+    try {
+      // Verify OTP
+      boolean isValid = customerService.verifyOtpCode(request.getEmail(), request.getToken());
+      if (!isValid) {
+        throw new IllegalArgumentException("Invalid or expired OTP code");
+      }
+
+      // Find and activate customer
+      Customer customer = customerService.findByEmail(request.getEmail());
+      if (customer == null) {
+        throw new IllegalArgumentException("Customer not found");
+      }
+
+      // Activate customer account
+      customer.setIsActive(true);
+      customerService.save(customer);
+
+      // Build Authentication from customer user details
+      MyUserDetails userDetails = new MyUserDetails(customer);
+      Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+      LoginResponse response = mapper.map(customer, LoginResponse.class);
+      response.setRole("USER");
+      response.setToken(jwtUtils.generateJwtToken(authentication));
+      response.setRefreshToken(jwtUtils.generateRefreshToken(authentication));
+      response.setTokenType("Bearer");
+
+      // Lưu access token vào cookie
+      Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+      accessTokenCookie.setHttpOnly(true);
+      accessTokenCookie.setPath("/");
+      accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+      httpResponse.addCookie(accessTokenCookie);
+
+      // Lưu refresh token vào cookie
+      Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+      refreshTokenCookie.setHttpOnly(true);
+      refreshTokenCookie.setPath("/");
+      refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days
+      httpResponse.addCookie(refreshTokenCookie);
+
+      return ResponseEntity.ok(response);
+
+    } catch (Exception e) {
+      throw new IllegalArgumentException("OTP verification failed: " + e.getMessage());
+    }
   }
 
   @PostMapping("/resetPassword")
@@ -240,6 +307,49 @@ public class AuthController {
       return ResponseEntity.ok(response);
     } catch (Exception e) {
       throw new IllegalArgumentException("Google login failed: " + e.getMessage());
+    }
+  }
+
+  @PostMapping("/google-login-mobile")
+  public ResponseEntity<LoginResponse> googleLoginMobile(@Valid @RequestBody GoogleLoginMobileRequest request,
+      HttpServletResponse httpResponse) {
+    try {
+      // Authenticate user với Google userInfo đã được decoded từ Flutter
+      Customer customer = googleAuthService.authenticateGoogleUserWithUserInfo(request);
+
+      // Tạo MyUserDetails object cho customer
+      MyUserDetails userDetails = new MyUserDetails(customer);
+
+      // Generate JWT token
+      Authentication authentication = new UsernamePasswordAuthenticationToken(
+          userDetails, null, userDetails.getAuthorities());
+      String jwt = jwtUtils.generateJwtToken(authentication);
+      String refreshToken = jwtUtils.generateRefreshToken(authentication);
+
+      // Return response giống như login thường
+      LoginResponse response = mapper.map(customer, LoginResponse.class);
+      response.setRole("USER");
+      response.setToken(jwt);
+      response.setRefreshToken(refreshToken);
+      response.setTokenType("Bearer");
+
+      // Lưu access token vào cookie
+      Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+      accessTokenCookie.setHttpOnly(true);
+      accessTokenCookie.setPath("/");
+      accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+      httpResponse.addCookie(accessTokenCookie);
+
+      // Lưu refresh token vào cookie
+      Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+      refreshTokenCookie.setHttpOnly(true);
+      refreshTokenCookie.setPath("/");
+      refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days (lâu hơn access token)
+      httpResponse.addCookie(refreshTokenCookie);
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Google login mobile failed: " + e.getMessage());
     }
   }
 
