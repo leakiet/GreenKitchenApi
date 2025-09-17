@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.services.GoogleAuthService;
+import com.greenkitchen.portal.dtos.GoogleLoginMobileRequest;
 
 @Service
 public class GoogleAuthServiceImpl implements GoogleAuthService {
@@ -75,6 +76,68 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
             return tokenInfo != null && tokenInfo.has("email");
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    @Override
+    public Customer authenticateGoogleUserWithUserInfo(GoogleLoginMobileRequest request) {
+        try {
+            // Extract user information từ request
+            String email = request.getEmail();
+            String googleId = request.getId();
+            String firstName = request.getGivenName();
+            String lastName = request.getFamilyName();
+            String name = request.getName();
+            String picture = request.getPicture();
+
+            // Validate required fields
+            if (email == null || email.trim().isEmpty()) {
+                throw new IllegalArgumentException("Email is required");
+            }
+            if (googleId == null || googleId.trim().isEmpty()) {
+                throw new IllegalArgumentException("Google ID is required");
+            }
+            // Tìm user existing hoặc tạo mới
+            Customer customer = customerRepository.findByEmail(email);
+
+            if (customer == null) {
+                // Tạo customer mới cho Google user
+                customer = new Customer();
+                customer.setEmail(email);
+
+                // Set name từ firstName + lastName hoặc từ name field
+                if (firstName != null && !firstName.trim().isEmpty()) {
+                    customer.setFirstName(firstName);
+                }
+
+                if (lastName != null && !lastName.trim().isEmpty()) {
+                    customer.setLastName(lastName);
+                }
+
+                customer.setAvatar(picture);
+                customer.setOauthProvider("google");
+                customer.setOauthProviderId(googleId);
+                customer.setIsOauthUser(true);
+                customer.setIsActive(true); // OAuth users auto active
+
+                customer = customerRepository.save(customer);
+                System.out.println("Created new Google user: " + email);
+            } else {
+                // Update OAuth info cho existing user (nếu chưa có)
+                if (customer.getOauthProvider() == null) {
+                    customer.setOauthProvider("google");
+                    customer.setOauthProviderId(googleId);
+                    customer.setIsOauthUser(true);
+                    customer = customerRepository.save(customer);
+                    System.out.println("Updated existing user with Google OAuth info: " + email);
+                } else {
+                    System.out.println("Found existing Google user: " + email);
+                }
+            }
+
+            return customer;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to authenticate Google user with userInfo: " + e.getMessage());
         }
     }
 
