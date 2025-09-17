@@ -375,8 +375,6 @@ public class CartEmailServiceImpl implements CartEmailService {
         return true;
     }
     
-
-    
     /**
      * Kiểm tra cart item có hợp lệ không
      */
