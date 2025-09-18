@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.services.impl;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,11 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses) {
         return queryService.getConversationsForEmp(statuses);
+    }
+
+    @Override
+    public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses, LocalDateTime fromDate, LocalDateTime toDate) {
+        return queryService.getConversationsForEmp(statuses, fromDate, toDate);
     }
 
     @Override

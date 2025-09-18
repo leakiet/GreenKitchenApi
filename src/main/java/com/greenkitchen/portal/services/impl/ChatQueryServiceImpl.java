@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.services.impl;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenkitchen.portal.dtos.ChatResponse;
@@ -106,21 +108,52 @@ public class ChatQueryServiceImpl implements ChatQueryService {
     }
 
     @Override
+    @Cacheable(value = "conversations", key = "#statuses.toString()", unless = "#result.isEmpty()")
     public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses) {
-        List<Conversation> convs = conversationRepo.findByStatusInOrderByUpdatedAtDesc(statuses);
+        // FIX: Sử dụng optimized query để tránh N+1 problem
+        List<Object[]> results = conversationRepo.findConversationsWithLastMessageAndUnreadCount(statuses);
+        
+        return results.stream().map(row -> {
+            Long id = (Long) row[0];
+            ConversationStatus status = (ConversationStatus) row[1];
+            String customerName = (String) row[3];
+            Long employeeId = (Long) row[4];
+            String lastMessage = (String) row[5];
+            LocalDateTime lastMessageTime = (LocalDateTime) row[6];
+            Long unreadCount = (Long) row[7];
+            
+            String lastMsgTime = lastMessageTime != null ? 
+                lastMessageTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM")) : "";
+            
+            return new ConversationResponse(id, customerName, status.name(), lastMessage, lastMsgTime,
+                    unreadCount.intValue(), employeeId);
+        }).toList();
+    }
 
-        return convs.stream().map(conv -> {
-            String customerName = (conv.getCustomer() != null) ? conv.getCustomer().getFirstName() : "Khách vãng lai";
-            String lastMsg = "";
-            String lastMsgTime = "";
-            if (conv.getMessages() != null && !conv.getMessages().isEmpty()) {
-                ChatMessage latest = conv.getMessages().get(conv.getMessages().size() - 1);
-                lastMsg = latest.getContent();
-                lastMsgTime = latest.getTimestamp().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM"));
-            }
-            int unreadCount = chatMessageRepo.countByConversationAndSenderTypeAndIsReadFalse(conv, SenderType.CUSTOMER);
-            return new ConversationResponse(conv.getId(), customerName, conv.getStatus().name(), lastMsg, lastMsgTime,
-                    unreadCount);
+    @Override
+    public List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses, LocalDateTime fromDate, LocalDateTime toDate) {
+        // FIX: Sử dụng optimized query với date filter
+        List<Object[]> results;
+        if (fromDate != null && toDate != null) {
+            results = conversationRepo.findConversationsWithLastMessageAndUnreadCountAndDateFilter(statuses, fromDate, toDate);
+        } else {
+            results = conversationRepo.findConversationsWithLastMessageAndUnreadCount(statuses);
+        }
+        
+        return results.stream().map(row -> {
+            Long id = (Long) row[0];
+            ConversationStatus status = (ConversationStatus) row[1];
+            String customerName = (String) row[3];
+            Long employeeId = (Long) row[4];
+            String lastMessage = (String) row[5];
+            LocalDateTime lastMessageTime = (LocalDateTime) row[6];
+            Long unreadCount = (Long) row[7];
+            
+            String lastMsgTime = lastMessageTime != null ? 
+                lastMessageTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM")) : "";
+            
+            return new ConversationResponse(id, customerName, status.name(), lastMessage, lastMsgTime,
+                    unreadCount.intValue(), employeeId);
         }).toList();
     }
 }

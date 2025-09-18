@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.greenkitchen.portal.dtos.ChatPagingResponse;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
 import com.greenkitchen.portal.dtos.ConversationResponse;
 import com.greenkitchen.portal.dtos.ConversationResquest;
-import com.greenkitchen.portal.dtos.ChatPagingResponse;
 import com.greenkitchen.portal.entities.Conversation;
 import com.greenkitchen.portal.enums.ConversationStatus;
 import com.greenkitchen.portal.enums.SenderType;
@@ -102,17 +102,18 @@ public class ChatController {
 		return ResponseEntity.ok(chatService.getConversationsByCustomer(customerId));
 	}
 
-	@GetMapping("/employee/conversations")
-	public ResponseEntity<List<ConversationResponse>> getConversationsForEmp(
-			@RequestParam(value = "status", required = false) List<ConversationStatus> statuses) {
+    @GetMapping("/employee/conversations")
+    public ResponseEntity<List<ConversationResponse>> getConversationsForEmp(
+            @RequestParam(value = "status", required = false) List<ConversationStatus> statuses,
+            @RequestParam(value = "fromDate", required = false) LocalDateTime fromDate,
+            @RequestParam(value = "toDate", required = false) LocalDateTime toDate) {
 		if (statuses == null || statuses.isEmpty()) {
-			statuses = List.of(ConversationStatus.EMP, ConversationStatus.WAITING_EMP, ConversationStatus.AI);																									// viên
+			// FIX: Chỉ load WAITING_EMP và EMP để tối ưu hiệu năng, không load AI status
+			statuses = List.of(ConversationStatus.EMP, ConversationStatus.WAITING_EMP);
 		}
 		// Gọi sang service mới đã mapping unreadCount
-		List<ConversationResponse> resp = chatService.getConversationsForEmp(statuses);
-		if (resp.isEmpty()) {
-			throw new EntityNotFoundException("Không có cuộc hội thoại nào phù hợp");
-		}
+        List<ConversationResponse> resp = chatService.getConversationsForEmp(statuses, fromDate, toDate);
+		// FIX: Không throw exception khi empty list, trả về empty list bình thường
 		return ResponseEntity.ok(resp);
 	}
 
