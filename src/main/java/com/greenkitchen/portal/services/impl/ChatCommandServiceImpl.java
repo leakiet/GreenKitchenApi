@@ -504,11 +504,13 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	        systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của Green Kitchen...";
 	    }
 
-        // Inject guardrails để tool biết cách gọi requestMeetEmp khi người dùng muốn gặp nhân viên
+        // Inject guardrails: chỉ escalate khi có từ khóa rõ ràng; không escalate cho chào hỏi
         String augmentedUserPrompt = prompt + "\n\n[TOOL_CALL_RULES]\n" +
-                "- Nếu user yêu cầu gặp nhân viên/con người/hotline: GỌI tool requestMeetEmp(conversationId).\n" +
+                "- CHỈ gọi requestMeetEmp(conversationId) khi người dùng NÓI RÕ ràng: 'gặp nhân viên', 'nói chuyện với người thật', 'kết nối nhân viên', 'gọi hotline', 'liên hệ hỗ trợ', 'human agent', 'talk to human', 'support agent'.\n" +
+                "- KHÔNG gọi tool cho lời chào hoặc câu chung chung như: 'hello', 'hi', 'chào', 'alo', 'test', 'có ai không', v.v. Hãy tiếp tục tư vấn bình thường.\n" +
+                "- Nếu không chắc chắn, HỎI LẠI người dùng thay vì gọi tool.\n" +
                 "- conversationId=" + conversationId + " (không để trống).\n" +
-                "- Không tự bịa, không trả Markdown khi đã quyết định gọi tool.\n";
+                "- Không trả Markdown/HTML khi đã quyết định gọi tool.\n";
 
         return chatClient.prompt()
 	            .system(systemPrompt)
