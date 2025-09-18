@@ -22,12 +22,16 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StreamUtils;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.greenkitchen.portal.dtos.ChatRequest;
 import com.greenkitchen.portal.dtos.ChatResponse;
+import com.greenkitchen.portal.dtos.EmpNotifyPayload;
 import com.greenkitchen.portal.dtos.MenuMealLiteResponse;
 import com.greenkitchen.portal.dtos.MenuMealsAiResponse;
 import com.greenkitchen.portal.entities.ChatMessage;
@@ -72,6 +76,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 
 	@Override
 	@Transactional
+	@CacheEvict(value = "conversations", allEntries = true)
 	public ChatResponse sendMessage(Long actorId, ChatRequest request) {
 		validateRequest(request);
 		SenderType senderType = SenderType.valueOf(request.getSenderRole().toUpperCase());
@@ -133,9 +138,19 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 					conversationRepo.save(currentConv);
 				}
 				
-				messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-				return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM",
-						"Yêu cầu đã gửi, vui lòng chờ nhân viên.", null, LocalDateTime.now(), MessageStatus.SENT);
+                EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), ConversationStatus.WAITING_EMP.name(), "CUSTOMER", LocalDateTime.now());
+                messagingTemplate.convertAndSend("/topic/emp-notify", payload);
+				ChatResponse response = new ChatResponse();
+				response.setId(null);
+				response.setConversationId(conv.getId());
+				response.setSenderRole(SenderType.SYSTEM.name());
+				response.setSenderName("SYSTEM");
+				response.setContent("Yêu cầu đã gửi, vui lòng chờ nhân viên.");
+				response.setMenu(null);
+				response.setTimestamp(LocalDateTime.now());
+				response.setStatus(MessageStatus.SENT);
+				response.setConversationStatus(ConversationStatus.WAITING_EMP.name());
+				return response;
 			});
 		} catch (OptimisticLockingFailureException e) {
 			log.warn("Optimistic locking conflict in handleMeetEmpCommand for conversation {}", conv.getId());
@@ -161,9 +176,19 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 					conversationRepo.save(currentConv);
 				}
 				
-				messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
-				return new ChatResponse(null, conv.getId(), SenderType.SYSTEM.name(), "SYSTEM",
-						"Chuyển về AI thành công.", null, LocalDateTime.now(), MessageStatus.SENT);
+                EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), ConversationStatus.AI.name(), "SYSTEM", LocalDateTime.now());
+                messagingTemplate.convertAndSend("/topic/emp-notify", payload);
+				ChatResponse response = new ChatResponse();
+				response.setId(null);
+				response.setConversationId(conv.getId());
+				response.setSenderRole(SenderType.SYSTEM.name());
+				response.setSenderName("SYSTEM");
+				response.setContent("Chuyển về AI thành công.");
+				response.setMenu(null);
+				response.setTimestamp(LocalDateTime.now());
+				response.setStatus(MessageStatus.SENT);
+				response.setConversationStatus(ConversationStatus.AI.name());
+				return response;
 			});
 		} catch (OptimisticLockingFailureException e) {
 			log.warn("Optimistic locking conflict in handleBackToAICommand for conversation {}", conv.getId());
@@ -189,8 +214,10 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			
 			ChatResponse resp = mapper.map(msg, ChatResponse.class);
 			resp.setSenderRole(SenderType.CUSTOMER.name());
+			resp.setConversationStatus(conv.getStatus().name());
 			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+            EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), conv.getStatus().name(), "CUSTOMER", LocalDateTime.now());
+            messagingTemplate.convertAndSend("/topic/emp-notify", payload);
 			return resp;
 		});
 	}
@@ -241,10 +268,12 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			// Emit ngay lập tức sau khi commit transaction
 			ChatResponse userResp = mapper.map(userMsg, ChatResponse.class);
 			userResp.setSenderRole(SenderType.CUSTOMER.name());
+			userResp.setConversationStatus(conv.getStatus().name());
 			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), userResp);
 
 			ChatResponse aiPendingResp = mapper.map(aiMsg, ChatResponse.class);
 			aiPendingResp.setSenderRole(SenderType.AI.name());
+			aiPendingResp.setConversationStatus(conv.getStatus().name());
 			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), aiPendingResp);
 
 			// Trả về wrapper object chứa cả 2 message
@@ -266,7 +295,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				long aiStartTime = System.currentTimeMillis();
 				log.info("🤖 Calling AI with context length: {} characters", context.length());
 				
-				MenuMealsAiResponse aiResp = callAi(context, lang);
+                MenuMealsAiResponse aiResp = callAi(context, lang, conv.getId());
 				
 				long aiDuration = System.currentTimeMillis() - aiStartTime;
 				log.info("✅ AI response received in {}ms", aiDuration);
@@ -305,6 +334,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 					resp.setMenu(menuList);
 				}
 
+				resp.setConversationStatus(conv.getStatus().name());
 				messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
 				
 				long totalDuration = System.currentTimeMillis() - startTime;
@@ -325,6 +355,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				// Emit message lỗi
 				ChatResponse errorResp = mapper.map(aiMsg, ChatResponse.class);
 				errorResp.setSenderRole(SenderType.AI.name());
+				errorResp.setConversationStatus(conv.getStatus().name());
 				messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), errorResp);
 				
 				return errorResp;
@@ -418,7 +449,8 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				conversationRepo.save(currentConv);
 			}
 			
-			messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+            EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), ConversationStatus.EMP.name(), "EMP", LocalDateTime.now());
+            messagingTemplate.convertAndSend("/topic/emp-notify", payload);
 
 			ChatMessage empMsg = buildMessage(null, emp, conv, emp.getFirstName(), SenderType.EMP, false,
 					request.getContent());
@@ -427,6 +459,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 
 			ChatResponse resp = mapper.map(empMsg, ChatResponse.class);
 			resp.setSenderRole(SenderType.EMP.name());
+			resp.setConversationStatus(conv.getStatus().name());
 			messagingTemplate.convertAndSend("/topic/conversations/" + conv.getId(), resp);
 			return resp;
 		});
@@ -462,7 +495,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	}
 
 	// Gọi AI với prompt và ngôn ngữ (tái sử dụng menuTools)
-	private MenuMealsAiResponse callAi(String prompt, String lang) {
+    private MenuMealsAiResponse callAi(String prompt, String lang, Long conversationId) {
 	    String systemPrompt;
 	    try {
 	        systemPrompt = loadPrompt("PromtAIGreenKitchen.md");
@@ -471,10 +504,16 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	        systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của Green Kitchen...";
 	    }
 
-	    return chatClient.prompt()
+        // Inject guardrails để tool biết cách gọi requestMeetEmp khi người dùng muốn gặp nhân viên
+        String augmentedUserPrompt = prompt + "\n\n[TOOL_CALL_RULES]\n" +
+                "- Nếu user yêu cầu gặp nhân viên/con người/hotline: GỌI tool requestMeetEmp(conversationId).\n" +
+                "- conversationId=" + conversationId + " (không để trống).\n" +
+                "- Không tự bịa, không trả Markdown khi đã quyết định gọi tool.\n";
+
+        return chatClient.prompt()
 	            .system(systemPrompt)
 	            .tools(menuTools)
-	            .user(prompt)
+                .user(augmentedUserPrompt)
 	            .call()
 	            .entity(new ParameterizedTypeReference<MenuMealsAiResponse>() {});
 	    
@@ -496,24 +535,117 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	}
 
 	@Override
+	@CacheEvict(value = "conversations", allEntries = true)
 	public void claimConversationAsEmp(Long conversationId, Long employeeId) {
-		Conversation conv = conversationRepo.findById(conversationId)
-				.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
-		Employee emp = employeeRepo.findById(employeeId)
-				.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
-		conv.setStatus(ConversationStatus.EMP);
-		conv.setEmployee(emp);
-		conversationRepo.saveAndFlush(conv);
-		messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+		// FIX: Optimistic Locking với retry mechanism để ngăn race condition
+		int maxRetries = 3;
+		int retryCount = 0;
+		
+		while (retryCount < maxRetries) {
+			try {
+				// 1. Load conversation với version check
+				Conversation conv = conversationRepo.findById(conversationId)
+						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+				
+				// 2. Kiểm tra trạng thái hiện tại
+				if (conv.getStatus() == ConversationStatus.EMP && conv.getEmployee() != null) {
+					if (conv.getEmployee().getId().equals(employeeId)) {
+						// EMP đã claim rồi, không cần làm gì
+						log.info("Conversation {} already claimed by employee {}", conversationId, employeeId);
+						return;
+					} else {
+						// Đã được claim bởi EMP khác
+						throw new ResponseStatusException(HttpStatus.CONFLICT, 
+							"Conversation đã được claim bởi nhân viên khác");
+					}
+				}
+				
+				// 3. Validate employee
+				Employee emp = employeeRepo.findById(employeeId)
+						.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
+				
+				// 4. Update với optimistic locking
+				conv.setStatus(ConversationStatus.EMP);
+				conv.setEmployee(emp);
+				conversationRepo.saveAndFlush(conv); // Sẽ throw OptimisticLockingFailureException nếu version conflict
+				
+				// 5. Success - gửi notification
+				EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), ConversationStatus.EMP.name(), "EMP", LocalDateTime.now());
+				messagingTemplate.convertAndSend("/topic/emp-notify", payload);
+				
+				log.info("Successfully claimed conversation {} by employee {} (attempt {})", 
+					conversationId, employeeId, retryCount + 1);
+				return;
+				
+			} catch (OptimisticLockingFailureException e) {
+				retryCount++;
+				log.warn("Optimistic locking failure for conversation {} (attempt {}/{}): {}", 
+					conversationId, retryCount, maxRetries, e.getMessage());
+				
+				if (retryCount >= maxRetries) {
+					throw new ResponseStatusException(HttpStatus.CONFLICT, 
+						"Không thể claim conversation do xung đột. Vui lòng thử lại.");
+				}
+				
+				// Exponential backoff: 100ms, 200ms, 400ms
+				try {
+					Thread.sleep(100 * (1L << (retryCount - 1)));
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Operation interrupted");
+				}
+			}
+		}
 	}
 
 	@Override
+	@CacheEvict(value = "conversations", allEntries = true)
 	public void releaseConversationToAI(Long conversationId) {
-		Conversation conv = conversationRepo.findById(conversationId)
-				.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
-		conv.setStatus(ConversationStatus.AI);
-		conv.setEmployee(null);
-		conversationRepo.saveAndFlush(conv);
-		messagingTemplate.convertAndSend("/topic/emp-notify", conv.getId());
+		// FIX: Optimistic Locking cho release operation
+		int maxRetries = 3;
+		int retryCount = 0;
+		
+		while (retryCount < maxRetries) {
+			try {
+				Conversation conv = conversationRepo.findById(conversationId)
+						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+				
+				// Kiểm tra trạng thái hiện tại
+				if (conv.getStatus() == ConversationStatus.AI && conv.getEmployee() == null) {
+					// Đã release rồi, không cần làm gì
+					log.info("Conversation {} already released to AI", conversationId);
+					return;
+				}
+				
+				conv.setStatus(ConversationStatus.AI);
+				conv.setEmployee(null);
+				conversationRepo.saveAndFlush(conv);
+				
+				EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), ConversationStatus.AI.name(), "EMP", LocalDateTime.now());
+				messagingTemplate.convertAndSend("/topic/emp-notify", payload);
+				
+				log.info("Successfully released conversation {} to AI (attempt {})", 
+					conversationId, retryCount + 1);
+				return;
+				
+			} catch (OptimisticLockingFailureException e) {
+				retryCount++;
+				log.warn("Optimistic locking failure for release conversation {} (attempt {}/{}): {}", 
+					conversationId, retryCount, maxRetries, e.getMessage());
+				
+				if (retryCount >= maxRetries) {
+					throw new ResponseStatusException(HttpStatus.CONFLICT, 
+						"Không thể release conversation do xung đột. Vui lòng thử lại.");
+				}
+				
+				// Exponential backoff
+				try {
+					Thread.sleep(100 * (1L << (retryCount - 1)));
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Operation interrupted");
+				}
+			}
+		}
 	}
 }

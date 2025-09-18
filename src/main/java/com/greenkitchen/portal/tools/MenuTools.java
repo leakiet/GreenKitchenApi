@@ -14,12 +14,25 @@ import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.dtos.MenuMealsAiResponse;
 import com.greenkitchen.portal.enums.MenuMealType;
 import com.greenkitchen.portal.services.MenuMealService;
+import com.greenkitchen.portal.dtos.ChatResponse;
+import com.greenkitchen.portal.enums.ConversationStatus;
+import com.greenkitchen.portal.enums.MessageStatus;
+import com.greenkitchen.portal.repositories.ConversationRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
+import com.greenkitchen.portal.dtos.EmpNotifyPayload;
+import org.springframework.cache.annotation.CacheEvict;
 
 @Slf4j
 @Component
 public class MenuTools {
 	@Autowired
 	MenuMealService menuMealService;
+    @Autowired
+    ConversationRepository conversationRepo;
+    @Autowired
+    SimpMessagingTemplate messagingTemplate;
 	
 	@Tool(name = "getMenuMeals", description = """
 			***IMPORTANT***: Buộc trả về JSON hợp lệ để FE render UI. KHÔNG markdown/HTML/text ngoài JSON. KHÔNG dịch/đổi key/ghi bịa dữ liệu trong `menu` (giữ nguyên key tiếng Anh như DB).
@@ -286,4 +299,43 @@ public class MenuTools {
 			return MenuMealType.BALANCE; // Default fallback
 		}
 	}
+
+    @Tool(name = "requestMeetEmp", description = "KHI user yêu cầu gặp nhân viên (nhân viên/human/hotline), GỌI tool này. Tham số: conversationId (Long, required). Không trả lời thêm ngoài việc gọi tool.")
+    @CacheEvict(value = "conversations", allEntries = true)
+    public ChatResponse requestMeetEmp(Long conversationId) {
+        if (conversationId == null) {
+            throw new IllegalArgumentException("conversationId không được null");
+        }
+		long start = System.currentTimeMillis();
+		log.info("requestMeetEmp start conversationId={}", conversationId);
+		var conv = conversationRepo.findById(conversationId)
+                .orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+		ConversationStatus prev = conv.getStatus();
+		if (prev != ConversationStatus.WAITING_EMP) {
+            conv.setStatus(ConversationStatus.WAITING_EMP);
+            conversationRepo.save(conv);
+        }
+		log.info("requestMeetEmp status {} -> {} convId={}", prev, conv.getStatus(), conv.getId());
+        EmpNotifyPayload payload = new EmpNotifyPayload(conv.getId(), ConversationStatus.WAITING_EMP.name(), "AI", LocalDateTime.now());
+        
+        // FIX: Debug WebSocket sending
+        log.info("🚀 Sending WebSocket emp-notify: conversationId={}, status={}, triggeredBy={}", 
+            payload.getConversationId(), payload.getStatus(), payload.getTriggeredBy());
+        
+        messagingTemplate.convertAndSend("/topic/emp-notify", payload);
+        log.info("✅ WebSocket emp-notify sent successfully");
+		long took = System.currentTimeMillis() - start;
+		log.info("requestMeetEmp done in {}ms convId={}", took, conversationId);
+        ChatResponse response = new ChatResponse();
+        response.setId(null);
+        response.setConversationId(conversationId);
+        response.setSenderRole("SYSTEM");
+        response.setSenderName("SYSTEM");
+        response.setContent("Yêu cầu đã gửi, vui lòng chờ nhân viên.");
+        response.setMenu(null);
+        response.setTimestamp(LocalDateTime.now());
+        response.setStatus(MessageStatus.SENT);
+        response.setConversationStatus(ConversationStatus.WAITING_EMP.name());
+        return response;
+    }
 }

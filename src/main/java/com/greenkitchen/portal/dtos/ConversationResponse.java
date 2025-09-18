@@ -13,4 +13,5 @@ public class ConversationResponse {
 	private String lastMessage;
 	private String lastMessageTime;
 	private int unreadCount;
+    private Long employeeId;
 }

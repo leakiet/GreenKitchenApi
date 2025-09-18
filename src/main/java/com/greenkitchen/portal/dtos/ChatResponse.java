@@ -26,6 +26,7 @@ import lombok.AllArgsConstructor;
 	    private List<MenuMealLiteResponse> menu;
 	    private LocalDateTime timestamp;  // thời điểm
 	    private MessageStatus  status; // "PENDING", "SENT", "FAILED"
+	    private String conversationStatus; // "AI", "WAITING_EMP", "EMP"
 
 	    
 	}

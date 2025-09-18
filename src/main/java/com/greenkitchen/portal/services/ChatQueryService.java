@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.services;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 import org.springframework.data.domain.Page;
 
@@ -13,4 +14,5 @@ public interface ChatQueryService {
     Page<ChatResponse> getMessagesByConversationPaged(Long conversationId, int page, int size);
     List<Long> getConversationsByCustomer(Long customerId);
     List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses);
+    List<ConversationResponse> getConversationsForEmp(List<ConversationStatus> statuses, LocalDateTime fromDate, LocalDateTime toDate);
 }
