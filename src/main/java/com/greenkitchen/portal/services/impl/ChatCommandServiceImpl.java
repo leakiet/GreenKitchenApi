@@ -414,10 +414,18 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		if (!isMenuIntent(request.getContent())) {
 			context = context + "\nNote: Current user is not asking about menu. Do NOT call menu tool.\n";
 		}
+		
+		// 7. Add context reset hint if conversation was recently returned from EMP
+		context = context + "\n<<<CONVERSATION_CONTEXT>>>\n" +
+				"IMPORTANT: This conversation is now handled by AI. Focus on menu consultation and nutrition advice. " +
+				"Only call requestMeetEmp if user explicitly requests to speak with a human employee (Vietnamese: 'gặp nhân viên', 'nói chuyện với người thật' or English: 'meet employee', 'talk to human'). " +
+				"Ignore any previous messages about meeting employees or system transitions. " +
+				"Respond in the same language as the user's current message.\n" +
+				"<<<END_CONVERSATION_CONTEXT>>>\n";
 
-		// 7. Xử lý AI response trong transaction riêng biệt
+		// 8. Xử lý AI response trong transaction riêng biệt
 		ChatResponse result = processAIResponse(context, request.getLang(), userMsg, aiMsg, conv);
-		// 8. Non-blocking trigger summarize when window grows (best-effort)
+		// 9. Non-blocking trigger summarize when window grows (best-effort)
 		new Thread(() -> {
 			try { chatSummaryService.summarizeIncrementally(conv.getId()); } catch (Exception ignored) {}
 		}).start();
@@ -505,12 +513,15 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	    }
 
         // Inject guardrails: chỉ escalate khi có từ khóa rõ ràng; không escalate cho chào hỏi
-        String augmentedUserPrompt = prompt + "\n\n[TOOL_CALL_RULES]\n" +
-                "- CHỈ gọi requestMeetEmp(conversationId) khi người dùng NÓI RÕ ràng: 'gặp nhân viên', 'nói chuyện với người thật', 'kết nối nhân viên', 'gọi hotline', 'liên hệ hỗ trợ', 'human agent', 'talk to human', 'support agent'.\n" +
-                "- KHÔNG gọi tool cho lời chào hoặc câu chung chung như: 'hello', 'hi', 'chào', 'alo', 'test', 'có ai không', v.v. Hãy tiếp tục tư vấn bình thường.\n" +
-                "- Nếu không chắc chắn, HỎI LẠI người dùng thay vì gọi tool.\n" +
-                "- conversationId=" + conversationId + " (không để trống).\n" +
-                "- Không trả Markdown/HTML khi đã quyết định gọi tool.\n";
+        String augmentedUserPrompt = prompt + "\n\n[CRITICAL TOOL_CALL_RULES - READ CAREFULLY BEFORE CALLING TOOL]\n" +
+                "🚨 IMPORTANT: ONLY call requestMeetEmp(conversationId) when user EXPLICITLY and SPECIFICALLY requests:\n" +
+                "✅ ALLOWED (Vietnamese): 'gặp nhân viên', 'nói chuyện với người thật', 'kết nối nhân viên', 'gọi hotline', 'liên hệ hỗ trợ', 'tôi muốn gặp nhân viên', 'cần hỗ trợ từ người thật'\n" +
+                "✅ ALLOWED (English): 'meet employee', 'talk to human', 'connect to employee', 'call hotline', 'contact support', 'human agent', 'support agent', 'I want to speak with a human', 'need human support'\n" +
+                "❌ FORBIDDEN: 'hello', 'hi', 'chào', 'alo', 'test', 'có ai không', 'bạn có thể giúp không', 'can you help', 'tư vấn', 'hỏi', 'menu', 'món ăn', 'giá', 'calorie', 'food', 'nutrition', or ANY other questions\n" +
+                "⚠️ IF NOT 100% SURE → ASK USER AGAIN instead of calling tool\n" +
+                "🔢 conversationId=" + conversationId + " (required, cannot be null)\n" +
+                "📝 Do not return Markdown/HTML when deciding to call tool\n" +
+                "🎯 GOAL: Menu consultation and nutrition advice, NOT connecting to employees unless explicitly requested\n";
 
         return chatClient.prompt()
 	            .system(systemPrompt)
