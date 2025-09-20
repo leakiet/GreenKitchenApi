@@ -46,6 +46,7 @@ public class SecurityConfiguration {
             // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers/**").permitAll()
             // .requestMatchers(HttpMethod.GET, "/apis/v1/menu-meals/customers").permitAll()
             .requestMatchers("/apis/v1/menu-meals/customers/**").permitAll()
+            .requestMatchers("/apis/v1/menu-meal-reviews/**").permitAll()
             .requestMatchers("/apis/v1/post-categories/**").permitAll()
             .requestMatchers("/apis/v1/posts/**").permitAll()
 
