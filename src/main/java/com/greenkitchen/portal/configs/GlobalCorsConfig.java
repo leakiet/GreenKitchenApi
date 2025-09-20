@@ -22,6 +22,7 @@ public class GlobalCorsConfig {
         String[] origins = allowedOrigins.split(",");
         registry.addMapping("/apis/v1/**")
             .allowedOrigins(origins)
+            .allowedOriginPatterns("*")  // Allow all origins for mobile
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true);

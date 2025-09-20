@@ -5,10 +5,14 @@ import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.greenkitchen.portal.dtos.MenuMealReviewRequest;
 import com.greenkitchen.portal.dtos.MenuMealReviewResponse;
+import com.greenkitchen.portal.dtos.PagedResponse;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.MenuMealReview;
@@ -97,6 +101,41 @@ public class MenuMealReviewServiceImpl implements MenuMealReviewService {
     public List<MenuMealReviewResponse> getAllReviewsByCustomerId(Long customerId) {
         List<MenuMealReview> reviews = menuMealReviewRepository.findByCustomerIdWithCustomerAndMenuMeal(customerId);
         return reviews.stream().map(this::toResponse).collect(Collectors.toList());
+    }
+    
+    @Override
+    public PagedResponse<MenuMealReviewResponse> listFilteredPaged(int page, int size, String status, String q) {
+        Pageable pageable = PageRequest.of(page, size);
+        // Sửa call để xóa fromDate và toDate
+        Page<MenuMealReview> reviewsPage = menuMealReviewRepository.findAllFiltered(pageable, status, q);
+        List<MenuMealReviewResponse> items = reviewsPage.getContent().stream().map(this::toResponse).collect(Collectors.toList());
+        
+        PagedResponse<MenuMealReviewResponse> response = new PagedResponse<>();
+        response.setItems(items);
+        response.setTotal(reviewsPage.getTotalElements());
+        response.setPage(page);
+        response.setSize(size);
+        return response;
+    }
+
+    @Override
+    public List<MenuMealReviewResponse> listAll() {
+        List<MenuMealReview> reviews = menuMealReviewRepository.findAll();
+        return reviews.stream().map(this::toResponse).collect(Collectors.toList());
+    }
+    
+    @Override
+    public PagedResponse<MenuMealReviewResponse> getPagedReviewsByMenuMealId(Long menuMealId, int page, int size, String status, String q) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<MenuMealReview> reviewsPage = menuMealReviewRepository.findFilteredByMenuMealId(menuMealId, pageable, status, q);
+        List<MenuMealReviewResponse> items = reviewsPage.getContent().stream().map(this::toResponse).collect(Collectors.toList());
+        
+        PagedResponse<MenuMealReviewResponse> response = new PagedResponse<>();
+        response.setItems(items);
+        response.setTotal(reviewsPage.getTotalElements());
+        response.setPage(page);
+        response.setSize(size);
+        return response;
     }
     
     // Helper method to convert entity to response DTO
