@@ -28,6 +28,10 @@ public class MenuMealServiceImpl implements MenuMealService {
 
     @Override
     public MenuMeal createMenuMeal(MenuMealRequest dto) {
+        if (menuMealRepository.existsByTitle(dto.getTitle())) {
+            throw new RuntimeException("Title already exists: " + dto.getTitle());
+        }
+
         MenuMeal menuMeal = new MenuMeal();
         if (menuMeal.getNutrition() == null) {
             menuMeal.setNutrition(new NutritionInfo());
@@ -66,6 +70,13 @@ public class MenuMealServiceImpl implements MenuMealService {
     public MenuMeal updateMenuMeal(Long id, MenuMealRequest dto) {
         MenuMeal existingMenuMeal = menuMealRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("MenuMeal not found with id: " + id));
+
+        // Kiểm tra title duy nhất nếu title mới khác title cũ
+        if (dto.getTitle() != null && !dto.getTitle().equals(existingMenuMeal.getTitle())) {
+            if (menuMealRepository.existsByTitle(dto.getTitle())) {
+                throw new RuntimeException("Title already exists: " + dto.getTitle());
+            }
+        }
 
         if (existingMenuMeal.getNutrition() == null) {
             existingMenuMeal.setNutrition(new NutritionInfo());

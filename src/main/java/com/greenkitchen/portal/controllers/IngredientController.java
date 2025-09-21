@@ -72,6 +72,11 @@ public class IngredientController {
     public ResponseEntity<?> addIngredient(@ModelAttribute IngredientRequest ingredientRequest,
             @RequestParam("imageFile") MultipartFile file) {
         try {
+            // Kiểm tra title duy nhất trước khi thêm
+            if (ingredientService.existsByTitle(ingredientRequest.getTitle())) {
+                return ResponseEntity.badRequest().body("Title already exists: " + ingredientRequest.getTitle());
+            }
+
             Ingredients ingredient = modelMapper.map(ingredientRequest, Ingredients.class);
             NutritionInfo nutrition = new NutritionInfo();
             nutrition.setCalories(ingredientRequest.getCalories());
@@ -126,6 +131,12 @@ public class IngredientController {
             Ingredients existing = ingredientService.findById(id);
             if (existing == null) {
                 return ResponseEntity.status(404).body("Ingredient not found");
+            }
+
+            // Kiểm tra title duy nhất nếu title mới khác title cũ
+            if (!existing.getTitle().equals(ingredientRequest.getTitle()) &&
+                ingredientService.existsByTitle(ingredientRequest.getTitle())) {
+                return ResponseEntity.badRequest().body("Title already exists: " + ingredientRequest.getTitle());
             }
 
             boolean isSame = existing.getTitle().equals(ingredientRequest.getTitle()) &&
