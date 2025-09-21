@@ -20,6 +20,13 @@ public class HolidayAdminServiceImpl implements HolidayAdminService {
     private HolidayRepository holidayRepository;
 
     @Override
+    public HolidayDto getById(Long id) {
+        Holiday holiday = holidayRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Holiday không tồn tại"));
+        return toDto(holiday);
+    }
+
+    @Override
     public HolidayDto create(HolidayCreateRequest req) {
         Holiday h = new Holiday();
         h.setName(req.name);
@@ -68,6 +75,8 @@ public class HolidayAdminServiceImpl implements HolidayAdminService {
         return dto;
     }
 }
+
+
 
 
 
