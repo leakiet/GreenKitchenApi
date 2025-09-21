@@ -16,7 +16,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.greenkitchen.portal.dtos.PostRequest;
 import com.greenkitchen.portal.dtos.PostResponse;
+import com.greenkitchen.portal.dtos.AIContentRequest;
+import com.greenkitchen.portal.dtos.AIContentResponse;
 import com.greenkitchen.portal.services.PostService;
+import com.greenkitchen.portal.services.AIContentService;
 
 @RestController
 @RequestMapping("/apis/v1/posts")
@@ -24,6 +27,9 @@ public class PostController {
 
     @Autowired
     private PostService postService;
+
+    @Autowired
+    private AIContentService aiContentService;
 
     @GetMapping
     public ResponseEntity<?> list(@RequestParam(value = "page", required = false) Integer page,
@@ -92,6 +98,46 @@ public class PostController {
         }
         String imageUrl = postService.uploadImage(file);
         return ResponseEntity.ok(imageUrl);
+    }
+
+    // AI Content Generation Endpoints
+    @PostMapping("/ai/generate")
+    public ResponseEntity<AIContentResponse> generateContent(@RequestBody AIContentRequest request) {
+        try {
+            AIContentResponse response = aiContentService.generatePostContent(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            AIContentResponse errorResponse = new AIContentResponse();
+            errorResponse.setStatus("error");
+            errorResponse.setMessage("Lỗi khi tạo nội dung: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/ai/generate-title")
+    public ResponseEntity<AIContentResponse> generateTitle(@RequestBody AIContentRequest request) {
+        try {
+            AIContentResponse response = aiContentService.generateTitleOnly(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            AIContentResponse errorResponse = new AIContentResponse();
+            errorResponse.setStatus("error");
+            errorResponse.setMessage("Lỗi khi tạo tiêu đề: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/ai/generate-content")
+    public ResponseEntity<AIContentResponse> generateContentOnly(@RequestBody AIContentRequest request) {
+        try {
+            AIContentResponse response = aiContentService.generateContentOnly(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            AIContentResponse errorResponse = new AIContentResponse();
+            errorResponse.setStatus("error");
+            errorResponse.setMessage("Lỗi khi tạo nội dung: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 
 }

@@ -45,6 +45,9 @@ public class Post extends AbstractEntity {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
+    @Column(length = 20)
+    private String priority = "normal";
+
     private LocalDateTime publishedAt;
 
     @Column(nullable = false, length = 50)

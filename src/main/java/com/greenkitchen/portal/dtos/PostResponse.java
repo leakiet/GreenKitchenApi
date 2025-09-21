@@ -19,6 +19,7 @@ public class PostResponse {
     private Long categoryId;
     private String categoryName;
     private String imageUrl;
+    private String priority;
     private LocalDateTime publishedAt;
     private String status;
     private LocalDateTime createdAt;
