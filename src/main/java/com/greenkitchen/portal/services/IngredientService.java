@@ -13,4 +13,5 @@ public interface IngredientService {
     Ingredients findById(Long id);
     void deleteById(Long id);
     Ingredients update(Ingredients ingredient);
+    boolean existsByTitle(String title);
 }
