@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.greenkitchen.portal.dtos.CustomerSummaryDto;
 import com.greenkitchen.portal.dtos.MenuMealReviewRequest;
 import com.greenkitchen.portal.dtos.MenuMealReviewResponse;
 import com.greenkitchen.portal.dtos.PagedResponse;
@@ -153,7 +154,16 @@ public class MenuMealReviewServiceImpl implements MenuMealReviewService {
         }
         
         if (review.getCustomer() != null) {
-            response.setCustomerId(review.getCustomer().getId());
+            CustomerSummaryDto customerSummary = new CustomerSummaryDto();
+            customerSummary.setId(review.getCustomer().getId());
+            customerSummary.setAvatar(review.getCustomer().getAvatar());
+            customerSummary.setFirstName(review.getCustomer().getFirstName());
+            customerSummary.setLastName(review.getCustomer().getLastName());
+            customerSummary.setFullName(review.getCustomer().getFullName());
+            customerSummary.setGender(review.getCustomer().getGender() != null ? review.getCustomer().getGender().name() : null);
+            customerSummary.setEmail(review.getCustomer().getEmail());
+            customerSummary.setPhone(review.getCustomer().getPhone());
+            response.setCustomer(customerSummary);
             response.setCustomerName(review.getCustomer().getFirstName() + " " + review.getCustomer().getLastName());
         }
         
