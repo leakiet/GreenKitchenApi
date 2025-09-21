@@ -38,6 +38,8 @@ public class MenuMealReview extends AbstractEntity {
     @Column(nullable = false)
     private Integer rating;
 
+    private String avatar;
+
     @Column(columnDefinition = "TEXT")
     private String comment;
 }
