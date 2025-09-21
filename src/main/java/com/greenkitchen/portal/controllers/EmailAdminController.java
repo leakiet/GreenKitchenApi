@@ -19,6 +19,7 @@ import com.greenkitchen.portal.entities.EmailHistory;
 import com.greenkitchen.portal.services.EmailHistoryService;
 import com.greenkitchen.portal.services.EmailSchedulerService;
 import com.greenkitchen.portal.services.MarketingEmailService;
+import com.greenkitchen.portal.services.EmailTrackingService;
 
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -36,6 +37,9 @@ public class EmailAdminController {
     
     @Autowired
     private EmailSchedulerService emailSchedulerService;
+    
+    @Autowired
+    private EmailTrackingService emailTrackingService;
 
     @PostMapping("/broadcast")
     public ResponseEntity<?> broadcast(@Valid @RequestBody BroadcastEmailRequest req) {
@@ -140,6 +144,28 @@ public class EmailAdminController {
         try {
             emailSchedulerService.processScheduledEmails();
             return ResponseEntity.ok(java.util.Map.of("message", "Scheduler test completed"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+    
+    // API lấy thống kê tracking cho cart abandonment emails
+    @GetMapping("/tracking-stats/cart-abandonment")
+    public ResponseEntity<?> getCartAbandonmentTrackingStats() {
+        try {
+            Map<String, Object> stats = emailTrackingService.getTrackingStats("CART_ABANDONMENT");
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+    
+    // API lấy thống kê tracking cho customer cụ thể
+    @GetMapping("/tracking-stats/customer/{customerId}")
+    public ResponseEntity<?> getCustomerTrackingStats(@PathVariable("customerId") Long customerId) {
+        try {
+            Map<String, Object> stats = emailTrackingService.getCustomerTrackingStats(customerId);
+            return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }

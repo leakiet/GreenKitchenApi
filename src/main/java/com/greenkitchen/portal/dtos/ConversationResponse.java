@@ -8,6 +8,7 @@ import lombok.Data;
 public class ConversationResponse {
 	private Long conversationId;
 	private String customerName; // hoặc ẩn danh nếu guest
+	private String customerPhone; // số điện thoại khách hàng
 	
 	private String status;
 	private String lastMessage;

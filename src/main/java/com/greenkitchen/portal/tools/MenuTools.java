@@ -35,30 +35,32 @@ public class MenuTools {
     SimpMessagingTemplate messagingTemplate;
 	
 	@Tool(name = "getMenuMeals", description = """
-			***IMPORTANT***: Buộc trả về JSON hợp lệ để FE render UI. KHÔNG markdown/HTML/text ngoài JSON. KHÔNG dịch/đổi key/ghi bịa dữ liệu trong `menu` (giữ nguyên key tiếng Anh như DB).
+			***CRITICAL***: CHỈ gọi tool này khi user HỎI CỤ THỂ về menu/food/nutrition. KHÔNG gọi cho greetings, chitchat, hoặc câu hỏi chung.
 
 			# PURPOSE
-			Lấy danh sách menu meals (các món trong menu) của Green Kitchen để phản hồi ở MENU_JSON_MODE theo Output Contract hệ thống.
+			Lấy danh sách menu meals của Green Kitchen để trả về JSON hợp lệ cho FE render UI.
 
 			# WHEN TO CALL - CHỈ gọi khi user hỏi CỤ THỂ về:
-			✅ "Menu có gì?", "Món nào ngon?", "Có món gì?"
-			✅ "Giá bao nhiêu?", "Calorie bao nhiêu?", "Khẩu phần thế nào?"
-			✅ "Nguyên liệu gì?", "Loại món gì?", "Món hôm nay có gì?"
-			✅ Tên món cụ thể: "Salmon", "Beef", "Chicken"
-			
+			✅ Vietnamese: "Menu có gì?", "Món nào ngon?", "Có món gì?", "Giá bao nhiêu?", "Calorie bao nhiêu?", "Khẩu phần thế nào?", "Nguyên liệu gì?", "Loại món gì?", "Món hôm nay có gì?", "Tên món cụ thể"
+			✅ English: "What's on the menu?", "What food do you have?", "What meals are available?", "What are the prices?", "How many calories?", "What ingredients?", "What types of meals?", "Show me the menu"
+
+			# WHEN NOT TO CALL - TUYỆT ĐỐI KHÔNG gọi khi:
+			❌ Vietnamese: "Hello", "Hi", "Chào", "Bạn khỏe không?", "Cảm ơn", "OK", "Test", "Bạn có thể giúp không?", "Bạn làm được gì?"
+			❌ English: "Hello", "Hi", "How are you?", "Thanks", "Thank you", "OK", "Test", "Can you help?", "What can you do?", "How are you doing?"
 
 			# EXAMPLES:
 			User: "Hello" → NO tool call, response: "Chào anh/chị! Em có thể giúp gì ạ?"
 			User: "Menu có gì?" → YES tool call, return menu JSON
 			User: "Chào" → NO tool call, response: "Chào anh/chị! Em có thể giúp gì ạ?"
 			User: "Món nào ngon?" → YES tool call, return menu JSON
+			User: "How are you?" → NO tool call, response: "I'm doing well, thank you! How can I help you today?"
 
 			# PARAMETERS
-			- limit (integer, optional): số món tối đa cần trả. Mặc định 10. Nếu vượt số món hiện có → giới hạn theo số món hiện có.
+			- limit (integer, optional): số món tối đa cần trả. Mặc định 10.
 			
 			# ERROR HANDLING
 			- Nếu DB rỗng: trả {"content": "Hiện chưa có món phù hợp.", "menu": []}.
-			- Nếu xảy ra lỗi hệ thống: ném exception để lớp ngoài xin lỗi người dùng; KHÔNG bịa dữ liệu.
+			- Nếu xảy ra lỗi hệ thống: ném exception để lớp ngoài xin lỗi người dùng.
 			""")
 	public MenuMealsAiResponse getMenuMeals(Integer limit) {
 		long startTime = System.currentTimeMillis();
@@ -117,18 +119,18 @@ public class MenuTools {
 	}
 
 	@Tool(name = "getMenuMealsByType", description = """
-			***IMPORTANT***: Buộc trả về JSON hợp lệ để FE render UI. KHÔNG markdown/HTML/text ngoài JSON.
+			***CRITICAL***: CHỈ gọi tool này khi user HỎI CỤ THỂ về loại món ăn theo mục tiêu dinh dưỡng. KHÔNG gọi cho greetings, chitchat, hoặc câu hỏi chung.
 
 			# PURPOSE
 			Lấy danh sách menu meals theo type cụ thể (LOW, HIGH, BALANCE, VEGETARIAN) để gợi ý món ăn phù hợp với mục tiêu dinh dưỡng.
 
-			# WHEN TO CALL - Gọi khi user cần món ăn theo type cụ thể:
-			✅ "Tôi muốn giảm cân, gợi ý món gì?" → type: LOW
-			✅ "Tôi muốn tăng cân, món nào phù hợp?" → type: HIGH  
-			✅ "Món ăn cân bằng dinh dưỡng?" → type: BALANCE
-			✅ "Món chay có gì?" → type: VEGETARIAN
-			✅ "Người béo nên ăn gì?" → type: LOW
-			✅ "Người gầy nên ăn gì?" → type: HIGH
+			# WHEN TO CALL - CHỈ gọi khi user hỏi CỤ THỂ về loại món ăn:
+			✅ Vietnamese: "Tôi muốn giảm cân, gợi ý món gì?", "Tôi muốn tăng cân, món nào phù hợp?", "Món ăn cân bằng dinh dưỡng?", "Món chay có gì?", "Người béo nên ăn gì?", "Người gầy nên ăn gì?", "Món ít calorie", "Món nhiều calorie"
+			✅ English: "I want to lose weight, what meals?", "I want to gain weight, what food?", "Balanced nutrition meals?", "Vegetarian options?", "Low calorie meals?", "High calorie meals?", "Healthy meals for weight loss/gain"
+
+			# WHEN NOT TO CALL - TUYỆT ĐỐI KHÔNG gọi khi:
+			❌ Vietnamese: "Hello", "Hi", "Chào", "Bạn khỏe không?", "Cảm ơn", "OK", "Test", "Bạn có thể giúp không?"
+			❌ English: "Hello", "Hi", "How are you?", "Thanks", "Thank you", "OK", "Test", "Can you help?", "What can you do?"
 
 			# PARAMETERS
 			- type (string, required): Loại món ăn. Phải là một trong: "LOW", "HIGH", "BALANCE", "VEGETARIAN"
@@ -216,16 +218,18 @@ public class MenuTools {
 	}
 
 	@Tool(name = "getMenuMealsForBodyType", description = """
-			***IMPORTANT***: Buộc trả về JSON hợp lệ để FE render UI. KHÔNG markdown/HTML/text ngoài JSON.
+			***CRITICAL***: CHỈ gọi tool này khi user HỎI CỤ THỂ về tư vấn dinh dưỡng theo thể trạng. KHÔNG gọi cho greetings, chitchat, hoặc câu hỏi chung.
 
 			# PURPOSE
 			Gợi ý món ăn phù hợp với thể trạng và mục tiêu dinh dưỡng của người dùng.
 
-			# WHEN TO CALL - Gọi khi user cần tư vấn dinh dưỡng theo thể trạng:
-			✅ "Tôi béo, muốn giảm cân" → bodyType: "OVERWEIGHT", goal: "LOSE_WEIGHT"
-			✅ "Tôi gầy, muốn tăng cân" → bodyType: "UNDERWEIGHT", goal: "GAIN_WEIGHT"
-			✅ "Tôi muốn duy trì cân nặng" → bodyType: "NORMAL", goal: "MAINTAIN"
-			✅ "Tôi muốn tăng cơ" → bodyType: "NORMAL", goal: "BUILD_MUSCLE"
+			# WHEN TO CALL - CHỈ gọi khi user hỏi CỤ THỂ về tư vấn dinh dưỡng theo thể trạng:
+			✅ Vietnamese: "Tôi béo, muốn giảm cân", "Tôi gầy, muốn tăng cân", "Tôi muốn duy trì cân nặng", "Tôi muốn tăng cơ", "Người béo nên ăn gì?", "Người gầy nên ăn gì?", "Món ăn cho người muốn giảm cân", "Món ăn cho người muốn tăng cân"
+			✅ English: "I'm overweight, want to lose weight", "I'm underweight, want to gain weight", "I want to maintain weight", "I want to build muscle", "Food for weight loss", "Food for weight gain", "Meals for overweight people", "Meals for underweight people"
+
+			# WHEN NOT TO CALL - TUYỆT ĐỐI KHÔNG gọi khi:
+			❌ Vietnamese: "Hello", "Hi", "Chào", "Bạn khỏe không?", "Cảm ơn", "OK", "Test", "Bạn có thể giúp không?"
+			❌ English: "Hello", "Hi", "How are you?", "Thanks", "Thank you", "OK", "Test", "Can you help?", "What can you do?"
 
 			# PARAMETERS
 			- bodyType (string, required): Thể trạng. Phải là một trong: "OVERWEIGHT", "UNDERWEIGHT", "NORMAL"
