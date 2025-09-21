@@ -242,8 +242,8 @@
             </div>
             
             <div class="cta-buttons">
-                <a th:href="${frontendUrl} + '/cart'" class="btn btn-primary">🛒 Xem giỏ hàng</a>
-                <a th:href="${frontendUrl} + '/checkout'" class="btn btn-secondary">💳 Thanh toán ngay</a>
+                <a th:href="${cartUrl}" class="btn btn-primary">🛒 Xem giỏ hàng</a>
+                <a th:href="${checkoutUrl}" class="btn btn-secondary">💳 Thanh toán ngay</a>
             </div>
             
             <div style="text-align: center; color: #666; font-size: 14px; margin-top: 20px;">
@@ -254,9 +254,9 @@
         
         <div class="footer">
             <div class="social-links">
-                <a href="#">📱 Facebook</a>
-                <a href="#">📸 Instagram</a>
-                <a href="#">🐦 Twitter</a>
+                <a th:href="${facebookUrl}" target="_blank">📱 Facebook</a>
+                <a th:href="${instagramUrl}" target="_blank">📸 Instagram</a>
+                <a th:href="${twitterUrl}" target="_blank">🐦 Twitter</a>
             </div>
             
             <p>Green Kitchen - Nơi ẩm thực xanh gặp gỡ sức khỏe</p>
