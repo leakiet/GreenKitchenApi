@@ -245,7 +245,12 @@ public class CartServiceImpl implements CartService {
     }
 
     private CartResponse toCartResponse(Cart cart) {
-        CartResponse response = modelMapper.map(cart, CartResponse.class);
+        CartResponse response = new CartResponse();
+
+        // Gán thủ công các field từ Cart
+        response.setId(cart.getId());
+        response.setCustomerId(cart.getCustomerId());
+        response.setTotalAmount(cart.getTotalAmount());
 
         if (cart.getCartItems() != null) {
             List<CartItemResponse> itemResponses = cart.getCartItems().stream()
@@ -258,59 +263,79 @@ public class CartServiceImpl implements CartService {
             response.setTotalQuantity(cart.getCartItems().stream()
                     .mapToInt(CartItem::getQuantity)
                     .sum());
+        } else {
+            response.setCartItems(null);
+            response.setTotalItems(0);
+            response.setTotalQuantity(0);
         }
 
         return response;
     }
 
     private CartItemResponse toItemResponse(CartItem item) {
-        CartItemResponse response = modelMapper.map(item, CartItemResponse.class);
+        CartItemResponse response = new CartItemResponse();
 
-        // Lấy dinh dưỡng từ CartItem (nếu có)
+        // Gán thủ công các field từ CartItem
+        response.setId(item.getId());
+        response.setCartId(item.getCart() != null ? item.getCart().getId() : null);
+        response.setIsCustom(item.getIsCustom());
+        response.setQuantity(item.getQuantity());
+        response.setUnitPrice(item.getUnitPrice());
+        response.setTotalPrice(item.getTotalPrice());
+        response.setTitle(item.getTitle());
+        response.setImage(item.getImage());
+        response.setDescription(item.getDescription());
+        response.setItemType(item.getItemType());
+
+        // Gán nutrition từ CartItem (nếu có)
         if (item.getNutrition() != null) {
             response.setCalories(item.getNutrition().getCalories());
             response.setProtein(item.getNutrition().getProtein());
             response.setCarbs(item.getNutrition().getCarbs());
             response.setFat(item.getNutrition().getFat());
+        } else {
+            response.setCalories(null);
+            response.setProtein(null);
+            response.setCarbs(null);
+            response.setFat(null);
         }
 
-        if (item.getItemType() != null) {
-            response.setItemType(item.getItemType());
-        }
-
-        // Map menuMeal nếu có
+        // Gán menuMeal nếu có
         if (item.getMenuMeal() != null) {
             MenuMealResponse menuMealResponse = menuMealServiceImpl.toResponse(item.getMenuMeal());
             response.setMenuMeal(menuMealResponse);
-            // response.setMenuMealType(item.getMenuMeal().getType());
             // Ưu tiên dinh dưỡng từ CartItem, nếu không có thì lấy từ menuMeal
-            if (response.getCalories() == null)
+            if (response.getCalories() == null && menuMealResponse.getCalories() != null)
                 response.setCalories(menuMealResponse.getCalories());
-            if (response.getProtein() == null)
+            if (response.getProtein() == null && menuMealResponse.getProtein() != null)
                 response.setProtein(menuMealResponse.getProtein());
-            if (response.getCarbs() == null)
+            if (response.getCarbs() == null && menuMealResponse.getCarbs() != null)
                 response.setCarbs(menuMealResponse.getCarbs());
-            if (response.getFat() == null)
+            if (response.getFat() == null && menuMealResponse.getFat() != null)
                 response.setFat(menuMealResponse.getFat());
+        } else {
+            response.setMenuMeal(null);
         }
 
-        // Map customMeal nếu có
+        // Gán customMeal nếu có
         if (item.getCustomMeal() != null) {
             CustomMealResponse customMealResponse = customMealServiceImpl.toResponse(item.getCustomMeal());
             response.setCustomMeal(customMealResponse);
             // Ưu tiên dinh dưỡng từ CartItem, nếu không có thì lấy từ customMeal
-            if (response.getCalories() == null)
+            if (response.getCalories() == null && customMealResponse.getCalories() != null)
                 response.setCalories(customMealResponse.getCalories());
-            if (response.getProtein() == null)
+            if (response.getProtein() == null && customMealResponse.getProtein() != null)
                 response.setProtein(customMealResponse.getProtein());
-            if (response.getCarbs() == null)
+            if (response.getCarbs() == null && customMealResponse.getCarb() != null)
                 response.setCarbs(customMealResponse.getCarb());
-            if (response.getFat() == null)
+            if (response.getFat() == null && customMealResponse.getFat() != null)
                 response.setFat(customMealResponse.getFat());
+        } else {
+            response.setCustomMeal(null);
         }
-        response.setTitle(item.getTitle());
-        response.setImage(item.getImage());
-        response.setDescription(item.getDescription());
+
+        // Gán weekMeal (nếu có, nhưng trong code hiện tại không set, nên để null)
+        response.setWeekMeal(null);
 
         return response;
     }
