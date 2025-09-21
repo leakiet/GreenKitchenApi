@@ -411,8 +411,21 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		if (actorId != null) {
 			context = context + "\n<<<HEALTH_INFO>>>\n" + healthInfoJson + "\n<<<END_HEALTH_INFO>>>\n";
 		}
-		if (!isMenuIntent(request.getContent())) {
-			context = context + "\nNote: Current user is not asking about menu. Do NOT call menu tool.\n";
+		
+		// Enhanced menu intent detection and context guidance
+		boolean isMenuRelated = isMenuIntent(request.getContent());
+		if (!isMenuRelated) {
+			context = context + "\n<<<TOOL_USAGE_GUIDANCE>>>\n" +
+				"IMPORTANT: Current user message does NOT contain menu-related keywords or context.\n" +
+				"DO NOT call any menu tools (getMenuMeals, getMenuMealsByType, getMenuMealsForBodyType).\n" +
+				"User is likely having a general conversation, asking questions, or making requests unrelated to food/menu.\n" +
+				"Respond naturally without calling tools unless user explicitly asks about menu items, prices, nutrition, or food recommendations.\n" +
+				"<<<END_TOOL_USAGE_GUIDANCE>>>\n";
+		} else {
+			context = context + "\n<<<MENU_TOOL_GUIDANCE>>>\n" +
+				"User is asking about menu/food/nutrition. You may use menu tools to provide helpful information.\n" +
+				"Choose appropriate tool based on user's specific request.\n" +
+				"<<<END_MENU_TOOL_GUIDANCE>>>\n";
 		}
 		
 		// 7. Add context reset hint if conversation was recently returned from EMP
@@ -431,11 +444,75 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		}).start();
 		return result;
 	}
-	// Helper: Kiểm tra intent menu
+	// Helper: Kiểm tra intent menu với logic cải thiện
 	private boolean isMenuIntent(String message) {
-		if (message == null) return false;
-		String lower = message.toLowerCase();
-		return lower.contains("menu") || lower.contains("món") || lower.contains("giá") || lower.contains("calorie") || lower.contains("nguyên liệu") || lower.contains("khẩu phần") || lower.contains("loại món");
+		if (message == null || message.trim().isEmpty()) return false;
+		
+		String lower = message.toLowerCase().trim();
+		
+		// Loại bỏ các từ chào hỏi và câu hỏi chung
+		String[] greetingWords = {"hello", "hi", "hey", "chào", "alo", "xin chào", "test", "ok", "okay", "cảm ơn", "thanks", "thank you"};
+		for (String greeting : greetingWords) {
+			if (lower.equals(greeting) || lower.startsWith(greeting + " ") || lower.endsWith(" " + greeting)) {
+				return false;
+			}
+		}
+		
+		// Các từ khóa chắc chắn về menu (tiếng Việt và tiếng Anh)
+		String[] strongMenuKeywords = {
+			"menu", "món ăn", "món", "food", "dish", "meal",
+			"giá", "price", "cost", "bao nhiêu tiền",
+			"calorie", "calories", "calo", "kcal",
+			"protein", "đạm", "carbs", "tinh bột", "fat", "chất béo",
+			"nguyên liệu", "ingredients", "thành phần",
+			"khẩu phần", "serving", "portion",
+			"loại món", "meal type", "món chay", "vegetarian",
+			"món ngon", "delicious", "recommend", "gợi ý",
+			"healthy", "healthy food", "healthy meal", "món lành mạnh",
+			"nutrition", "dinh dưỡng", "nutritional"
+		};
+		
+		// Các từ khóa có thể liên quan đến menu nhưng cần kiểm tra context
+		String[] weakMenuKeywords = {
+			"ăn", "eat", "eating", "thức ăn", "food",
+			"ngon", "tasty", "delicious", "good",
+			"có gì", "what", "available", "có sẵn"
+		};
+		
+		// Kiểm tra strong keywords
+		for (String keyword : strongMenuKeywords) {
+			if (lower.contains(keyword)) {
+				return true;
+			}
+		}
+		
+		// Kiểm tra weak keywords với context
+		boolean hasWeakKeyword = false;
+		for (String keyword : weakMenuKeywords) {
+			if (lower.contains(keyword)) {
+				hasWeakKeyword = true;
+				break;
+			}
+		}
+		
+		// Nếu có weak keyword, kiểm tra thêm context
+		if (hasWeakKeyword) {
+			// Các từ khóa context cho thấy đây là câu hỏi về menu
+			String[] contextKeywords = {
+				"hôm nay", "today", "có gì", "what", "gợi ý", "suggest", 
+				"recommend", "phù hợp", "suitable", "cho", "for", "tôi", "me",
+				"giảm cân", "lose weight", "tăng cân", "gain weight",
+				"healthy", "lành mạnh", "dinh dưỡng", "nutrition"
+			};
+			
+			for (String context : contextKeywords) {
+				if (lower.contains(context)) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
 	}
 
 
@@ -513,7 +590,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	    }
 
         // Inject guardrails: chỉ escalate khi có từ khóa rõ ràng; không escalate cho chào hỏi
-        String augmentedUserPrompt = prompt + "\n\n[CRITICAL TOOL_CALL_RULES - READ CAREFULLY BEFORE CALLING TOOL]\n" +
+        String augmentedUserPrompt = prompt + "\n\n[CRITICAL TOOL_CALL_RULES - READ CAREFULLY BEFORE CALLING ANY TOOL]\n" +
                 "🚨 IMPORTANT: ONLY call requestMeetEmp(conversationId) when user EXPLICITLY and SPECIFICALLY requests:\n" +
                 "✅ ALLOWED (Vietnamese): 'gặp nhân viên', 'nói chuyện với người thật', 'kết nối nhân viên', 'gọi hotline', 'liên hệ hỗ trợ', 'tôi muốn gặp nhân viên', 'cần hỗ trợ từ người thật'\n" +
                 "✅ ALLOWED (English): 'meet employee', 'talk to human', 'connect to employee', 'call hotline', 'contact support', 'human agent', 'support agent', 'I want to speak with a human', 'need human support'\n" +
@@ -521,7 +598,14 @@ public class ChatCommandServiceImpl implements ChatCommandService {
                 "⚠️ IF NOT 100% SURE → ASK USER AGAIN instead of calling tool\n" +
                 "🔢 conversationId=" + conversationId + " (required, cannot be null)\n" +
                 "📝 Do not return Markdown/HTML when deciding to call tool\n" +
-                "🎯 GOAL: Menu consultation and nutrition advice, NOT connecting to employees unless explicitly requested\n";
+                "🎯 GOAL: Menu consultation and nutrition advice, NOT connecting to employees unless explicitly requested\n" +
+                "\n🚨 MENU TOOL RULES - ONLY call menu tools when user asks SPECIFICALLY about:\n" +
+                "✅ ALLOWED: 'menu có gì?', 'món nào ngon?', 'giá bao nhiêu?', 'calorie', 'protein', 'ingredients', 'vegetarian food', 'healthy meals', 'nutrition advice'\n" +
+                "✅ ALLOWED: 'what's on the menu?', 'recommend food', 'price', 'calories', 'protein content', 'ingredients list', 'healthy options'\n" +
+                "❌ FORBIDDEN: General greetings, 'hello', 'hi', 'chào', 'how are you?', 'bạn khỏe không?', 'test', 'ok', 'thanks', 'cảm ơn'\n" +
+                "❌ FORBIDDEN: General questions, 'bạn có thể giúp không?', 'can you help?', 'what can you do?', 'bạn làm được gì?'\n" +
+                "⚠️ IF USER IS JUST CHATTING OR GREETING → RESPOND NATURALLY WITHOUT CALLING TOOLS\n" +
+                "🎯 PRIORITY: Natural conversation first, tools only when explicitly needed\n";
 
         return chatClient.prompt()
 	            .system(systemPrompt)
