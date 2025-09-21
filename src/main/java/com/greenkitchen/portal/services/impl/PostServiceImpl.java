@@ -89,6 +89,7 @@ public class PostServiceImpl implements PostService {
             p.setCategory(cat);
         }
         p.setImageUrl(req.getImageUrl());
+        p.setPriority(req.getPriority() != null ? req.getPriority() : "normal");
         p.setPublishedAt(req.getPublishedAt());
         // parse status string from request, default to DRAFT
         if (req.getStatus() == null) {
@@ -123,6 +124,7 @@ public class PostServiceImpl implements PostService {
             existing.setCategory(cat);
         }
         existing.setImageUrl(req.getImageUrl() != null ? req.getImageUrl() : existing.getImageUrl());
+        existing.setPriority(req.getPriority() != null ? req.getPriority() : existing.getPriority());
         existing.setPublishedAt(req.getPublishedAt() != null ? req.getPublishedAt() : existing.getPublishedAt());
         // update status from string in request if provided
         if (req.getStatus() != null) {
