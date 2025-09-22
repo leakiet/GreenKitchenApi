@@ -25,6 +25,9 @@ public interface MenuMealRepository extends JpaRepository<MenuMeal, Long> {
     @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END FROM MenuMeal m WHERE m.slug = :slug AND m.isDeleted = false")
     boolean existsBySlug(@Param("slug") String slug);
 
+    @Query("SELECT m FROM MenuMeal m WHERE m.isDeleted = false ORDER BY m.soldCount DESC")
+    List<MenuMeal> findTop10BySoldCount();
+
     boolean existsByTitle(String title);
 
 }

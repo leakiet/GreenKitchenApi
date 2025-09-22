@@ -15,6 +15,7 @@ import com.greenkitchen.portal.entities.CustomerCoupon;
 import com.greenkitchen.portal.services.CustomerCouponService;
 
 import jakarta.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequestMapping("/apis/v1/customer-coupons")
@@ -38,5 +39,13 @@ public class CustomerCouponController {
         CustomerCouponIdsResponse response = customerCouponService.getCustomerIdsByCouponId(couponId);
         return ResponseEntity.ok(response);
     }
-  
-  }
+    
+    /**
+     * Lấy danh sách customer coupons có sẵn cho customer
+     */
+    @GetMapping("/customer/{customerId}/available")
+    public ResponseEntity<List<CustomerCoupon>> getAvailableCustomerCoupons(@PathVariable("customerId") Long customerId) {
+        List<CustomerCoupon> customerCoupons = customerCouponService.getAvailableCustomerCoupons(customerId);
+        return ResponseEntity.ok(customerCoupons);
+    }
+}

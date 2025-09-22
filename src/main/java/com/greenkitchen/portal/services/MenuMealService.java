@@ -14,4 +14,7 @@ public interface MenuMealService {
     MenuMeal updateMenuMeal(Long id, MenuMealRequest dto);
     void deleteMenuMeal(Long id);
     boolean existsBySlug(String slug);
+    void incrementSoldCount(Long menuMealId);
+    List<MenuMealResponse> getPopularMenuMeals();
+
 }

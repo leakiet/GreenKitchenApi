@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.controllers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.greenkitchen.portal.dtos.ExchangeCouponRequest;
@@ -29,7 +31,7 @@ public class CouponController {
   private CouponService couponService;
 
   /**
-   * Hiển thị danh sách các coupon có thể đổi (đơn giản, không phân trang)
+   * Hiển thị danh sách các coupon có thể đổi
    */
   @GetMapping("/available")
   public ResponseEntity<List<Coupon>> getAvailableCoupons() {
@@ -73,7 +75,7 @@ public class CouponController {
   }
 
   /**
-   * ADMIN: Lấy tất cả coupons (không phân trang)
+   * ADMIN: Lấy tất cả coupons
    */
   @GetMapping("/admin/all")
   public ResponseEntity<List<Coupon>> getAllCoupons() {
@@ -134,6 +136,22 @@ public class CouponController {
       return ResponseEntity.notFound().build();
     } catch (Exception e) {
       return ResponseEntity.badRequest().build();
+    }
+  }
+
+  /**
+   * Validate voucher code cho customer
+   */
+  @GetMapping("/validate/{code}")
+  public ResponseEntity<Map<String, Object>> validateVoucherCode(
+      @PathVariable("code") String code,
+      @RequestParam("customerId") Long customerId,
+      @RequestParam(value = "orderValue", required = false) Double orderValue) {
+    try {
+      Map<String, Object> result = couponService.validateVoucherCode(code, customerId, orderValue);
+      return ResponseEntity.ok(result);
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }
   }
 }

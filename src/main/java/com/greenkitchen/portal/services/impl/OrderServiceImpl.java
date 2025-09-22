@@ -31,6 +31,7 @@ import com.greenkitchen.portal.repositories.CustomMealRepository;
 import com.greenkitchen.portal.repositories.MenuMealRepository;
 import com.greenkitchen.portal.repositories.OrderRepository;
 import com.greenkitchen.portal.repositories.PaymentRepository;
+import com.greenkitchen.portal.services.MenuMealService;
 import com.greenkitchen.portal.services.OrderService;
 import com.greenkitchen.portal.services.PaymentService;
 
@@ -60,6 +61,9 @@ public class OrderServiceImpl implements OrderService {
 
   @Autowired
   private MembershipServiceImpl membershipService;
+
+  @Autowired
+  private MenuMealService menuMealService;
 
   @Override
   public List<Order> listAll() {
@@ -132,6 +136,9 @@ public class OrderServiceImpl implements OrderService {
               orderItem.setTitle(menuMeal.getTitle());
               orderItem.setDescription(menuMeal.getDescription());
               orderItem.setImage(menuMeal.getImage());
+
+              // Increment sold count for menu meal
+              menuMealService.incrementSoldCount(itemRequest.getMenuMealId());
               break;
             case CUSTOM_MEAL:
               CustomMeal customMeal = customMealRepository.findById(itemRequest.getCustomMealId())
@@ -140,6 +147,7 @@ public class OrderServiceImpl implements OrderService {
               orderItem.setTitle(customMeal.getTitle());
               orderItem.setDescription(customMeal.getDescription());
               orderItem.setImage(customMeal.getImage());
+              break;
             case WEEK_MEAL:
               // WeekMeal weekMeal = weekMealRepository.findById(itemRequest.getWeekMealId())
               // .orElseThrow(() -> new RuntimeException("WeekMeal not found"));

@@ -74,4 +74,6 @@ public class CustomerCoupon extends AbstractEntity {
     
     private Double maxDiscount; // Giá trị giảm giá tối đa
     
+    @NotNull
+    private Double pointsRequired; // Số điểm cần thiết để đổi coupon (snapshot)
 }
