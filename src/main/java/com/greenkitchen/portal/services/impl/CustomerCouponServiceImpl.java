@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.greenkitchen.portal.dtos.CustomerCouponIdsResponse;
 import com.greenkitchen.portal.dtos.UseCouponRequest;
 import com.greenkitchen.portal.entities.CustomerCoupon;
+import com.greenkitchen.portal.enums.CouponApplicability;
 import com.greenkitchen.portal.enums.CustomerCouponStatus;
 import com.greenkitchen.portal.repositories.CustomerCouponRepository;
 import com.greenkitchen.portal.services.CustomerCouponService;
@@ -56,5 +57,16 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
     public CustomerCouponIdsResponse getCustomerIdsByCouponId(Long couponId) {
         List<Long> customerIds = customerCouponRepository.findCustomerIdsByCouponId(couponId);
         return new CustomerCouponIdsResponse(customerIds);
+    }
+    
+    @Override
+    public List<CustomerCoupon> getAvailableCustomerCoupons(Long customerId) {
+        LocalDateTime now = LocalDateTime.now();
+        return customerCouponRepository.findAvailableCustomerCoupons(
+            customerId, 
+            CustomerCouponStatus.AVAILABLE, 
+            now,
+            CouponApplicability.GENERAL
+        );
     }
 }

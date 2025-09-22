@@ -36,6 +36,8 @@ public class CustomMeal extends AbstractEntity {
   private String description;
   private String image;
 
+  private Integer soldCount;
+
   // @JsonIgnore
   @OneToMany(mappedBy = "customMeal", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<CustomMealDetail> details;

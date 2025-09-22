@@ -2,6 +2,7 @@ package com.greenkitchen.portal.services.impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -196,6 +197,48 @@ public class CouponServiceImpl implements CouponService {
         couponRepository.save(coupon);
     }
     
+    @Override
+    public Map<String, Object> validateVoucherCode(String code, Long customerId, Double orderValue) {
+        // Tìm customer coupon theo code và customer ID
+        CustomerCoupon customerCoupon = customerCouponRepository
+            .findByCustomerIdAndCouponCodeAndIsDeletedFalse(customerId, code)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid voucher code or voucher not available for this customer"));
+        
+        // Kiểm tra trạng thái
+        if (customerCoupon.getStatus() != CustomerCouponStatus.AVAILABLE) {
+            throw new IllegalArgumentException("Voucher has already been used");
+        }
+        
+        // Kiểm tra thời gian hết hạn
+        LocalDateTime now = LocalDateTime.now();
+        if (customerCoupon.getExpiresAt().isBefore(now)) {
+            throw new IllegalArgumentException("Voucher has expired");
+        }
+        
+        // Kiểm tra giá trị đơn hàng tối thiểu (nếu có)
+        if (orderValue != null && customerCoupon.getCouponDiscountValue() != null) {
+            // Có thể thêm logic kiểm tra min order value ở đây nếu cần
+        }
+        
+        // Kiểm tra applicability
+        if (customerCoupon.getCouponApplicability() != CouponApplicability.GENERAL) {
+            throw new IllegalArgumentException("Invalid voucher code or voucher not available for this customer");
+        }
+        
+        // Trả về thông tin voucher
+        return Map.of(
+            "id", customerCoupon.getId(),
+            "code", customerCoupon.getCouponCode(),
+            "name", customerCoupon.getCouponName(),
+            "description", customerCoupon.getCouponDescription(),
+            "discountType", customerCoupon.getCouponType().toString(),
+            "discountValue", customerCoupon.getCouponDiscountValue(),
+            "maxDiscount", customerCoupon.getMaxDiscount(),
+            "pointsRequired", customerCoupon.getPointsRequired(),
+            "expiresAt", customerCoupon.getExpiresAt().toString()
+        );
+    }
+    
     // Helper methods
     private boolean isValidForExchange(Coupon coupon) {
         LocalDateTime now = LocalDateTime.now();
@@ -240,6 +283,7 @@ public class CouponServiceImpl implements CouponService {
         customerCoupon.setCouponApplicability(coupon.getApplicability());
         customerCoupon.setCouponDiscountValue(coupon.getDiscountValue());
         customerCoupon.setMaxDiscount(coupon.getMaxDiscount());
+        customerCoupon.setPointsRequired(coupon.getPointsRequired());
         
         customerCoupon.setCreatedAt(LocalDateTime.now());
         customerCoupon.setUpdatedAt(LocalDateTime.now());

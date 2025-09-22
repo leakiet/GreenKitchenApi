@@ -1,6 +1,7 @@
 package com.greenkitchen.portal.services;
 
 import java.util.List;
+import java.util.Map;
 
 import com.greenkitchen.portal.dtos.CreateCouponRequest;
 import com.greenkitchen.portal.dtos.BulkCreateCustomerCouponsRequest;
@@ -52,5 +53,10 @@ public interface CouponService {
      * ADMIN: Xóa coupon
      */
     void deleteCoupon(Long couponId);
+    
+    /**
+     * Validate voucher code cho customer
+     */
+    Map<String, Object> validateVoucherCode(String code, Long customerId, Double orderValue);
 }
 

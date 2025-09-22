@@ -48,6 +48,12 @@ public class MenuMealController {
     return ResponseEntity.ok(menuMeals);
   }
 
+  @GetMapping("/customers/popular")
+  public ResponseEntity<List<MenuMealResponse>> getPopularMenuMeals() {
+    List<MenuMealResponse> popularMenuMeals = menuMealService.getPopularMenuMeals();
+    return ResponseEntity.ok(popularMenuMeals);
+  }
+
   @PostMapping("/customers")
   @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
   public ResponseEntity<?> createMenuMeal(@ModelAttribute MenuMealRequest request,

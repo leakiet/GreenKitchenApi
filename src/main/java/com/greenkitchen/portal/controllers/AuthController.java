@@ -15,6 +15,7 @@ import com.greenkitchen.portal.dtos.GoogleLoginMobileRequest;
 import com.greenkitchen.portal.dtos.LoginRequest;
 import com.greenkitchen.portal.dtos.LoginResponse;
 import com.greenkitchen.portal.dtos.PhoneLoginRequest;
+import com.greenkitchen.portal.dtos.PhoneLoginMobileRequest;
 import com.greenkitchen.portal.dtos.RegisterRequest;
 import com.greenkitchen.portal.dtos.RegisterResponse;
 import com.greenkitchen.portal.dtos.ResetPasswordRequest;
@@ -407,6 +408,57 @@ public class AuthController {
       return ResponseEntity.ok(response);
     } catch (Exception e) {
       throw new IllegalArgumentException("Phone login failed: " + e.getMessage());
+    }
+  }
+
+  @PostMapping("/phone-login-mobile")
+  public ResponseEntity<LoginResponse> phoneLoginMobile(@Valid @RequestBody PhoneLoginMobileRequest request,
+      HttpServletResponse httpResponse) {
+    try {
+      // Find or create customer by phone number
+      Customer customer = customerService.findOrCreateCustomerByPhone(request.getPhone());
+
+      // Validate customer exists and is active
+      if (customer == null) {
+        throw new IllegalArgumentException("Customer not found for phone number: " + request.getPhone());
+      }
+
+      if (!customer.getIsActive()) {
+        throw new IllegalArgumentException("Customer account is not active");
+      }
+
+      // Build Authentication from customer user details
+      MyUserDetails userDetails = new MyUserDetails(customer);
+      Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+      // Generate JWT tokens
+      String jwt = jwtUtils.generateJwtToken(authentication);
+      String refreshToken = jwtUtils.generateRefreshToken(authentication);
+
+      // Create response
+      LoginResponse response = mapper.map(customer, LoginResponse.class);
+      response.setRole("USER");
+      response.setToken(jwt);
+      response.setRefreshToken(refreshToken);
+      response.setTokenType("Bearer");
+
+      // Save access token to cookie
+      Cookie accessTokenCookie = new Cookie("access_token", response.getToken());
+      accessTokenCookie.setHttpOnly(true);
+      accessTokenCookie.setPath("/");
+      accessTokenCookie.setMaxAge(60 * 60 * 24 * 14); // 14 days
+      httpResponse.addCookie(accessTokenCookie);
+
+      // Save refresh token to cookie
+      Cookie refreshTokenCookie = new Cookie("refresh_token", response.getRefreshToken());
+      refreshTokenCookie.setHttpOnly(true);
+      refreshTokenCookie.setPath("/");
+      refreshTokenCookie.setMaxAge(60 * 60 * 24 * 30); // 30 days
+      httpResponse.addCookie(refreshTokenCookie);
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Phone login mobile failed: " + e.getMessage());
     }
   }
 

@@ -19,4 +19,20 @@ public interface CustomerCouponRepository extends JpaRepository<CustomerCoupon, 
     // Tìm tất cả customer IDs theo coupon ID
     @Query("SELECT cc.customer.id FROM CustomerCoupon cc WHERE cc.coupon.id = :couponId AND cc.isDeleted = false")
     java.util.List<Long> findCustomerIdsByCouponId(@Param("couponId") Long couponId);
+    
+    // Lấy danh sách customer coupons có sẵn cho customer
+    @Query("SELECT cc FROM CustomerCoupon cc WHERE cc.customer.id = :customerId " +
+           "AND cc.status = :status AND cc.expiresAt > :now AND cc.isDeleted = false " +
+           "AND cc.couponApplicability = :applicability")
+    java.util.List<CustomerCoupon> findAvailableCustomerCoupons(
+        @Param("customerId") Long customerId,
+        @Param("status") com.greenkitchen.portal.enums.CustomerCouponStatus status,
+        @Param("now") java.time.LocalDateTime now,
+        @Param("applicability") com.greenkitchen.portal.enums.CouponApplicability applicability
+    );
+    
+    // Tìm customer coupon theo customer ID và coupon code
+    java.util.Optional<CustomerCoupon> findByCustomerIdAndCouponCodeAndIsDeletedFalse(
+        Long customerId, String couponCode
+    );
 }

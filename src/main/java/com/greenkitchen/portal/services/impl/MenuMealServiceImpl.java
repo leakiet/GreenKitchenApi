@@ -114,6 +114,26 @@ public class MenuMealServiceImpl implements MenuMealService {
         return menuMealRepository.existsBySlug(slug);
     }
 
+    @Override
+    public void incrementSoldCount(Long menuMealId) {
+        MenuMeal menuMeal = menuMealRepository.findById(menuMealId)
+                .orElseThrow(() -> new RuntimeException("MenuMeal not found with id: " + menuMealId));
+
+        // Increment sold count
+        Integer currentSoldCount = menuMeal.getSoldCount() != null ? menuMeal.getSoldCount() : 0;
+        menuMeal.setSoldCount(currentSoldCount + 1);
+
+        menuMealRepository.save(menuMeal);
+    }
+
+    @Override
+    public List<MenuMealResponse> getPopularMenuMeals() {
+        return menuMealRepository.findTop10BySoldCount().stream()
+                .limit(10)
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public MenuMealResponse toResponse(MenuMeal menuMeal) {
         MenuMealResponse response = new MenuMealResponse();
 
@@ -125,6 +145,7 @@ public class MenuMealServiceImpl implements MenuMealService {
         response.setPrice(menuMeal.getPrice());
         response.setSlug(menuMeal.getSlug());
         response.setStock(menuMeal.getStock());
+        response.setSoldCount(menuMeal.getSoldCount());
         if (menuMeal.getMenuIngredients() != null) {
             response.setMenuIngredients(
                     menuMeal.getMenuIngredients() != null ? new HashSet<>(menuMeal.getMenuIngredients())

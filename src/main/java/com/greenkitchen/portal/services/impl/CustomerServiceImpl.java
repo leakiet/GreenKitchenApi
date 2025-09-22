@@ -58,6 +58,8 @@ public class CustomerServiceImpl implements CustomerService {
     Customer existingCustomer = customerRepository.findByPhone(phoneNumber);
 
     if (existingCustomer != null) {
+      existingCustomer.setIsPhoneLogin(true);
+      customerRepository.save(existingCustomer);
       return existingCustomer;
     }
 
