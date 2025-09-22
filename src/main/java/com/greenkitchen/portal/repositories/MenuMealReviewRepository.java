@@ -2,6 +2,8 @@ package com.greenkitchen.portal.repositories;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +35,17 @@ public interface MenuMealReviewRepository extends JpaRepository<MenuMealReview, 
 
     // Đếm số review cho menu meal
     Long countByMenuMealId(Long menuMealId);
+
+    // Thêm method cho filtering với pagination
+    @Query("SELECT r FROM MenuMealReview r WHERE " +
+           "(:status IS NULL OR r.rating = :status) AND " +
+           "(:q IS NULL OR LOWER(r.comment) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<MenuMealReview> findAllFiltered(Pageable pageable, @Param("status") String status, @Param("q") String q);
+
+    // Thêm method cho filtering theo menuMealId
+    @Query("SELECT r FROM MenuMealReview r WHERE r.menuMeal.id = :menuMealId AND " +
+           "(:status IS NULL OR r.rating = :status) AND " +
+           "(:q IS NULL OR LOWER(r.comment) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<MenuMealReview> findFilteredByMenuMealId(@Param("menuMealId") Long menuMealId, Pageable pageable, 
+                                                  @Param("status") String status, @Param("q") String q);
 }

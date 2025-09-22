@@ -48,6 +48,11 @@ public class ChatSummaryServiceImpl implements ChatSummaryService {
 
         sb.append("<<<RECENT_MESSAGES>>>\n");
         for (ChatMessage msg : recent) {
+            // Filter out messages related to requestMeetEmp to prevent AI confusion
+            if (isRequestMeetEmpRelatedMessage(msg)) {
+                continue; // Skip this message
+            }
+            
             String role = switch (msg.getSenderType().name()) {
                 case "CUSTOMER" -> "user";
                 case "AI" -> "assistant";
@@ -136,6 +141,45 @@ public class ChatSummaryServiceImpl implements ChatSummaryService {
         sb.append("<<<END_NEW_MESSAGES>>>\n\n");
         sb.append("Xuất duy nhất phần tóm tắt mới (không thêm meta).\n");
         return sb.toString();
+    }
+
+    /**
+     * Kiểm tra xem tin nhắn có liên quan đến requestMeetEmp không để loại bỏ khỏi context
+     * Tránh AI hiểu nhầm và gọi requestMeetEmp liên tục
+     * Hỗ trợ cả tiếng Việt và tiếng Anh
+     */
+    private boolean isRequestMeetEmpRelatedMessage(ChatMessage msg) {
+        if (msg == null || msg.getContent() == null) {
+            return false;
+        }
+        
+        String content = msg.getContent().toLowerCase().trim();
+        String senderName = msg.getSenderName() != null ? msg.getSenderName().toLowerCase() : "";
+        
+        // Các tin nhắn liên quan đến requestMeetEmp cần loại bỏ (tiếng Việt)
+        boolean vietnamesePatterns = content.contains("yêu cầu đã gửi, vui lòng chờ nhân viên") ||
+               content.contains("chuyển về ai thành công") ||
+               content.contains("requestmeetemp") ||
+               content.contains("gặp nhân viên") ||
+               content.contains("kết nối nhân viên") ||
+               content.contains("liên hệ hỗ trợ") ||
+               (senderName.equals("system") && content.contains("chuyển")) ||
+               (senderName.equals("ai") && content.contains("yêu cầu đã gửi"));
+        
+        // Các tin nhắn liên quan đến requestMeetEmp cần loại bỏ (tiếng Anh)
+        boolean englishPatterns = content.contains("request sent, please wait for employee") ||
+               content.contains("switched back to ai successfully") ||
+               content.contains("requestmeetemp") ||
+               content.contains("meet employee") ||
+               content.contains("connect to employee") ||
+               content.contains("contact support") ||
+               content.contains("human agent") ||
+               content.contains("talk to human") ||
+               content.contains("support agent") ||
+               (senderName.equals("system") && content.contains("switch")) ||
+               (senderName.equals("ai") && content.contains("request sent"));
+        
+        return vietnamesePatterns || englishPatterns;
     }
 }
 

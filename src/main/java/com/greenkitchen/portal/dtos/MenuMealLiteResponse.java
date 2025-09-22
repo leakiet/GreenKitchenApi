@@ -20,6 +20,7 @@ public class MenuMealLiteResponse {
 	private String title;
 	private String slug;
 	private String image;
+	private String description;
 	private Double carb; // carbs
 	private Double calo; // calories
 	private Double protein; // protein

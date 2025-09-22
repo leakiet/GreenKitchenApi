@@ -1,6 +1,5 @@
 package com.greenkitchen.portal.services.impl;
 
-import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,7 +9,6 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -25,6 +23,7 @@ import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.repositories.CartRepository;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.services.CartEmailService;
+import com.greenkitchen.portal.services.EmailTrackingService;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -49,6 +48,9 @@ public class CartEmailServiceImpl implements CartEmailService {
     
     @Autowired
     private com.greenkitchen.portal.repositories.CartEmailLogRepository cartEmailLogRepository;
+    
+    @Autowired
+    private EmailTrackingService emailTrackingService;
     
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -84,9 +86,26 @@ public class CartEmailServiceImpl implements CartEmailService {
             context.setVariable("customerName", customerName.trim());
             context.setVariable("cartItems", prepareCartItemsData(cart.getCartItems()));
             context.setVariable("totalAmount", formatPrice(cart.getTotalAmount()));
-            context.setVariable("frontendUrl", frontendUrl != null ? frontendUrl : "http://localhost:3000");
-            context.setVariable("unsubscribeUrl", (frontendUrl != null ? frontendUrl : "http://localhost:3000") + "/unsubscribe");
-            context.setVariable("preferencesUrl", (frontendUrl != null ? frontendUrl : "http://localhost:3000") + "/email-preferences");
+            
+            // Tạo tracking URLs
+            String baseUrl = frontendUrl != null ? frontendUrl : "http://localhost:3000";
+            String cartUrl = createTrackingUrl(baseUrl + "/cart", "CART", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            String checkoutUrl = createTrackingUrl(baseUrl + "/checkout", "CHECKOUT", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            String unsubscribeUrl = createTrackingUrl(baseUrl + "/unsubscribe", "UNSUBSCRIBE", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            String preferencesUrl = createTrackingUrl(baseUrl + "/email-preferences", "PREFERENCES", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            
+            // Social media tracking URLs
+            String facebookUrl = createTrackingUrl("https://facebook.com/greenkitchen", "SOCIAL_FACEBOOK", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            String instagramUrl = createTrackingUrl("https://instagram.com/greenkitchen", "SOCIAL_INSTAGRAM", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            String twitterUrl = createTrackingUrl("https://twitter.com/greenkitchen", "SOCIAL_TWITTER", cart.getCustomerId(), customerEmail, "CART_ABANDONMENT");
+            
+            context.setVariable("cartUrl", cartUrl);
+            context.setVariable("checkoutUrl", checkoutUrl);
+            context.setVariable("unsubscribeUrl", unsubscribeUrl);
+            context.setVariable("preferencesUrl", preferencesUrl);
+            context.setVariable("facebookUrl", facebookUrl);
+            context.setVariable("instagramUrl", instagramUrl);
+            context.setVariable("twitterUrl", twitterUrl);
             
             // Log dữ liệu template để debug
             log.info("Template variables: customerName={}, cartItems={}, totalAmount={}", 
@@ -265,7 +284,7 @@ public class CartEmailServiceImpl implements CartEmailService {
     private String formatPrice(Double price) {
         if (price == null) return "0 VNĐ";
         
-        NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(Locale.of("vi", "VN"));
         return formatter.format(price).replace("₫", "VNĐ");
     }
     
@@ -383,5 +402,12 @@ public class CartEmailServiceImpl implements CartEmailService {
             && item.getTitle() != null && !item.getTitle().trim().isEmpty()
             && item.getQuantity() != null && item.getQuantity() > 0
             && item.getTotalPrice() != null && item.getTotalPrice() > 0;
+    }
+    
+    /**
+     * Tạo tracking URL cho link trong email
+     */
+    private String createTrackingUrl(String originalUrl, String linkType, Long customerId, String customerEmail, String emailType) {
+        return emailTrackingService.createTrackingUrl(originalUrl, linkType, customerId, customerEmail, emailType);
     }
 }

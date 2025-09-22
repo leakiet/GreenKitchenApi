@@ -117,15 +117,17 @@ public class ChatQueryServiceImpl implements ChatQueryService {
             Long id = (Long) row[0];
             ConversationStatus status = (ConversationStatus) row[1];
             String customerName = (String) row[3];
-            Long employeeId = (Long) row[4];
-            String lastMessage = (String) row[5];
-            LocalDateTime lastMessageTime = (LocalDateTime) row[6];
-            Long unreadCount = (Long) row[7];
+            String customerPhone = (String) row[4];
+            Long employeeId = (Long) row[5];
+            String lastMessage = (String) row[6];
+            LocalDateTime lastMessageTime = (LocalDateTime) row[7];
+            Long unreadCount = (Long) row[8];
             
+            // Gửi timestamp thô để frontend có thể format đúng cách
             String lastMsgTime = lastMessageTime != null ? 
-                lastMessageTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM")) : "";
+                lastMessageTime.toString() : null;
             
-            return new ConversationResponse(id, customerName, status.name(), lastMessage, lastMsgTime,
+            return new ConversationResponse(id, customerName, customerPhone, status.name(), lastMessage, lastMsgTime,
                     unreadCount.intValue(), employeeId);
         }).toList();
     }
@@ -144,15 +146,17 @@ public class ChatQueryServiceImpl implements ChatQueryService {
             Long id = (Long) row[0];
             ConversationStatus status = (ConversationStatus) row[1];
             String customerName = (String) row[3];
-            Long employeeId = (Long) row[4];
-            String lastMessage = (String) row[5];
-            LocalDateTime lastMessageTime = (LocalDateTime) row[6];
-            Long unreadCount = (Long) row[7];
+            String customerPhone = (String) row[4];
+            Long employeeId = (Long) row[5];
+            String lastMessage = (String) row[6];
+            LocalDateTime lastMessageTime = (LocalDateTime) row[7];
+            Long unreadCount = (Long) row[8];
             
+            // Gửi timestamp thô để frontend có thể format đúng cách
             String lastMsgTime = lastMessageTime != null ? 
-                lastMessageTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM")) : "";
+                lastMessageTime.toString() : null;
             
-            return new ConversationResponse(id, customerName, status.name(), lastMessage, lastMsgTime,
+            return new ConversationResponse(id, customerName, customerPhone, status.name(), lastMessage, lastMsgTime,
                     unreadCount.intValue(), employeeId);
         }).toList();
     }

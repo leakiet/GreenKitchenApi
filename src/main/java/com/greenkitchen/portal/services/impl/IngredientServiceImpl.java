@@ -20,6 +20,11 @@ public class IngredientServiceImpl implements IngredientService {
     }
 
     @Override
+    public boolean existsByTitle(String title) {
+        return ingredientRepository.existsByTitle(title);
+    }
+
+    @Override
     public List<Ingredients> findAll() {
         return ingredientRepository.findAll();
     }

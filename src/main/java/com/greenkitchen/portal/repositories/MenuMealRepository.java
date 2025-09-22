@@ -28,4 +28,6 @@ public interface MenuMealRepository extends JpaRepository<MenuMeal, Long> {
     @Query("SELECT m FROM MenuMeal m WHERE m.isDeleted = false ORDER BY m.soldCount DESC")
     List<MenuMeal> findTop10BySoldCount();
 
+    boolean existsByTitle(String title);
+
 }

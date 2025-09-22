@@ -9,6 +9,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.greenkitchen.portal.dtos.CustomerSummaryDto;
 import com.greenkitchen.portal.dtos.MenuMealRequest;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.dtos.MenuMealReviewResponse;
@@ -28,6 +29,10 @@ public class MenuMealServiceImpl implements MenuMealService {
 
     @Override
     public MenuMeal createMenuMeal(MenuMealRequest dto) {
+        if (menuMealRepository.existsByTitle(dto.getTitle())) {
+            throw new RuntimeException("Title already exists: " + dto.getTitle());
+        }
+
         MenuMeal menuMeal = new MenuMeal();
         if (menuMeal.getNutrition() == null) {
             menuMeal.setNutrition(new NutritionInfo());
@@ -66,6 +71,13 @@ public class MenuMealServiceImpl implements MenuMealService {
     public MenuMeal updateMenuMeal(Long id, MenuMealRequest dto) {
         MenuMeal existingMenuMeal = menuMealRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("MenuMeal not found with id: " + id));
+
+        // Kiểm tra title duy nhất nếu title mới khác title cũ
+        if (dto.getTitle() != null && !dto.getTitle().equals(existingMenuMeal.getTitle())) {
+            if (menuMealRepository.existsByTitle(dto.getTitle())) {
+                throw new RuntimeException("Title already exists: " + dto.getTitle());
+            }
+        }
 
         if (existingMenuMeal.getNutrition() == null) {
             existingMenuMeal.setNutrition(new NutritionInfo());
@@ -173,7 +185,16 @@ public class MenuMealServiceImpl implements MenuMealService {
                         reviewResponse.setMenuMealTitle(menuMeal.getTitle());
 
                         if (review.getCustomer() != null) {
-                            reviewResponse.setCustomerId(review.getCustomer().getId());
+                            CustomerSummaryDto customerSummary = new CustomerSummaryDto();
+                            customerSummary.setId(review.getCustomer().getId());
+                            customerSummary.setAvatar(review.getCustomer().getAvatar());
+                            customerSummary.setFirstName(review.getCustomer().getFirstName());
+                            customerSummary.setLastName(review.getCustomer().getLastName());
+                            customerSummary.setFullName(review.getCustomer().getFullName());
+                            customerSummary.setGender(review.getCustomer().getGender() != null ? review.getCustomer().getGender().name() : null);
+                            customerSummary.setEmail(review.getCustomer().getEmail());
+                            customerSummary.setPhone(review.getCustomer().getPhone());
+                            reviewResponse.setCustomer(customerSummary);
                             reviewResponse.setCustomerName(
                                     review.getCustomer().getFirstName() + " " + review.getCustomer().getLastName());
                         }
