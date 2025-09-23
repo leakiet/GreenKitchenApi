@@ -150,6 +150,25 @@ public class AuthController {
     return ResponseEntity.ok(response);
   }
 
+  @DeleteMapping("/employee-logout")
+  public ResponseEntity<String> logoutEmployee(HttpServletResponse httpResponse) {
+    // Xóa cookie access_token
+    Cookie accessTokenCookie = new Cookie("access_token", null);
+    accessTokenCookie.setHttpOnly(true);
+    accessTokenCookie.setPath("/");
+    accessTokenCookie.setMaxAge(0);
+    httpResponse.addCookie(accessTokenCookie);
+
+    // Xóa cookie refresh_token
+    Cookie refreshTokenCookie = new Cookie("refresh_token", null);
+    refreshTokenCookie.setHttpOnly(true);
+    refreshTokenCookie.setPath("/");
+    refreshTokenCookie.setMaxAge(0);
+    httpResponse.addCookie(refreshTokenCookie);
+
+    return ResponseEntity.ok("Logout successful");
+  }
+
   @PostMapping("/register")
   public ResponseEntity<RegisterResponse> registerCustomer(@Valid @RequestBody RegisterRequest registerRequest) {
     Customer customer = mapper.map(registerRequest, Customer.class);

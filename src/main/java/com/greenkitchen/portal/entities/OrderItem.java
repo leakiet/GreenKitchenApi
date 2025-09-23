@@ -49,7 +49,7 @@ public class OrderItem extends AbstractEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "week_meal_id")
     @JsonBackReference
-    private WeekMeal weekMeal;
+    private CustomerWeekMeal weekMeal; //Thuc te day la customerWeekMeal
 
     private String title;
     private String description;
