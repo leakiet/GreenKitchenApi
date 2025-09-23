@@ -103,6 +103,10 @@ public class Customer extends AbstractEntity {
 	@JsonManagedReference
 	private List<CustomerCoupon> customerCoupons;
 
+	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JsonManagedReference
+	private List<CustomerWeekMeal> customerWeekMeals;
+
 	// Override getter để chỉ trả về coupon chưa sử dụng và còn hạn  
 	public List<CustomerCoupon> getCustomerCoupons() {
 		if (customerCoupons == null) {

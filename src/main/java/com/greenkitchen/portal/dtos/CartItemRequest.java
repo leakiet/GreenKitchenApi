@@ -14,7 +14,7 @@ public class CartItemRequest {
   private Boolean isCustom;
   private Long menuMealId; // For menu items
   private Long customMealId; // For custom items
-  private Long weekMealId; // For week meal items
+  private Long customerWeekMealDayId; // For customer week meal day items
   private Integer quantity;
   private Double unitPrice;
   private Double totalPrice;
