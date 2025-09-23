@@ -14,4 +14,6 @@ public class AIContentResponse {
     private String excerpt;
     private String status;
     private String message; // for error messages or additional info
+    private String promptSource; // "markdown" | "manual"
+    private String imageInjection; // "ai" | "fallback" | "none"
 }

@@ -7,4 +7,5 @@ public interface AIContentService {
     AIContentResponse generatePostContent(AIContentRequest request);
     AIContentResponse generateTitleOnly(AIContentRequest request);
     AIContentResponse generateContentOnly(AIContentRequest request);
+    com.greenkitchen.portal.dtos.AITopicsResponse suggestTopics(String category, String style, String audience, int count, String language);
 }
