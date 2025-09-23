@@ -156,7 +156,7 @@ public class EmailServiceImpl implements EmailService {
     message.setTo(toEmail);
     message.setSubject("Green Kitchen - Order Created");
 
-    String orderUrl = frontendUrl + "/order-tracking/" + orderCode;
+    String orderUrl = frontendUrl + "/tracking-order?orderCode=" + orderCode;
     String body = String.format(
         """
         Hello,

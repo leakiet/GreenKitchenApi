@@ -19,7 +19,7 @@ public class OrderItemResponse {
     // IDs for relationships
     private Long menuMealId;
     private Long customMealId;
-    private Long weekMealId;
+    private Long weekMealId; //Thuc te day la customerWeekMealId
 
     private String title;
     private String description;

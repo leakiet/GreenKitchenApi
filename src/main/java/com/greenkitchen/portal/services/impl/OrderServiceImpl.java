@@ -23,7 +23,9 @@ import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.Order;
 import com.greenkitchen.portal.entities.OrderItem;
 import com.greenkitchen.portal.entities.Payment;
-import com.greenkitchen.portal.entities.WeekMeal;
+import com.greenkitchen.portal.entities.CustomerWeekMeal;
+import com.greenkitchen.portal.entities.Ingredients;
+import com.greenkitchen.portal.entities.CustomMealDetail;
 import com.greenkitchen.portal.enums.OrderStatus;
 import com.greenkitchen.portal.enums.PaymentMethod;
 import com.greenkitchen.portal.enums.PaymentStatus;
@@ -36,7 +38,8 @@ import com.greenkitchen.portal.services.MenuMealService;
 import com.greenkitchen.portal.services.OrderService;
 import com.greenkitchen.portal.services.PaymentService;
 import com.greenkitchen.portal.services.EmailService;
-import com.greenkitchen.portal.repositories.WeekMealRepository;
+import com.greenkitchen.portal.repositories.CustomerWeekMealRepository;
+import com.greenkitchen.portal.repositories.IngredientRepository;
 
 
 
@@ -57,7 +60,10 @@ public class OrderServiceImpl implements OrderService {
   private CustomMealRepository customMealRepository;
 
   @Autowired
-  private WeekMealRepository weekMealRepository;
+  private CustomerWeekMealRepository customerWeekMealRepository;
+
+  @Autowired
+  private IngredientRepository ingredientRepository;
 
   @Autowired
   private PaymentService paymentService;
@@ -136,7 +142,7 @@ public class OrderServiceImpl implements OrderService {
           orderItem.setUnitPrice(itemRequest.getUnitPrice());
           orderItem.setNotes(itemRequest.getNotes());
 
-          // Set product references
+          // Set product references and update stock
           switch (itemRequest.getItemType()) {
             case MENU_MEAL:
               MenuMeal menuMeal = menuMealRepository.findById(itemRequest.getMenuMealId())
@@ -145,6 +151,14 @@ public class OrderServiceImpl implements OrderService {
               orderItem.setTitle(menuMeal.getTitle());
               orderItem.setDescription(menuMeal.getDescription());
               orderItem.setImage(menuMeal.getImage());
+
+              // Update stock for menu meal
+              int currentStock = menuMeal.getStock();
+              if (currentStock < itemRequest.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for " + menuMeal.getTitle() + ". Available: " + currentStock + ", Requested: " + itemRequest.getQuantity());
+              }
+              menuMeal.setStock(currentStock - itemRequest.getQuantity());
+              menuMealRepository.save(menuMeal);
 
               // Increment sold count for menu meal
               menuMealService.incrementSoldCount(itemRequest.getMenuMealId());
@@ -156,12 +170,30 @@ public class OrderServiceImpl implements OrderService {
               orderItem.setTitle(customMeal.getTitle());
               orderItem.setDescription(customMeal.getDescription());
               orderItem.setImage(customMeal.getImage());
+
+              // Update stock for each ingredient in custom meal
+              if (customMeal.getDetails() != null) {
+                for (CustomMealDetail detail : customMeal.getDetails()) {
+                  Ingredients ingredient = ingredientRepository.findById(detail.getIngredientId())
+                      .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + detail.getIngredientId()));
+                  
+                  double requiredQuantity = detail.getQuantity() * itemRequest.getQuantity();
+                  int currentIngredientStock = ingredient.getStock();
+                  
+                  if (currentIngredientStock < requiredQuantity) {
+                    throw new RuntimeException("Insufficient stock for ingredient " + ingredient.getTitle() + 
+                        ". Available: " + currentIngredientStock + ", Required: " + (int)requiredQuantity);
+                  }
+                  
+                  ingredient.setStock(currentIngredientStock - (int)requiredQuantity);
+                  ingredientRepository.save(ingredient);
+                }
+              }
               break;
             case WEEK_MEAL:
-              Long weekMealId = itemRequest.getWeekMealId();
-              WeekMeal weekMeal = weekMealRepository.findById(weekMealId)
-               .orElseThrow(() -> new RuntimeException("WeekMeal not found"));
-              orderItem.setWeekMeal(weekMeal);
+              CustomerWeekMeal customerWeekMeal = customerWeekMealRepository.findById(itemRequest.getWeekMealId())
+               .orElseThrow(() -> new RuntimeException("CustomerWeekMeal not found with id: " + itemRequest.getWeekMealId()));
+              orderItem.setWeekMeal(customerWeekMeal);
               orderItem.setTitle(itemRequest.getWeekMealTitle());
               orderItem.setDescription(itemRequest.getWeekMealDescription());
               orderItem.setImage(itemRequest.getWeekMealImage());
