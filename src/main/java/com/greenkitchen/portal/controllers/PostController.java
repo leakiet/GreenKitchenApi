@@ -18,6 +18,7 @@ import com.greenkitchen.portal.dtos.PostRequest;
 import com.greenkitchen.portal.dtos.PostResponse;
 import com.greenkitchen.portal.dtos.AIContentRequest;
 import com.greenkitchen.portal.dtos.AIContentResponse;
+import com.greenkitchen.portal.dtos.AITopicsResponse;
 import com.greenkitchen.portal.services.PostService;
 import com.greenkitchen.portal.services.AIContentService;
 
@@ -110,6 +111,26 @@ public class PostController {
             AIContentResponse errorResponse = new AIContentResponse();
             errorResponse.setStatus("error");
             errorResponse.setMessage("Lỗi khi tạo nội dung: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/ai/suggest-topics")
+    public ResponseEntity<AITopicsResponse> suggestTopics(
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "style", required = false) String style,
+            @RequestParam(value = "audience", required = false) String audience,
+            @RequestParam(value = "count", required = false, defaultValue = "8") Integer count,
+            @RequestParam(value = "language", required = false, defaultValue = "vi") String language
+    ) {
+        try {
+            AITopicsResponse response = aiContentService.suggestTopics(category, style, audience, count != null ? count : 8, language);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            AITopicsResponse errorResponse = new AITopicsResponse();
+            errorResponse.setStatus("error");
+            errorResponse.setMessage("Lỗi khi gợi ý chủ đề: " + e.getMessage());
+            errorResponse.setTopics(java.util.List.of());
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
