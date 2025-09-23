@@ -43,8 +43,8 @@ public class CartItem extends AbstractEntity {
     private CustomMeal customMeal;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_week_meal_day_id")
-    private CustomerWeekMealDay customerWeekMealDay;
+    @JoinColumn(name = "customer_week_meal_id")
+    private CustomerWeekMeal customerWeekMeal;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
