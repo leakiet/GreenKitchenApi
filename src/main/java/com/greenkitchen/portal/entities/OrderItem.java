@@ -31,7 +31,7 @@ public class OrderItem extends AbstractEntity {
     private Order order;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private OrderItemType itemType;
 
     // Liên kết với MenuMeal (nullable vì có thể là CustomMeal)
@@ -46,10 +46,10 @@ public class OrderItem extends AbstractEntity {
     @JsonBackReference
     private CustomMeal customMeal;
 
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "week_meal_id")
-    // @JsonBackReference
-    // private WeekMeal weekMeal;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "week_meal_id")
+    @JsonBackReference
+    private WeekMeal weekMeal;
 
     private String title;
     private String description;

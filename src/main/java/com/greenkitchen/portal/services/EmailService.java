@@ -9,4 +9,6 @@ public interface EmailService {
 
     void sendSupportRequestEmail(String issueType, String priority, String subject, String description, String contactMethod, String contactValue);
 
+    void sendOrderCreatedEmail(String toEmail, String orderCode, Double totalAmount);
+
 }

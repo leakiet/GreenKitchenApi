@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.greenkitchen.portal.dtos.CreateOrderRequest;
 import com.greenkitchen.portal.dtos.OrderResponse;
@@ -109,4 +110,15 @@ public class OrderController {
         }
     }
     
+    // Cancel order with note
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId, @RequestParam(name = "note", required = false) String note) {
+        try {
+            Order order = orderService.cancelOrder(orderId, note);
+            return new ResponseEntity<>(order, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

@@ -31,4 +31,7 @@ public interface OrderService {
     
     // Method để update order status trong workflow
     Order updateOrderStatus(Long orderId, String newStatus);
+
+    // Hủy đơn với lý do
+    Order cancelOrder(Long orderId, String note);
 }

@@ -19,6 +19,7 @@ public class OrderItemResponse {
     // IDs for relationships
     private Long menuMealId;
     private Long customMealId;
+    private Long weekMealId;
 
     private String title;
     private String description;

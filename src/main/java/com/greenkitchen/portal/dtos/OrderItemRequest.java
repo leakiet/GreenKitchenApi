@@ -13,8 +13,12 @@ import lombok.Setter;
 @AllArgsConstructor
 public class OrderItemRequest {
     private OrderItemType itemType;
-    private Long menuMealId;    // Null nếu là CustomMeal
-    private Long customMealId;  // Null nếu là MenuMeal
+    private Long menuMealId;    // Null nếu là CustomMeal hoặc WeekMeal
+    private Long customMealId;  // Null nếu là MenuMeal hoặc WeekMeal
+    private Long weekMealId;   // Null nếu là MenuMeal hoặc CustomMeal
+    private String weekMealTitle;
+    private String weekMealDescription;
+    private String weekMealImage;
     private Integer quantity;
     private Double unitPrice;
     private String notes;
