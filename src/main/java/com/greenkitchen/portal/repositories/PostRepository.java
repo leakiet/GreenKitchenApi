@@ -15,13 +15,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT p FROM Post p WHERE COALESCE(p.isDeleted, false) = false")
     List<Post> findAllActive();
 
-    @Query("SELECT p FROM Post p WHERE COALESCE(p.isDeleted, false) = false")
+    @Query("SELECT p FROM Post p WHERE COALESCE(p.isDeleted, false) = false ORDER BY p.createdAt DESC")
     Page<Post> findAllActivePaged(Pageable pageable);
 
     @Query("SELECT p FROM Post p WHERE COALESCE(p.isDeleted, false) = false " +
         "AND (:status IS NULL OR p.status = :status) " +
         "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
-        "AND (:q IS NULL OR p.title LIKE CONCAT('%', :q, '%') OR p.content LIKE CONCAT('%', :q, '%'))")
+        "AND (:q IS NULL OR p.title LIKE CONCAT('%', :q, '%') OR p.content LIKE CONCAT('%', :q, '%')) " +
+        "ORDER BY p.createdAt DESC")
     Page<Post> findFilteredPaged(@Param("status") PostStatus status,
                  @Param("categoryId") Long categoryId,
                  @Param("q") String q,

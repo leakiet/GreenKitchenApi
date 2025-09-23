@@ -18,8 +18,7 @@ public class EmailServiceImpl implements EmailService {
   @Value("${spring.mail.username}")
   private String fromEmail;
 
-  @Value("${app.frontend.url}")
-  private String frontendUrl;
+  private String frontendUrl = "http://127.0.0.1:5173";
 
   @Override
   @Async
@@ -144,6 +143,37 @@ public class EmailServiceImpl implements EmailService {
         contactMethod,
         contactValue
     );
+    message.setText(body);
+    mailSender.send(message);
+  }
+
+  @Override
+  @Async
+  public void sendOrderCreatedEmail(String toEmail, String orderCode, Double totalAmount) {
+    if (toEmail == null || toEmail.isEmpty()) return;
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setFrom(fromEmail);
+    message.setTo(toEmail);
+    message.setSubject("Green Kitchen - Order Created");
+
+    String orderUrl = frontendUrl + "/order-tracking/" + orderCode;
+    String body = String.format(
+        """
+        Hello,
+
+        Your order %s has been created successfully.
+        Total: %s VND
+
+        You can track your order here:
+        %s
+
+        Thank you for choosing Green Kitchen!
+        """,
+        orderCode,
+        totalAmount == null ? "0" : String.format("%,.0f", totalAmount),
+        orderUrl
+    );
+
     message.setText(body);
     mailSender.send(message);
   }

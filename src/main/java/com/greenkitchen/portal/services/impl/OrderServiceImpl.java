@@ -23,6 +23,7 @@ import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.Order;
 import com.greenkitchen.portal.entities.OrderItem;
 import com.greenkitchen.portal.entities.Payment;
+import com.greenkitchen.portal.entities.WeekMeal;
 import com.greenkitchen.portal.enums.OrderStatus;
 import com.greenkitchen.portal.enums.PaymentMethod;
 import com.greenkitchen.portal.enums.PaymentStatus;
@@ -34,6 +35,8 @@ import com.greenkitchen.portal.repositories.PaymentRepository;
 import com.greenkitchen.portal.services.MenuMealService;
 import com.greenkitchen.portal.services.OrderService;
 import com.greenkitchen.portal.services.PaymentService;
+import com.greenkitchen.portal.services.EmailService;
+import com.greenkitchen.portal.repositories.WeekMealRepository;
 
 
 
@@ -54,6 +57,9 @@ public class OrderServiceImpl implements OrderService {
   private CustomMealRepository customMealRepository;
 
   @Autowired
+  private WeekMealRepository weekMealRepository;
+
+  @Autowired
   private PaymentService paymentService;
 
   @Autowired
@@ -64,6 +70,9 @@ public class OrderServiceImpl implements OrderService {
 
   @Autowired
   private MenuMealService menuMealService;
+
+  @Autowired
+  private EmailService emailService;
 
   @Override
   public List<Order> listAll() {
@@ -149,12 +158,13 @@ public class OrderServiceImpl implements OrderService {
               orderItem.setImage(customMeal.getImage());
               break;
             case WEEK_MEAL:
-              // WeekMeal weekMeal = weekMealRepository.findById(itemRequest.getWeekMealId())
-              // .orElseThrow(() -> new RuntimeException("WeekMeal not found"));
-              // orderItem.setWeekMeal(weekMeal);
-              // orderItem.setTitle(weekMeal.getTitle());
-              // orderItem.setDescription(weekMeal.getDescription());
-              // orderItem.setImage(weekMeal.getImage());
+              Long weekMealId = itemRequest.getWeekMealId();
+              WeekMeal weekMeal = weekMealRepository.findById(weekMealId)
+               .orElseThrow(() -> new RuntimeException("WeekMeal not found"));
+              orderItem.setWeekMeal(weekMeal);
+              orderItem.setTitle(itemRequest.getWeekMealTitle());
+              orderItem.setDescription(itemRequest.getWeekMealDescription());
+              orderItem.setImage(itemRequest.getWeekMealImage());
               break;
           }
 
@@ -188,6 +198,14 @@ public class OrderServiceImpl implements OrderService {
       // Tạo PayPal payment và complete luôn
       paymentService.createPayPalPayment(savedOrder, customer, savedOrder.getTotalAmount(),
           "paypal_order_" + savedOrder.getId());
+    }
+
+    try {
+      // Send order created email (async), best-effort only
+      String toEmail = customer.getEmail();
+      emailService.sendOrderCreatedEmail(toEmail, savedOrder.getOrderCode(), savedOrder.getTotalAmount());
+    } catch (Exception ignore) {
+      // do not block order creation on email failure
     }
 
     return savedOrder;
@@ -433,6 +451,26 @@ public class OrderServiceImpl implements OrderService {
 
     Order savedOrder = orderRepository.save(order);
     return savedOrder;
+  }
+
+  @Override
+  public Order cancelOrder(Long orderId, String note) {
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+
+    if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+      throw new RuntimeException("Only PENDING or CONFIRMED orders can be cancelled");
+    }
+
+    order.setStatus(OrderStatus.CANCELLED);
+    order.setCanceledAt(LocalDateTime.now());
+    String existingNotes = order.getNotes();
+    String appended = (existingNotes == null || existingNotes.isEmpty())
+        ? ("Cancel reason: " + (note == null ? "" : note))
+        : (existingNotes + "\nCancel reason: " + (note == null ? "" : note));
+    order.setNotes(appended);
+
+    return orderRepository.save(order);
   }
 
   /**
