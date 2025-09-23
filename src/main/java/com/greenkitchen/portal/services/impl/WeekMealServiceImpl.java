@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,9 +37,6 @@ public class WeekMealServiceImpl implements WeekMealService {
   @Autowired
   private WeekMealDayRepository weekMealDayRepository; // Thêm nếu chưa có
 
-  @Autowired
-  private ModelMapper modelMapper;
-
   @Override
   public WeekMealDayResponse getWeekMealDayById(Long weekMealId, Long dayId) {
     WeekMealDay day = weekMealDayRepository.findById(dayId)
@@ -50,10 +46,79 @@ public class WeekMealServiceImpl implements WeekMealService {
       throw new RuntimeException("Day does not belong to the specified WeekMeal");
     }
 
-    // Map to response (sử dụng ModelMapper hoặc manual)
-    WeekMealDayResponse response = modelMapper.map(day, WeekMealDayResponse.class);
+    // Map to response manually
+    WeekMealDayResponse response = new WeekMealDayResponse();
     response.setId(day.getId());
+    response.setDay(day.getDay());
+    response.setDate(day.getDate());
     response.setType(day.getWeekMeal().getType().name()); // Convert enum thành String
+
+    // Set meal1
+    if (day.getMeal1() != null) {
+      MenuMealResponse meal1Response = new MenuMealResponse();
+      meal1Response.setId(day.getMeal1().getId());
+      meal1Response.setTitle(day.getMeal1().getTitle());
+      meal1Response.setDescription(day.getMeal1().getDescription());
+      meal1Response.setImage(day.getMeal1().getImage());
+      meal1Response.setPrice(day.getMeal1().getPrice());
+      meal1Response.setSlug(day.getMeal1().getSlug());
+      meal1Response.setStock(day.getMeal1().getStock());
+      meal1Response.setSoldCount(day.getMeal1().getSoldCount());
+      meal1Response.setType(day.getMeal1().getType());
+      meal1Response.setMenuIngredients(day.getMeal1().getMenuIngredients());
+      if (day.getMeal1().getNutrition() != null) {
+        meal1Response.setCalories(day.getMeal1().getNutrition().getCalories());
+        meal1Response.setProtein(day.getMeal1().getNutrition().getProtein());
+        meal1Response.setCarbs(day.getMeal1().getNutrition().getCarbs());
+        meal1Response.setFat(day.getMeal1().getNutrition().getFat());
+      }
+      response.setMeal1(meal1Response);
+    }
+
+    // Set meal2
+    if (day.getMeal2() != null) {
+      MenuMealResponse meal2Response = new MenuMealResponse();
+      meal2Response.setId(day.getMeal2().getId());
+      meal2Response.setTitle(day.getMeal2().getTitle());
+      meal2Response.setDescription(day.getMeal2().getDescription());
+      meal2Response.setImage(day.getMeal2().getImage());
+      meal2Response.setPrice(day.getMeal2().getPrice());
+      meal2Response.setSlug(day.getMeal2().getSlug());
+      meal2Response.setStock(day.getMeal2().getStock());
+      meal2Response.setSoldCount(day.getMeal2().getSoldCount());
+      meal2Response.setType(day.getMeal2().getType());
+      meal2Response.setMenuIngredients(day.getMeal2().getMenuIngredients());
+      if (day.getMeal2().getNutrition() != null) {
+        meal2Response.setCalories(day.getMeal2().getNutrition().getCalories());
+        meal2Response.setProtein(day.getMeal2().getNutrition().getProtein());
+        meal2Response.setCarbs(day.getMeal2().getNutrition().getCarbs());
+        meal2Response.setFat(day.getMeal2().getNutrition().getFat());
+      }
+      response.setMeal2(meal2Response);
+    }
+
+    // Set meal3
+    if (day.getMeal3() != null) {
+      MenuMealResponse meal3Response = new MenuMealResponse();
+      meal3Response.setId(day.getMeal3().getId());
+      meal3Response.setTitle(day.getMeal3().getTitle());
+      meal3Response.setDescription(day.getMeal3().getDescription());
+      meal3Response.setImage(day.getMeal3().getImage());
+      meal3Response.setPrice(day.getMeal3().getPrice());
+      meal3Response.setSlug(day.getMeal3().getSlug());
+      meal3Response.setStock(day.getMeal3().getStock());
+      meal3Response.setSoldCount(day.getMeal3().getSoldCount());
+      meal3Response.setType(day.getMeal3().getType());
+      meal3Response.setMenuIngredients(day.getMeal3().getMenuIngredients());
+      if (day.getMeal3().getNutrition() != null) {
+        meal3Response.setCalories(day.getMeal3().getNutrition().getCalories());
+        meal3Response.setProtein(day.getMeal3().getNutrition().getProtein());
+        meal3Response.setCarbs(day.getMeal3().getNutrition().getCarbs());
+        meal3Response.setFat(day.getMeal3().getNutrition().getFat());
+      }
+      response.setMeal3(meal3Response);
+    }
+
     return response;
   }
 
@@ -97,7 +162,13 @@ public class WeekMealServiceImpl implements WeekMealService {
       return null;
 
     WeekMeal weekMeal = weekMealOpt.get();
-    WeekMealResponse response = modelMapper.map(weekMeal, WeekMealResponse.class);
+
+    // Map WeekMeal to WeekMealResponse manually
+    WeekMealResponse response = new WeekMealResponse();
+    response.setId(weekMeal.getId());
+    response.setType(weekMeal.getType().name());
+    response.setWeekStart(weekMeal.getWeekStart());
+    response.setWeekEnd(weekMeal.getWeekEnd());
 
     var dayResponses = new ArrayList<WeekMealDayResponse>();
     for (WeekMealDay day : weekMeal.getDays()) {
@@ -105,27 +176,74 @@ public class WeekMealServiceImpl implements WeekMealService {
       dayRes.setId(day.getId());
       dayRes.setDay(day.getDay());
       dayRes.setDate(day.getDate());
-      dayRes.setMeal1(modelMapper.map(day.getMeal1(), MenuMealResponse.class));
-      if (day.getMeal1().getNutrition() != null) {
-        dayRes.getMeal1().setCalories(day.getMeal1().getNutrition().getCalories());
-        dayRes.getMeal1().setProtein(day.getMeal1().getNutrition().getProtein());
-        dayRes.getMeal1().setCarbs(day.getMeal1().getNutrition().getCarbs());
-        dayRes.getMeal1().setFat(day.getMeal1().getNutrition().getFat());
+      dayRes.setType(weekMeal.getType().name());
+
+      // Set meal1 manually
+      if (day.getMeal1() != null) {
+        MenuMealResponse meal1Response = new MenuMealResponse();
+        meal1Response.setId(day.getMeal1().getId());
+        meal1Response.setTitle(day.getMeal1().getTitle());
+        meal1Response.setDescription(day.getMeal1().getDescription());
+        meal1Response.setImage(day.getMeal1().getImage());
+        meal1Response.setPrice(day.getMeal1().getPrice());
+        meal1Response.setSlug(day.getMeal1().getSlug());
+        meal1Response.setStock(day.getMeal1().getStock());
+        meal1Response.setSoldCount(day.getMeal1().getSoldCount());
+        meal1Response.setType(day.getMeal1().getType());
+        meal1Response.setMenuIngredients(day.getMeal1().getMenuIngredients());
+        if (day.getMeal1().getNutrition() != null) {
+          meal1Response.setCalories(day.getMeal1().getNutrition().getCalories());
+          meal1Response.setProtein(day.getMeal1().getNutrition().getProtein());
+          meal1Response.setCarbs(day.getMeal1().getNutrition().getCarbs());
+          meal1Response.setFat(day.getMeal1().getNutrition().getFat());
+        }
+        dayRes.setMeal1(meal1Response);
       }
-      dayRes.setMeal2(modelMapper.map(day.getMeal2(), MenuMealResponse.class));
-      if (day.getMeal2().getNutrition() != null) {
-        dayRes.getMeal2().setCalories(day.getMeal2().getNutrition().getCalories());
-        dayRes.getMeal2().setProtein(day.getMeal2().getNutrition().getProtein());
-        dayRes.getMeal2().setCarbs(day.getMeal2().getNutrition().getCarbs());
-        dayRes.getMeal2().setFat(day.getMeal2().getNutrition().getFat());
+
+      // Set meal2 manually
+      if (day.getMeal2() != null) {
+        MenuMealResponse meal2Response = new MenuMealResponse();
+        meal2Response.setId(day.getMeal2().getId());
+        meal2Response.setTitle(day.getMeal2().getTitle());
+        meal2Response.setDescription(day.getMeal2().getDescription());
+        meal2Response.setImage(day.getMeal2().getImage());
+        meal2Response.setPrice(day.getMeal2().getPrice());
+        meal2Response.setSlug(day.getMeal2().getSlug());
+        meal2Response.setStock(day.getMeal2().getStock());
+        meal2Response.setSoldCount(day.getMeal2().getSoldCount());
+        meal2Response.setType(day.getMeal2().getType());
+        meal2Response.setMenuIngredients(day.getMeal2().getMenuIngredients());
+        if (day.getMeal2().getNutrition() != null) {
+          meal2Response.setCalories(day.getMeal2().getNutrition().getCalories());
+          meal2Response.setProtein(day.getMeal2().getNutrition().getProtein());
+          meal2Response.setCarbs(day.getMeal2().getNutrition().getCarbs());
+          meal2Response.setFat(day.getMeal2().getNutrition().getFat());
+        }
+        dayRes.setMeal2(meal2Response);
       }
-      dayRes.setMeal3(modelMapper.map(day.getMeal3(), MenuMealResponse.class));
-      if (day.getMeal3().getNutrition() != null) {
-        dayRes.getMeal3().setCalories(day.getMeal3().getNutrition().getCalories());
-        dayRes.getMeal3().setProtein(day.getMeal3().getNutrition().getProtein());
-        dayRes.getMeal3().setCarbs(day.getMeal3().getNutrition().getCarbs());
-        dayRes.getMeal3().setFat(day.getMeal3().getNutrition().getFat());
+
+      // Set meal3 manually
+      if (day.getMeal3() != null) {
+        MenuMealResponse meal3Response = new MenuMealResponse();
+        meal3Response.setId(day.getMeal3().getId());
+        meal3Response.setTitle(day.getMeal3().getTitle());
+        meal3Response.setDescription(day.getMeal3().getDescription());
+        meal3Response.setImage(day.getMeal3().getImage());
+        meal3Response.setPrice(day.getMeal3().getPrice());
+        meal3Response.setSlug(day.getMeal3().getSlug());
+        meal3Response.setStock(day.getMeal3().getStock());
+        meal3Response.setSoldCount(day.getMeal3().getSoldCount());
+        meal3Response.setType(day.getMeal3().getType());
+        meal3Response.setMenuIngredients(day.getMeal3().getMenuIngredients());
+        if (day.getMeal3().getNutrition() != null) {
+          meal3Response.setCalories(day.getMeal3().getNutrition().getCalories());
+          meal3Response.setProtein(day.getMeal3().getNutrition().getProtein());
+          meal3Response.setCarbs(day.getMeal3().getNutrition().getCarbs());
+          meal3Response.setFat(day.getMeal3().getNutrition().getFat());
+        }
+        dayRes.setMeal3(meal3Response);
       }
+
       dayResponses.add(dayRes);
     }
     response.setDays(dayResponses);
@@ -144,11 +262,18 @@ public class WeekMealServiceImpl implements WeekMealService {
           "WeekMeal with type " + typeEnum + " for week starting " + weekStart + " already exists.");
     }
 
-    WeekMeal weekMeal = modelMapper.map(request, WeekMeal.class);
+    // Map WeekMealRequest to WeekMeal manually
+    WeekMeal weekMeal = new WeekMeal();
+    weekMeal.setType(typeEnum);
+    weekMeal.setWeekStart(request.getWeekStart());
+    weekMeal.setWeekEnd(request.getWeekEnd());
 
     List<WeekMealDay> days = new ArrayList<>();
     for (WeekMealDayRequest d : request.getDays()) {
-      WeekMealDay day = modelMapper.map(d, WeekMealDay.class);
+      // Map WeekMealDayRequest to WeekMealDay manually
+      WeekMealDay day = new WeekMealDay();
+      day.setDay(d.getDay());
+      day.setDate(d.getDate());
       day.setMeal1(menuMealRepository.findById(d.getMeal1()).orElseThrow());
       day.setMeal2(menuMealRepository.findById(d.getMeal2()).orElseThrow());
       day.setMeal3(menuMealRepository.findById(d.getMeal3()).orElseThrow());
@@ -166,34 +291,88 @@ public class WeekMealServiceImpl implements WeekMealService {
       return null;
 
     WeekMeal weekMeal = weekMealOpt.get();
-    WeekMealResponse response = modelMapper.map(weekMeal, WeekMealResponse.class);
+
+    // Map WeekMeal to WeekMealResponse manually
+    WeekMealResponse response = new WeekMealResponse();
+    response.setId(weekMeal.getId());
+    response.setType(weekMeal.getType().name());
+    response.setWeekStart(weekMeal.getWeekStart());
+    response.setWeekEnd(weekMeal.getWeekEnd());
 
     var dayResponses = new ArrayList<WeekMealDayResponse>();
     for (WeekMealDay day : weekMeal.getDays()) {
       var dayRes = new WeekMealDayResponse();
+      dayRes.setId(day.getId());
       dayRes.setDay(day.getDay());
       dayRes.setDate(day.getDate());
-      dayRes.setMeal1(modelMapper.map(day.getMeal1(), MenuMealResponse.class));
-      if (day.getMeal1().getNutrition() != null) {
-        dayRes.getMeal1().setCalories(day.getMeal1().getNutrition().getCalories());
-        dayRes.getMeal1().setProtein(day.getMeal1().getNutrition().getProtein());
-        dayRes.getMeal1().setCarbs(day.getMeal1().getNutrition().getCarbs());
-        dayRes.getMeal1().setFat(day.getMeal1().getNutrition().getFat());
+      dayRes.setType(weekMeal.getType().name());
+
+      // Set meal1 manually
+      if (day.getMeal1() != null) {
+        MenuMealResponse meal1Response = new MenuMealResponse();
+        meal1Response.setId(day.getMeal1().getId());
+        meal1Response.setTitle(day.getMeal1().getTitle());
+        meal1Response.setDescription(day.getMeal1().getDescription());
+        meal1Response.setImage(day.getMeal1().getImage());
+        meal1Response.setPrice(day.getMeal1().getPrice());
+        meal1Response.setSlug(day.getMeal1().getSlug());
+        meal1Response.setStock(day.getMeal1().getStock());
+        meal1Response.setSoldCount(day.getMeal1().getSoldCount());
+        meal1Response.setType(day.getMeal1().getType());
+        meal1Response.setMenuIngredients(day.getMeal1().getMenuIngredients());
+        if (day.getMeal1().getNutrition() != null) {
+          meal1Response.setCalories(day.getMeal1().getNutrition().getCalories());
+          meal1Response.setProtein(day.getMeal1().getNutrition().getProtein());
+          meal1Response.setCarbs(day.getMeal1().getNutrition().getCarbs());
+          meal1Response.setFat(day.getMeal1().getNutrition().getFat());
+        }
+        dayRes.setMeal1(meal1Response);
       }
-      dayRes.setMeal2(modelMapper.map(day.getMeal2(), MenuMealResponse.class));
-      if (day.getMeal2().getNutrition() != null) {
-        dayRes.getMeal2().setCalories(day.getMeal2().getNutrition().getCalories());
-        dayRes.getMeal2().setProtein(day.getMeal2().getNutrition().getProtein());
-        dayRes.getMeal2().setCarbs(day.getMeal2().getNutrition().getCarbs());
-        dayRes.getMeal2().setFat(day.getMeal2().getNutrition().getFat());
+
+      // Set meal2 manually
+      if (day.getMeal2() != null) {
+        MenuMealResponse meal2Response = new MenuMealResponse();
+        meal2Response.setId(day.getMeal2().getId());
+        meal2Response.setTitle(day.getMeal2().getTitle());
+        meal2Response.setDescription(day.getMeal2().getDescription());
+        meal2Response.setImage(day.getMeal2().getImage());
+        meal2Response.setPrice(day.getMeal2().getPrice());
+        meal2Response.setSlug(day.getMeal2().getSlug());
+        meal2Response.setStock(day.getMeal2().getStock());
+        meal2Response.setSoldCount(day.getMeal2().getSoldCount());
+        meal2Response.setType(day.getMeal2().getType());
+        meal2Response.setMenuIngredients(day.getMeal2().getMenuIngredients());
+        if (day.getMeal2().getNutrition() != null) {
+          meal2Response.setCalories(day.getMeal2().getNutrition().getCalories());
+          meal2Response.setProtein(day.getMeal2().getNutrition().getProtein());
+          meal2Response.setCarbs(day.getMeal2().getNutrition().getCarbs());
+          meal2Response.setFat(day.getMeal2().getNutrition().getFat());
+        }
+        dayRes.setMeal2(meal2Response);
       }
-      dayRes.setMeal3(modelMapper.map(day.getMeal3(), MenuMealResponse.class));
-      if (day.getMeal3().getNutrition() != null) {
-        dayRes.getMeal3().setCalories(day.getMeal3().getNutrition().getCalories());
-        dayRes.getMeal3().setProtein(day.getMeal3().getNutrition().getProtein());
-        dayRes.getMeal3().setCarbs(day.getMeal3().getNutrition().getCarbs());
-        dayRes.getMeal3().setFat(day.getMeal3().getNutrition().getFat());
+
+      // Set meal3 manually
+      if (day.getMeal3() != null) {
+        MenuMealResponse meal3Response = new MenuMealResponse();
+        meal3Response.setId(day.getMeal3().getId());
+        meal3Response.setTitle(day.getMeal3().getTitle());
+        meal3Response.setDescription(day.getMeal3().getDescription());
+        meal3Response.setImage(day.getMeal3().getImage());
+        meal3Response.setPrice(day.getMeal3().getPrice());
+        meal3Response.setSlug(day.getMeal3().getSlug());
+        meal3Response.setStock(day.getMeal3().getStock());
+        meal3Response.setSoldCount(day.getMeal3().getSoldCount());
+        meal3Response.setType(day.getMeal3().getType());
+        meal3Response.setMenuIngredients(day.getMeal3().getMenuIngredients());
+        if (day.getMeal3().getNutrition() != null) {
+          meal3Response.setCalories(day.getMeal3().getNutrition().getCalories());
+          meal3Response.setProtein(day.getMeal3().getNutrition().getProtein());
+          meal3Response.setCarbs(day.getMeal3().getNutrition().getCarbs());
+          meal3Response.setFat(day.getMeal3().getNutrition().getFat());
+        }
+        dayRes.setMeal3(meal3Response);
       }
+
       dayResponses.add(dayRes);
     }
     response.setDays(dayResponses);
@@ -248,7 +427,12 @@ public class WeekMealServiceImpl implements WeekMealService {
 
     if (isSame) {
       // Không update, trả về dữ liệu hiện tại
-      return modelMapper.map(weekMeal, WeekMealResponse.class);
+      WeekMealResponse response = new WeekMealResponse();
+      response.setId(weekMeal.getId());
+      response.setType(weekMeal.getType().name());
+      response.setWeekStart(weekMeal.getWeekStart());
+      response.setWeekEnd(weekMeal.getWeekEnd());
+      return response;
     }
 
     weekMeal.setType(MenuMealType.valueOf(request.getType().toUpperCase()));
@@ -295,7 +479,92 @@ public class WeekMealServiceImpl implements WeekMealService {
     weekMeal.getDays().addAll(updatedDays);
 
     WeekMeal savedWeekMeal = weekMealRepository.save(weekMeal);
-    // Trả về DTO bằng modelMapper
-    return modelMapper.map(savedWeekMeal, WeekMealResponse.class);
+
+    // Map WeekMeal to WeekMealResponse manually
+    WeekMealResponse response = new WeekMealResponse();
+    response.setId(savedWeekMeal.getId());
+    response.setType(savedWeekMeal.getType().name());
+    response.setWeekStart(savedWeekMeal.getWeekStart());
+    response.setWeekEnd(savedWeekMeal.getWeekEnd());
+
+    List<WeekMealDayResponse> dayResponses = new ArrayList<>();
+    for (WeekMealDay day : savedWeekMeal.getDays()) {
+      WeekMealDayResponse dayRes = new WeekMealDayResponse();
+      dayRes.setId(day.getId());
+      dayRes.setDay(day.getDay());
+      dayRes.setDate(day.getDate());
+      dayRes.setType(savedWeekMeal.getType().name());
+
+      // Set meal1 manually
+      if (day.getMeal1() != null) {
+        MenuMealResponse meal1Response = new MenuMealResponse();
+        meal1Response.setId(day.getMeal1().getId());
+        meal1Response.setTitle(day.getMeal1().getTitle());
+        meal1Response.setDescription(day.getMeal1().getDescription());
+        meal1Response.setImage(day.getMeal1().getImage());
+        meal1Response.setPrice(day.getMeal1().getPrice());
+        meal1Response.setSlug(day.getMeal1().getSlug());
+        meal1Response.setStock(day.getMeal1().getStock());
+        meal1Response.setSoldCount(day.getMeal1().getSoldCount());
+        meal1Response.setType(day.getMeal1().getType());
+        meal1Response.setMenuIngredients(day.getMeal1().getMenuIngredients());
+        if (day.getMeal1().getNutrition() != null) {
+          meal1Response.setCalories(day.getMeal1().getNutrition().getCalories());
+          meal1Response.setProtein(day.getMeal1().getNutrition().getProtein());
+          meal1Response.setCarbs(day.getMeal1().getNutrition().getCarbs());
+          meal1Response.setFat(day.getMeal1().getNutrition().getFat());
+        }
+        dayRes.setMeal1(meal1Response);
+      }
+
+      // Set meal2 manually
+      if (day.getMeal2() != null) {
+        MenuMealResponse meal2Response = new MenuMealResponse();
+        meal2Response.setId(day.getMeal2().getId());
+        meal2Response.setTitle(day.getMeal2().getTitle());
+        meal2Response.setDescription(day.getMeal2().getDescription());
+        meal2Response.setImage(day.getMeal2().getImage());
+        meal2Response.setPrice(day.getMeal2().getPrice());
+        meal2Response.setSlug(day.getMeal2().getSlug());
+        meal2Response.setStock(day.getMeal2().getStock());
+        meal2Response.setSoldCount(day.getMeal2().getSoldCount());
+        meal2Response.setType(day.getMeal2().getType());
+        meal2Response.setMenuIngredients(day.getMeal2().getMenuIngredients());
+        if (day.getMeal2().getNutrition() != null) {
+          meal2Response.setCalories(day.getMeal2().getNutrition().getCalories());
+          meal2Response.setProtein(day.getMeal2().getNutrition().getProtein());
+          meal2Response.setCarbs(day.getMeal2().getNutrition().getCarbs());
+          meal2Response.setFat(day.getMeal2().getNutrition().getFat());
+        }
+        dayRes.setMeal2(meal2Response);
+      }
+
+      // Set meal3 manually
+      if (day.getMeal3() != null) {
+        MenuMealResponse meal3Response = new MenuMealResponse();
+        meal3Response.setId(day.getMeal3().getId());
+        meal3Response.setTitle(day.getMeal3().getTitle());
+        meal3Response.setDescription(day.getMeal3().getDescription());
+        meal3Response.setImage(day.getMeal3().getImage());
+        meal3Response.setPrice(day.getMeal3().getPrice());
+        meal3Response.setSlug(day.getMeal3().getSlug());
+        meal3Response.setStock(day.getMeal3().getStock());
+        meal3Response.setSoldCount(day.getMeal3().getSoldCount());
+        meal3Response.setType(day.getMeal3().getType());
+        meal3Response.setMenuIngredients(day.getMeal3().getMenuIngredients());
+        if (day.getMeal3().getNutrition() != null) {
+          meal3Response.setCalories(day.getMeal3().getNutrition().getCalories());
+          meal3Response.setProtein(day.getMeal3().getNutrition().getProtein());
+          meal3Response.setCarbs(day.getMeal3().getNutrition().getCarbs());
+          meal3Response.setFat(day.getMeal3().getNutrition().getFat());
+        }
+        dayRes.setMeal3(meal3Response);
+      }
+
+      dayResponses.add(dayRes);
+    }
+    response.setDays(dayResponses);
+
+    return response;
   }
 }

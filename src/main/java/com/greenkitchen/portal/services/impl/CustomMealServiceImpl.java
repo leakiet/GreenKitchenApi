@@ -33,14 +33,14 @@ public class CustomMealServiceImpl implements CustomMealService {
 
   @Override
   public List<CustomMealResponse> getAllCustomMeals() {
-    return customMealRepository.findAll().stream()
+    return customMealRepository.findAllByIsDeletedFalse().stream()
         .map(this::toResponse)
         .collect(Collectors.toList());
   }
 
   @Override
   public List<CustomMealResponse> getCustomMealsByCustomerId(Long customerId) {
-    return customMealRepository.findAllByCustomerId(customerId).stream()
+    return customMealRepository.findAllByCustomerIdAndIsDeletedFalse(customerId).stream()
         .map(this::toResponse)
         .collect(Collectors.toList());
   }
@@ -48,6 +48,7 @@ public class CustomMealServiceImpl implements CustomMealService {
   @Override
   public CustomMealResponse findById(Long id) {
     CustomMeal meal = customMealRepository.findById(id)
+        .filter(m -> !m.getIsDeleted())
         .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
     return toResponse(meal);
   }
@@ -111,6 +112,7 @@ public class CustomMealServiceImpl implements CustomMealService {
   @Override
   public CustomMealResponse updateCustomMeal(Long id, CustomMealRequest request) {
     CustomMeal existingMeal = customMealRepository.findById(id)
+        .filter(m -> !m.getIsDeleted())
         .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
 
     existingMeal.setCustomerId(request.getCustomerId());
@@ -171,7 +173,10 @@ public class CustomMealServiceImpl implements CustomMealService {
 
   @Override
   public void deleteCustomMeal(Long id) {
-    customMealRepository.deleteById(id);
+    CustomMeal meal = customMealRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
+    meal.setIsDeleted(true);
+    customMealRepository.save(meal);
   }
 
   public CustomMealResponse toResponse(CustomMeal meal) {

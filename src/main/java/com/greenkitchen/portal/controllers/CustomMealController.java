@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.greenkitchen.portal.dtos.CustomMealRequest;
 import com.greenkitchen.portal.dtos.CustomMealResponse;
+import com.greenkitchen.portal.entities.CustomMeal;
+import com.greenkitchen.portal.repositories.CustomMealRepository;
 import com.greenkitchen.portal.services.CustomMealService;
 
 @RestController
@@ -23,6 +25,9 @@ public class CustomMealController {
 
     @Autowired
     private CustomMealService customMealService;
+
+    @Autowired
+    private CustomMealRepository customMealRepository;
 
     @GetMapping
     public ResponseEntity<List<CustomMealResponse>> getAll() {
@@ -93,9 +98,9 @@ public class CustomMealController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable("id") Long id) {
         try {
-            boolean exists = customMealService.getAllCustomMeals().stream()
-                    .anyMatch(meal -> meal.getId().equals(id));
-            if (!exists) {
+            CustomMeal meal = customMealRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Custom meal not found with id: " + id));
+            if (meal.getIsDeleted()) {
                 return ResponseEntity.status(404).body("Custom meal not found with id: " + id);
             }
             customMealService.deleteCustomMeal(id);
