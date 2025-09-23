@@ -7,5 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.greenkitchen.portal.entities.CustomMeal;
 
 public interface CustomMealRepository extends JpaRepository<CustomMeal, Long> {
-  List<CustomMeal> findAllByCustomerId(Long customerId);
+  List<CustomMeal> findAllByCustomerIdAndIsDeletedFalse(Long customerId);
+  List<CustomMeal> findAllByIsDeletedFalse();
 }
