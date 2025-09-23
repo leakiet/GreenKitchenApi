@@ -21,7 +21,7 @@ public class CartItemResponse {
     
     private MenuMealResponse menuMeal;
     private CustomMealResponse customMeal;
-    private WeekMealResponse weekMeal;
+    private CustomerWeekMealDayResponse customerWeekMealDay;
     private OrderItemType itemType;
     
     private Integer quantity;
