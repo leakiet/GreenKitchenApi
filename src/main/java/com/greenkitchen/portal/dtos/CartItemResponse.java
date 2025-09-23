@@ -1,8 +1,5 @@
 package com.greenkitchen.portal.dtos;
 
-import java.util.List;
-
-import com.greenkitchen.portal.enums.MenuMealType;
 import com.greenkitchen.portal.enums.OrderItemType;
 
 import lombok.AllArgsConstructor;
@@ -21,7 +18,7 @@ public class CartItemResponse {
     
     private MenuMealResponse menuMeal;
     private CustomMealResponse customMeal;
-    private CustomerWeekMealDayResponse customerWeekMealDay;
+    private CustomerWeekMealResponse customerWeekMeal;
     private OrderItemType itemType;
     
     private Integer quantity;

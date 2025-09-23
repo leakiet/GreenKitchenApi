@@ -14,19 +14,20 @@ import com.greenkitchen.portal.dtos.CartRequest;
 import com.greenkitchen.portal.dtos.CartResponse;
 import com.greenkitchen.portal.dtos.CustomMealDetailResponse;
 import com.greenkitchen.portal.dtos.CustomMealResponse;
+import com.greenkitchen.portal.dtos.CustomerWeekMealResponse;
 import com.greenkitchen.portal.dtos.CustomerWeekMealDayResponse;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.entities.Cart;
 import com.greenkitchen.portal.entities.CartItem;
 import com.greenkitchen.portal.entities.CustomMeal;
-import com.greenkitchen.portal.entities.CustomerWeekMealDay;
+import com.greenkitchen.portal.entities.CustomerWeekMeal;
 import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.NutritionInfo;
 import com.greenkitchen.portal.enums.OrderItemType;
 import com.greenkitchen.portal.repositories.CartItemRepository;
 import com.greenkitchen.portal.repositories.CartRepository;
 import com.greenkitchen.portal.repositories.CustomMealRepository;
-import com.greenkitchen.portal.repositories.CustomerWeekMealDayRepository;
+import com.greenkitchen.portal.repositories.CustomerWeekMealRepository;
 import com.greenkitchen.portal.repositories.IngredientRepository;
 import com.greenkitchen.portal.repositories.MenuMealRepository;
 import com.greenkitchen.portal.services.CartService;
@@ -51,7 +52,7 @@ public class CartServiceImpl implements CartService {
     private MenuMealRepository menuMealRepository;
 
     @Autowired
-    private CustomerWeekMealDayRepository customerWeekMealDayRepository;
+    private CustomerWeekMealRepository customerWeekMealRepository;
 
     @Autowired
     private MenuMealServiceImpl menuMealServiceImpl;
@@ -105,9 +106,9 @@ public class CartServiceImpl implements CartService {
                         return Boolean.TRUE.equals(item.getIsCustom()) &&
                                 item.getCustomMeal() != null &&
                                 item.getCustomMeal().getId().equals(itemRequest.getCustomMealId());
-                    } else if (itemRequest.getCustomerWeekMealDayId() != null) {
-                        return item.getCustomerWeekMealDay() != null &&
-                                item.getCustomerWeekMealDay().getId().equals(itemRequest.getCustomerWeekMealDayId());
+                    } else if (itemRequest.getCustomerWeekMealId() != null) {
+                        return item.getCustomerWeekMeal() != null &&
+                                item.getCustomerWeekMeal().getId().equals(itemRequest.getCustomerWeekMealId());
                     } else {
                         return Boolean.FALSE.equals(item.getIsCustom()) &&
                                 item.getMenuMeal() != null &&
@@ -219,16 +220,16 @@ public class CartServiceImpl implements CartService {
             cartItem.setNutrition(nutrition);
         }
 
-        // Set menu meal, custom meal, or customer week meal day reference
+        // Set menu meal, custom meal, customer week meal, or customer week meal day reference
         if (Boolean.FALSE.equals(request.getIsCustom()) && request.getMenuMealId() != null) {
             menuMealRepository.findById(request.getMenuMealId())
                     .ifPresent(cartItem::setMenuMeal);
         } else if (Boolean.TRUE.equals(request.getIsCustom()) && request.getCustomMealId() != null) {
             customMealRepository.findById(request.getCustomMealId())
                     .ifPresent(cartItem::setCustomMeal);
-        } else if (request.getCustomerWeekMealDayId() != null) {
-            customerWeekMealDayRepository.findById(request.getCustomerWeekMealDayId())
-                    .ifPresent(cartItem::setCustomerWeekMealDay);
+        } else if (request.getCustomerWeekMealId() != null) {
+            customerWeekMealRepository.findById(request.getCustomerWeekMealId())
+                    .ifPresent(cartItem::setCustomerWeekMeal);
         }
 
         return cartItem;
@@ -346,33 +347,48 @@ public class CartServiceImpl implements CartService {
             response.setCustomMeal(null);
         }
 
-        // Gán customerWeekMealDay (nếu có)
-        if (item.getCustomerWeekMealDay() != null) {
-            // Map CustomerWeekMealDay to CustomerWeekMealDayResponse
-            CustomerWeekMealDayResponse customerWeekMealDayResponse = new CustomerWeekMealDayResponse();
-            customerWeekMealDayResponse.setId(item.getCustomerWeekMealDay().getId());
-            customerWeekMealDayResponse.setDay(item.getCustomerWeekMealDay().getDay());
-            customerWeekMealDayResponse.setDate(item.getCustomerWeekMealDay().getDate());
-            customerWeekMealDayResponse.setType(item.getCustomerWeekMealDay().getCustomerWeekMeal().getType().name());
+        // Gán customerWeekMeal (nếu có)
+        if (item.getCustomerWeekMeal() != null) {
+            // Map CustomerWeekMeal to CustomerWeekMealResponse
+            CustomerWeekMealResponse customerWeekMealResponse = new CustomerWeekMealResponse();
+            customerWeekMealResponse.setId(item.getCustomerWeekMeal().getId());
+            customerWeekMealResponse.setCustomerId(item.getCustomerWeekMeal().getCustomer().getId());
+            customerWeekMealResponse.setType(item.getCustomerWeekMeal().getType().name());
+            customerWeekMealResponse.setWeekStart(item.getCustomerWeekMeal().getWeekStart());
+            customerWeekMealResponse.setWeekEnd(item.getCustomerWeekMeal().getWeekEnd());
 
-            // Map meals
-            if (item.getCustomerWeekMealDay().getMeal1() != null) {
-                MenuMealResponse meal1Response = menuMealServiceImpl.toResponse(item.getCustomerWeekMealDay().getMeal1());
-                customerWeekMealDayResponse.setMeal1(meal1Response);
-            }
-            if (item.getCustomerWeekMealDay().getMeal2() != null) {
-                MenuMealResponse meal2Response = menuMealServiceImpl.toResponse(item.getCustomerWeekMealDay().getMeal2());
-                customerWeekMealDayResponse.setMeal2(meal2Response);
-            }
-            if (item.getCustomerWeekMealDay().getMeal3() != null) {
-                MenuMealResponse meal3Response = menuMealServiceImpl.toResponse(item.getCustomerWeekMealDay().getMeal3());
-                customerWeekMealDayResponse.setMeal3(meal3Response);
+            // Map days if needed
+            if (item.getCustomerWeekMeal().getDays() != null) {
+                List<CustomerWeekMealDayResponse> dayResponses = item.getCustomerWeekMeal().getDays().stream()
+                    .map(day -> {
+                        CustomerWeekMealDayResponse dayResponse = new CustomerWeekMealDayResponse();
+                        dayResponse.setId(day.getId());
+                        dayResponse.setDay(day.getDay());
+                        dayResponse.setDate(day.getDate());
+                        dayResponse.setType(item.getCustomerWeekMeal().getType().name());
+
+                        // Map meals
+                        if (day.getMeal1() != null) {
+                            dayResponse.setMeal1(menuMealServiceImpl.toResponse(day.getMeal1()));
+                        }
+                        if (day.getMeal2() != null) {
+                            dayResponse.setMeal2(menuMealServiceImpl.toResponse(day.getMeal2()));
+                        }
+                        if (day.getMeal3() != null) {
+                            dayResponse.setMeal3(menuMealServiceImpl.toResponse(day.getMeal3()));
+                        }
+
+                        return dayResponse;
+                    })
+                    .collect(Collectors.toList());
+                customerWeekMealResponse.setDays(dayResponses);
             }
 
-            response.setCustomerWeekMealDay(customerWeekMealDayResponse);
+            response.setCustomerWeekMeal(customerWeekMealResponse);
         } else {
-            response.setCustomerWeekMealDay(null);
+            response.setCustomerWeekMeal(null);
         }
+
 
         return response;
     }

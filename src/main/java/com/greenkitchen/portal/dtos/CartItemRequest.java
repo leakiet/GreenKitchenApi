@@ -15,6 +15,7 @@ public class CartItemRequest {
   private Long menuMealId; // For menu items
   private Long customMealId; // For custom items
   private Long customerWeekMealDayId; // For customer week meal day items
+  private Long customerWeekMealId; // For customer week meal items
   private Integer quantity;
   private Double unitPrice;
   private Double totalPrice;
