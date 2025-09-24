@@ -69,6 +69,7 @@ public class SecurityConfiguration {
             .requestMatchers("/apis/v1/orders/**").permitAll()
             .requestMatchers("/apis/v1/coupons/**").permitAll()
             .requestMatchers("/apis/v1/customer-coupons/**").permitAll()
+            .requestMatchers("/apis/v1/stores/**").permitAll()
 
             // Admin endpoints
             .requestMatchers("/apis/v1/admin/**").hasRole("ADMIN")
