@@ -62,7 +62,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
 		// FIX: Query tối ưu để lấy conversation với last message và unread count
 	@Query("SELECT c.id, c.status, c.updatedAt, " +
-		   "COALESCE(c.customer.firstName, 'Khách vãng lai') as customerName, " +
+		   "COALESCE(c.customer.firstName, 'Guest') as customerName, " +
 		   "c.customer.phone as customerPhone, " +
 		   "c.employee.id as employeeId, " +
 		   "COALESCE(lastMsg.content, '') as lastMessage, " +
@@ -82,7 +82,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
 	// FIX: Query tối ưu với date filter
 	@Query("SELECT c.id, c.status, c.updatedAt, " +
-		   "COALESCE(c.customer.firstName, 'Khách vãng lai') as customerName, " +
+		   "COALESCE(c.customer.firstName, 'Guest') as customerName, " +
 		   "c.customer.phone as customerPhone, " +
 		   "c.employee.id as employeeId, " +
 		   "COALESCE(lastMsg.content, '') as lastMessage, " +
