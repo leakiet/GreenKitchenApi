@@ -3,6 +3,7 @@ package com.greenkitchen.portal.entities;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.greenkitchen.portal.enums.MenuMealType;
 
@@ -22,6 +23,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class WeekMeal extends AbstractEntity {
   private static final long serialVersionUID = 1L;
 
