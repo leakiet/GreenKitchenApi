@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,9 @@ public class HolidayEmailController {
     
     @Autowired
     private ScheduledHolidayEmailService scheduledHolidayEmailService;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     /**
      * Get email template for a specific holiday
@@ -234,9 +238,9 @@ public class HolidayEmailController {
         if (content == null) return "";
         
         return content
-            .replace("{{customerName}}", "Quý khách")
+            .replace("{{customerName}}", "Customer")
             .replace("{{holidayName}}", holiday.name)
             .replace("{{holidayDate}}", holiday.date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy", java.util.Locale.forLanguageTag("vi-VN"))))
-            .replace("{{frontendUrl}}", "https://greenkitchen.com"); // TODO: Get from config
+            .replace("{{frontendUrl}}", frontendUrl); // TODO: Get from config
     }
 }

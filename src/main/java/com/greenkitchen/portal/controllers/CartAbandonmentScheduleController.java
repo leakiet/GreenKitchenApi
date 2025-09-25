@@ -37,7 +37,7 @@ public class CartAbandonmentScheduleController {
      * Cập nhật lịch
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateSchedule(@PathVariable Long id, @Valid @RequestBody CartAbandonmentScheduleRequest request) {
+    public ResponseEntity<?> updateSchedule(@PathVariable("id")	 Long id, @Valid @RequestBody CartAbandonmentScheduleRequest request) {
         try {
             CartAbandonmentScheduleResponse response = cartAbandonmentScheduleService.updateSchedule(id, request);
             return ResponseEntity.ok(response);
@@ -72,7 +72,7 @@ public class CartAbandonmentScheduleController {
      * Xóa lịch
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteSchedule(@PathVariable Long id) {
+    public ResponseEntity<?> deleteSchedule(@PathVariable(value="id") Long id) {
         try {
             cartAbandonmentScheduleService.deleteSchedule(id);
             return ResponseEntity.ok(Map.of("message", "Đã xóa lịch thành công"));
@@ -85,7 +85,7 @@ public class CartAbandonmentScheduleController {
      * Kích hoạt/vô hiệu hóa lịch
      */
     @PutMapping("/{id}/toggle")
-    public ResponseEntity<?> toggleSchedule(@PathVariable Long id) {
+    public ResponseEntity<?> toggleSchedule(@PathVariable(value="id")  Long id) {
         try {
             CartAbandonmentScheduleResponse response = cartAbandonmentScheduleService.toggleSchedule(id);
             return ResponseEntity.ok(response);
@@ -98,7 +98,7 @@ public class CartAbandonmentScheduleController {
      * Kiểm tra tên lịch đã tồn tại chưa
      */
     @GetMapping("/check-name")
-    public ResponseEntity<?> checkScheduleName(@RequestParam String scheduleName, @RequestParam(required = false) Long excludeId) {
+    public ResponseEntity<?> checkScheduleName(@RequestParam("scheduleName") String scheduleName, @RequestParam("excludeId") Long excludeId) {
         boolean exists = cartAbandonmentScheduleService.isScheduleNameExists(scheduleName, excludeId);
         return ResponseEntity.ok(Map.of("exists", exists));
     }

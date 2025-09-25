@@ -21,7 +21,7 @@ public class EmailTrackingServiceImpl implements EmailTrackingService {
     @Autowired
     private EmailTrackingRepository emailTrackingRepository;
     
-    @Value("${app.backend.url:http://localhost:8080}")
+    @Value("${app.backend.url")
     private String backendUrl;
     
     @Override
