@@ -70,7 +70,7 @@ public class MenuTools {
 			User: "How are you?" → NO tool call, response: "I'm doing well, thank you! How can I help you today?"
 
 			# PARAMETERS
-			- limit (integer, optional): số món tối đa cần trả. Mặc định 10.
+			- limit (integer, optional): số món tối đa cần trả. Mặc định 4. Luôn giới hạn tối đa 4.
 			
 			# ERROR HANDLING
 			- Nếu DB rỗng: trả {"content": "Hiện chưa có món phù hợp.", "menu": []}.
@@ -98,7 +98,8 @@ public class MenuTools {
 				return new MenuMealsAiResponse("Hiện chưa có món phù hợp.", Collections.emptyList());
 			}
 
-			int maxItems = Math.min(limit != null ? limit : 10, meals.size());
+			int requested = (limit != null ? limit : 4);
+			int maxItems = Math.min(Math.min(requested, 4), meals.size());
 			List<MenuMealLiteResponse> limited = meals.stream().limit(maxItems)
 				.map(m -> new MenuMealLiteResponse(
 					m.getId(),
@@ -149,7 +150,7 @@ public class MenuTools {
 
 			# PARAMETERS
 			- type (string, required): Loại món ăn. Phải là một trong: "LOW", "HIGH", "BALANCE", "VEGETARIAN"
-			- limit (integer, optional): Số món tối đa cần trả. Mặc định 10.
+			- limit (integer, optional): Số món tối đa cần trả. Mặc định 4. Luôn giới hạn tối đa 4.
 
 			# TYPE MEANINGS:
 			- LOW: Món ít calorie, phù hợp giảm cân, người béo
@@ -199,7 +200,8 @@ public class MenuTools {
 				return new MenuMealsAiResponse("Hiện chưa có món phù hợp với loại " + type + ".", Collections.emptyList());
 			}
 
-			int maxItems = Math.min(limit != null ? limit : 10, filteredMeals.size());
+			int requested = (limit != null ? limit : 4);
+			int maxItems = Math.min(Math.min(requested, 4), filteredMeals.size());
 			List<MenuMealLiteResponse> limited = filteredMeals.stream().limit(maxItems)
 				.map(m -> new MenuMealLiteResponse(
 					m.getId(),
@@ -250,7 +252,7 @@ public class MenuTools {
 			# PARAMETERS
 			- bodyType (string, required): Thể trạng. Phải là một trong: "OVERWEIGHT", "UNDERWEIGHT", "NORMAL"
 			- goal (string, required): Mục tiêu. Phải là một trong: "LOSE_WEIGHT", "GAIN_WEIGHT", "MAINTAIN", "BUILD_MUSCLE"
-			- limit (integer, optional): Số món tối đa cần trả. Mặc định 8.
+			- limit (integer, optional): Số món tối đa cần trả. Mặc định 4. Luôn giới hạn tối đa 4.
 
 			# LOGIC MAPPING:
 			- OVERWEIGHT + LOSE_WEIGHT → type: LOW (ít calorie)
@@ -336,7 +338,7 @@ public class MenuTools {
 
 			# PARAMETERS
 			- ingredient (string, required): Nguyên liệu cần tìm (ví dụ: "tôm", "shrimp", "prawns", "bò", "beef", "gà", "chicken")
-			- limit (integer, optional): Số món tối đa cần trả. Mặc định 10.
+			- limit (integer, optional): Số món tối đa cần trả. Mặc định 4. Luôn giới hạn tối đa 4.
 
 			# TỪ ĐỒNG NGHĨA ĐƯỢC HỖ TRỢ:
 			- Tôm: "tôm", "shrimp", "prawns", "prawn", "lobster", "crayfish"
@@ -393,7 +395,8 @@ public class MenuTools {
 			}
 
 			// 3. Fast mapping with limit
-			int finalLimit = Math.min(limit != null ? limit : 10, filteredMeals.size());
+			int requested = (limit != null ? limit : 4);
+			int finalLimit = Math.min(Math.min(requested, 4), filteredMeals.size());
 			List<MenuMealLiteResponse> limited = new java.util.ArrayList<>();
 			
 			for (int i = 0; i < finalLimit; i++) {
@@ -521,7 +524,7 @@ public class MenuTools {
 			- minPrice (integer, optional): Giá tối thiểu (VND). Mặc định null (không giới hạn tối thiểu).
 			- maxPrice (integer, optional): Giá tối đa (VND). Mặc định null (không giới hạn tối đa).
 			- sortBy (string, optional): Sắp xếp theo "price_asc" (rẻ nhất trước) hoặc "price_desc" (đắt nhất trước). Mặc định null (không sắp xếp).
-			- limit (integer, optional): Số món tối đa cần trả. Mặc định 10.
+			- limit (integer, optional): Số món tối đa cần trả. Mặc định 4. Luôn giới hạn tối đa 4.
 
 			# EXAMPLES:
 			User: "Có món nào dưới 100k không?" → minPrice=null, maxPrice=100000
@@ -579,7 +582,8 @@ public class MenuTools {
 			}
 
 			// 4. Limiting
-			int maxItems = Math.min(limit != null ? limit : 10, filteredMeals.size());
+			int requested = (limit != null ? limit : 4);
+			int maxItems = Math.min(Math.min(requested, 4), filteredMeals.size());
 			List<MenuMealLiteResponse> limited = filteredMeals.stream().limit(maxItems)
 				.map(m -> new MenuMealLiteResponse(
 					m.getId(),

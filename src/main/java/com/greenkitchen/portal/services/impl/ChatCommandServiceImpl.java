@@ -406,10 +406,24 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	    }
 
 
-		// 6. Build context bằng rolling summary + recent + health info
+		// 6. Build context bằng rolling summary + RECENT_MENU + health info
 		String context = chatSummaryService.buildContextForAi(conv.getId(), request.getContent().trim());
 		if (actorId != null) {
 			context = context + "\n<<<HEALTH_INFO>>>\n" + healthInfoJson + "\n<<<END_HEALTH_INFO>>>\n";
+		}
+		// Inject RECENT_MENU nếu có menuJson gần nhất trong lịch sử (ưu tiên từ AI)
+		String recentMenuJson = null;
+		for (int i = last20Msgs.size() - 1; i >= 0; i--) {
+			ChatMessage m = last20Msgs.get(i);
+			try {
+				if (m.getMenuJson() != null && !m.getMenuJson().isBlank()) {
+					recentMenuJson = m.getMenuJson();
+				}
+			} catch (Exception ignored) {}
+			if (recentMenuJson != null) break;
+		}
+		if (recentMenuJson != null) {
+			context = context + "\n<<<RECENT_MENU>>>\n" + recentMenuJson + "\n<<<END_RECENT_MENU>>>\n";
 		}
 		
 		// Enhanced menu intent detection and context guidance
@@ -428,12 +442,12 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				"<<<END_MENU_TOOL_GUIDANCE>>>\n";
 		}
 		
-		// 7. Add context reset hint if conversation was recently returned from EMP
+		// 7. Add context reset hint and enforce English-only responses
 		context = context + "\n<<<CONVERSATION_CONTEXT>>>\n" +
 				"IMPORTANT: This conversation is now handled by AI. Focus on menu consultation and nutrition advice. " +
 				"Only call requestMeetEmp if user explicitly requests to speak with a human employee (Vietnamese: 'gặp nhân viên', 'nói chuyện với người thật' or English: 'meet employee', 'talk to human'). " +
 				"Ignore any previous messages about meeting employees or system transitions. " +
-				"Respond in the same language as the user's current message.\n" +
+				"Respond ONLY in English, regardless of the user's language. Do not use Vietnamese in replies.\n" +
 				"<<<END_CONVERSATION_CONTEXT>>>\n";
 
 		// 8. Xử lý AI response trong transaction riêng biệt
