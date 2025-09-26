@@ -29,15 +29,23 @@ public class CartAbandonmentScheduleExecutorService {
     public void processCartAbandonmentSchedules() {
         try {
             List<CartAbandonmentSchedule> activeSchedules = scheduleService.getActiveSchedules();
+            java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+            java.time.LocalDateTime nowTs = java.time.LocalDateTime.now(zone);
+            log.info("[Scheduler Tick] now={} zone={}", nowTs, zone);
             
             if (activeSchedules.isEmpty()) {
-                log.debug("Không có lịch cart abandonment nào đang hoạt động");
+                log.info("Không có lịch cart abandonment nào đang hoạt động");
                 return;
             }
 
             for (CartAbandonmentSchedule schedule : activeSchedules) {
-                if (shouldExecuteSchedule(schedule)) {
+
+                boolean should = shouldExecuteSchedule(schedule);
+                log.debug("Result shouldExecute = {} for schedule id={}", should, schedule.getId());
+                if (should) {
                     executeCartAbandonmentSchedule(schedule);
+                } else {
+                    log.trace("Skip schedule id={} at now={}", schedule.getId(), nowTs);
                 }
             }
         } catch (Exception e) {
@@ -72,8 +80,10 @@ public class CartAbandonmentScheduleExecutorService {
         if (scheduleTime == null) return false;
         
         java.time.LocalTime now = java.time.LocalTime.now();
-        // Kiểm tra trong vòng 1 phút (để tránh bỏ lỡ do delay)
-        return now.isAfter(scheduleTime.minusMinutes(1)) && now.isBefore(scheduleTime.plusMinutes(1));
+        boolean inWindow = now.isAfter(scheduleTime.minusMinutes(1)) && now.isBefore(scheduleTime.plusMinutes(1));
+        log.debug("isTimeToExecuteDaily? now={} scheduleTime={} window=[{}, {}] => {}",
+                now, scheduleTime, scheduleTime.minusMinutes(1), scheduleTime.plusMinutes(1), inWindow);
+        return inWindow;
     }
 
     /**
@@ -86,7 +96,9 @@ public class CartAbandonmentScheduleExecutorService {
         int currentHour = now.getHour();
         
         // Kiểm tra xem giờ hiện tại có chia hết cho frequency không
-        return currentHour % frequencyHours == 0 && now.getMinute() == 0;
+        boolean match = currentHour % frequencyHours == 0 && now.getMinute() == 0;
+        log.debug("isTimeToExecuteHourly? now={} freqHours={} => {}", now, frequencyHours, match);
+        return match;
     }
 
     /**
