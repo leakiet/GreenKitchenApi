@@ -231,13 +231,13 @@
                             <div class="item-name" th:text="${item.title}">Item name</div>
                             <div class="item-details">Quantity: <span th:text="${item.quantity}">0</span> | <span th:text="${item.description}">Description</span></div>
                         </div>
-                        <div class="item-price" th:text="${item.totalPrice} + ' VND'">0 VND</div>
+                        <div class="item-price" th:text="${item.totalPrice}">0 VND</div>
                     </div>
                 </div>
             </div>
             
             <div class="total-section">
-                <div class="total-amount" th:text="${totalAmount} + ' VND'">0 VND</div>
+                <div class="total-amount" th:text="${totalAmount} ">0 VND</div>
                 <div class="total-label">Cart total</div>
             </div>
             
