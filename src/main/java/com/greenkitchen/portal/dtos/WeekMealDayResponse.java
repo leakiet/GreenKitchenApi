@@ -11,7 +11,7 @@ public class WeekMealDayResponse {
   private String day;
   private LocalDate date;
   private String type;
-  private MenuMealResponse meal1; // Trả về luôn entity hoặc DTO của MenuMeal
-  private MenuMealResponse meal2;
-  private MenuMealResponse meal3;
+  private MenuMealSummaryResponse meal1; // Sử dụng summary response để tránh circular reference
+  private MenuMealSummaryResponse meal2;
+  private MenuMealSummaryResponse meal3;
 }

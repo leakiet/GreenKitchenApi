@@ -14,7 +14,7 @@ import com.greenkitchen.portal.dtos.CustomerWeekMealDayResponse;
 import com.greenkitchen.portal.dtos.CustomerWeekMealDayUpdateRequest;
 import com.greenkitchen.portal.dtos.CustomerWeekMealRequest;
 import com.greenkitchen.portal.dtos.CustomerWeekMealResponse;
-import com.greenkitchen.portal.dtos.MenuMealResponse;
+import com.greenkitchen.portal.dtos.MenuMealSummaryResponse;
 import com.greenkitchen.portal.entities.Customer;
 import com.greenkitchen.portal.entities.CustomerWeekMeal;
 import com.greenkitchen.portal.entities.CustomerWeekMealDay;
@@ -250,24 +250,24 @@ public class CustomerWeekMealServiceImpl implements CustomerWeekMealService {
 
         // Set meal1
         if (day.getMeal1() != null) {
-            response.setMeal1(mapToMenuMealResponse(day.getMeal1()));
+            response.setMeal1(mapToMenuMealSummaryResponse(day.getMeal1()));
         }
 
         // Set meal2
         if (day.getMeal2() != null) {
-            response.setMeal2(mapToMenuMealResponse(day.getMeal2()));
+            response.setMeal2(mapToMenuMealSummaryResponse(day.getMeal2()));
         }
 
         // Set meal3
         if (day.getMeal3() != null) {
-            response.setMeal3(mapToMenuMealResponse(day.getMeal3()));
+            response.setMeal3(mapToMenuMealSummaryResponse(day.getMeal3()));
         }
 
         return response;
     }
 
-    private MenuMealResponse mapToMenuMealResponse(MenuMeal menuMeal) {
-        MenuMealResponse response = new MenuMealResponse();
+    private MenuMealSummaryResponse mapToMenuMealSummaryResponse(MenuMeal menuMeal) {
+        MenuMealSummaryResponse response = new MenuMealSummaryResponse();
         response.setId(menuMeal.getId());
         response.setTitle(menuMeal.getTitle());
         response.setDescription(menuMeal.getDescription());
@@ -288,8 +288,7 @@ public class CustomerWeekMealServiceImpl implements CustomerWeekMealService {
             response.setFat(menuMeal.getNutrition().getFat());
         }
 
-        // Don't set reviews to avoid serialization issues
-        response.setReviews(null);
+        // MenuMealSummaryResponse doesn't have reviews field to avoid serialization issues
 
         return response;
     }

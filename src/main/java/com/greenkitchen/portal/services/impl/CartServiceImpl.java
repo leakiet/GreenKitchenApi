@@ -369,13 +369,13 @@ public class CartServiceImpl implements CartService {
 
                         // Map meals
                         if (day.getMeal1() != null) {
-                            dayResponse.setMeal1(menuMealServiceImpl.toResponse(day.getMeal1()));
+                            dayResponse.setMeal1(menuMealServiceImpl.toSummaryResponse(day.getMeal1()));
                         }
                         if (day.getMeal2() != null) {
-                            dayResponse.setMeal2(menuMealServiceImpl.toResponse(day.getMeal2()));
+                            dayResponse.setMeal2(menuMealServiceImpl.toSummaryResponse(day.getMeal2()));
                         }
                         if (day.getMeal3() != null) {
-                            dayResponse.setMeal3(menuMealServiceImpl.toResponse(day.getMeal3()));
+                            dayResponse.setMeal3(menuMealServiceImpl.toSummaryResponse(day.getMeal3()));
                         }
 
                         return dayResponse;

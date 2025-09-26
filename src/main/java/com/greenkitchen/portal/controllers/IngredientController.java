@@ -150,7 +150,10 @@ public class IngredientController {
                 return ResponseEntity.ok(existing);
             }
 
-            modelMapper.map(ingredientRequest, existing);
+            // Chỉ update các field cần thiết, không ghi đè image
+            existing.setTitle(ingredientRequest.getTitle());
+            existing.setDescription(ingredientRequest.getDescription());
+            existing.setType(ingredientRequest.getType());
 
             if (existing.getNutrition() == null) {
                 existing.setNutrition(new NutritionInfo());
