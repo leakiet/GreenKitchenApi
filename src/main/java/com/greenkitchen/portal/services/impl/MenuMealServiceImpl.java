@@ -13,6 +13,7 @@ import com.greenkitchen.portal.dtos.CustomerSummaryDto;
 import com.greenkitchen.portal.dtos.MenuMealRequest;
 import com.greenkitchen.portal.dtos.MenuMealResponse;
 import com.greenkitchen.portal.dtos.MenuMealReviewResponse;
+import com.greenkitchen.portal.dtos.MenuMealSummaryResponse;
 import com.greenkitchen.portal.entities.MenuMeal;
 import com.greenkitchen.portal.entities.NutritionInfo;
 import com.greenkitchen.portal.repositories.MenuMealRepository;
@@ -93,8 +94,13 @@ public class MenuMealServiceImpl implements MenuMealService {
             existingMenuMeal.setImage(dto.getImage());
         }
 
-        // Update các trường khác
-        modelMapper.map(dto, existingMenuMeal);
+        // Update các trường khác, không ghi đè image
+        existingMenuMeal.setTitle(dto.getTitle());
+        existingMenuMeal.setDescription(dto.getDescription());
+        existingMenuMeal.setType(dto.getType());
+        existingMenuMeal.setPrice(dto.getPrice());
+        existingMenuMeal.setStock(dto.getStock());
+        existingMenuMeal.setSlug(dto.getSlug());
         existingMenuMeal.setId(id);
 
         return menuMealRepository.save(existingMenuMeal);
@@ -208,6 +214,29 @@ public class MenuMealServiceImpl implements MenuMealService {
             response.setReviews(reviewResponses);
         } else {
             response.setReviews(new ArrayList<>());
+        }
+
+        return response;
+    }
+
+    public MenuMealSummaryResponse toSummaryResponse(MenuMeal menuMeal) {
+        MenuMealSummaryResponse response = new MenuMealSummaryResponse();
+        response.setId(menuMeal.getId());
+        response.setTitle(menuMeal.getTitle());
+        response.setDescription(menuMeal.getDescription());
+        response.setImage(menuMeal.getImage());
+        response.setPrice(menuMeal.getPrice());
+        response.setSlug(menuMeal.getSlug());
+        response.setStock(menuMeal.getStock());
+        response.setSoldCount(menuMeal.getSoldCount());
+        response.setType(menuMeal.getType());
+        response.setMenuIngredients(menuMeal.getMenuIngredients());
+
+        if (menuMeal.getNutrition() != null) {
+            response.setCalories(menuMeal.getNutrition().getCalories());
+            response.setProtein(menuMeal.getNutrition().getProtein());
+            response.setCarbs(menuMeal.getNutrition().getCarbs());
+            response.setFat(menuMeal.getNutrition().getFat());
         }
 
         return response;

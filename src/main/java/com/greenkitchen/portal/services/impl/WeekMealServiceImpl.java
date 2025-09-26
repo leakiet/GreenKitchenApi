@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.greenkitchen.portal.dtos.MenuMealResponse;
+import com.greenkitchen.portal.dtos.MenuMealSummaryResponse;
 import com.greenkitchen.portal.dtos.WeekMealDayRequest;
 import com.greenkitchen.portal.dtos.WeekMealDayResponse;
 import com.greenkitchen.portal.dtos.WeekMealDayUpdateRequest;
@@ -55,7 +55,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
     // Set meal1
     if (day.getMeal1() != null) {
-      MenuMealResponse meal1Response = new MenuMealResponse();
+      MenuMealSummaryResponse meal1Response = new MenuMealSummaryResponse();
       meal1Response.setId(day.getMeal1().getId());
       meal1Response.setTitle(day.getMeal1().getTitle());
       meal1Response.setDescription(day.getMeal1().getDescription());
@@ -77,7 +77,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
     // Set meal2
     if (day.getMeal2() != null) {
-      MenuMealResponse meal2Response = new MenuMealResponse();
+      MenuMealSummaryResponse meal2Response = new MenuMealSummaryResponse();
       meal2Response.setId(day.getMeal2().getId());
       meal2Response.setTitle(day.getMeal2().getTitle());
       meal2Response.setDescription(day.getMeal2().getDescription());
@@ -99,7 +99,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
     // Set meal3
     if (day.getMeal3() != null) {
-      MenuMealResponse meal3Response = new MenuMealResponse();
+      MenuMealSummaryResponse meal3Response = new MenuMealSummaryResponse();
       meal3Response.setId(day.getMeal3().getId());
       meal3Response.setTitle(day.getMeal3().getTitle());
       meal3Response.setDescription(day.getMeal3().getDescription());
@@ -180,7 +180,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal1 manually
       if (day.getMeal1() != null) {
-        MenuMealResponse meal1Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal1Response = new MenuMealSummaryResponse();
         meal1Response.setId(day.getMeal1().getId());
         meal1Response.setTitle(day.getMeal1().getTitle());
         meal1Response.setDescription(day.getMeal1().getDescription());
@@ -202,7 +202,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal2 manually
       if (day.getMeal2() != null) {
-        MenuMealResponse meal2Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal2Response = new MenuMealSummaryResponse();
         meal2Response.setId(day.getMeal2().getId());
         meal2Response.setTitle(day.getMeal2().getTitle());
         meal2Response.setDescription(day.getMeal2().getDescription());
@@ -224,7 +224,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal3 manually
       if (day.getMeal3() != null) {
-        MenuMealResponse meal3Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal3Response = new MenuMealSummaryResponse();
         meal3Response.setId(day.getMeal3().getId());
         meal3Response.setTitle(day.getMeal3().getTitle());
         meal3Response.setDescription(day.getMeal3().getDescription());
@@ -300,7 +300,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal1 manually
       if (day.getMeal1() != null) {
-        MenuMealResponse meal1Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal1Response = new MenuMealSummaryResponse();
         meal1Response.setId(day.getMeal1().getId());
         meal1Response.setTitle(day.getMeal1().getTitle());
         meal1Response.setDescription(day.getMeal1().getDescription());
@@ -322,7 +322,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal2 manually
       if (day.getMeal2() != null) {
-        MenuMealResponse meal2Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal2Response = new MenuMealSummaryResponse();
         meal2Response.setId(day.getMeal2().getId());
         meal2Response.setTitle(day.getMeal2().getTitle());
         meal2Response.setDescription(day.getMeal2().getDescription());
@@ -344,7 +344,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal3 manually
       if (day.getMeal3() != null) {
-        MenuMealResponse meal3Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal3Response = new MenuMealSummaryResponse();
         meal3Response.setId(day.getMeal3().getId());
         meal3Response.setTitle(day.getMeal3().getTitle());
         meal3Response.setDescription(day.getMeal3().getDescription());
@@ -396,7 +396,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal1 manually
       if (day.getMeal1() != null) {
-        MenuMealResponse meal1Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal1Response = new MenuMealSummaryResponse();
         meal1Response.setId(day.getMeal1().getId());
         meal1Response.setTitle(day.getMeal1().getTitle());
         meal1Response.setDescription(day.getMeal1().getDescription());
@@ -418,7 +418,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal2 manually
       if (day.getMeal2() != null) {
-        MenuMealResponse meal2Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal2Response = new MenuMealSummaryResponse();
         meal2Response.setId(day.getMeal2().getId());
         meal2Response.setTitle(day.getMeal2().getTitle());
         meal2Response.setDescription(day.getMeal2().getDescription());
@@ -440,7 +440,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal3 manually
       if (day.getMeal3() != null) {
-        MenuMealResponse meal3Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal3Response = new MenuMealSummaryResponse();
         meal3Response.setId(day.getMeal3().getId());
         meal3Response.setTitle(day.getMeal3().getTitle());
         meal3Response.setDescription(day.getMeal3().getDescription());
@@ -584,7 +584,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal1 manually
       if (day.getMeal1() != null) {
-        MenuMealResponse meal1Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal1Response = new MenuMealSummaryResponse();
         meal1Response.setId(day.getMeal1().getId());
         meal1Response.setTitle(day.getMeal1().getTitle());
         meal1Response.setDescription(day.getMeal1().getDescription());
@@ -606,7 +606,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal2 manually
       if (day.getMeal2() != null) {
-        MenuMealResponse meal2Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal2Response = new MenuMealSummaryResponse();
         meal2Response.setId(day.getMeal2().getId());
         meal2Response.setTitle(day.getMeal2().getTitle());
         meal2Response.setDescription(day.getMeal2().getDescription());
@@ -628,7 +628,7 @@ public class WeekMealServiceImpl implements WeekMealService {
 
       // Set meal3 manually
       if (day.getMeal3() != null) {
-        MenuMealResponse meal3Response = new MenuMealResponse();
+        MenuMealSummaryResponse meal3Response = new MenuMealSummaryResponse();
         meal3Response.setId(day.getMeal3().getId());
         meal3Response.setTitle(day.getMeal3().getTitle());
         meal3Response.setDescription(day.getMeal3().getDescription());

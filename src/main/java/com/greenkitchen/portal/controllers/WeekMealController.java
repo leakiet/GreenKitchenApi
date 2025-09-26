@@ -54,8 +54,10 @@ public class WeekMealController {
       @PathVariable("dayId") Long dayId,
       @RequestBody WeekMealDayUpdateRequest request) {
     try {
-      WeekMealDay updatedDay = weekMealService.updateWeekMealDay(weekMealId, dayId, request);
-      return ResponseEntity.ok(updatedDay);
+      weekMealService.updateWeekMealDay(weekMealId, dayId, request);
+      // Trả về response DTO thay vì entity để tránh lazy loading issues
+      WeekMealDayResponse response = weekMealService.getWeekMealDayById(weekMealId, dayId);
+      return ResponseEntity.ok(response);
     } catch (Exception e) {
       return ResponseEntity.status(400).body("Update day failed: " + e.getMessage());
     }

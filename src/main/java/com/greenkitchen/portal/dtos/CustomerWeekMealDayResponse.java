@@ -11,7 +11,7 @@ public class CustomerWeekMealDayResponse {
     private String day;
     private LocalDate date;
     private String type;
-    private MenuMealResponse meal1;
-    private MenuMealResponse meal2;
-    private MenuMealResponse meal3;
+  private MenuMealSummaryResponse meal1;
+  private MenuMealSummaryResponse meal2;
+  private MenuMealSummaryResponse meal3;
 }
