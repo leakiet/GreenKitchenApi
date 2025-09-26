@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bạn quên gì đó trong giỏ hàng!</title>
+    <title>You left something in your cart!</title>
     <style>
         * {
             margin: 0;
@@ -211,44 +211,44 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛒 Bạn quên gì đó trong giỏ hàng!</h1>
-            <p>Hoàn thành đơn hàng của bạn ngay hôm nay</p>
+            <h1>🛒 You left something in your cart!</h1>
+            <p>Complete your order today</p>
         </div>
         
         <div class="content">
-            <div class="greeting">Xin chào <span th:text="${customerName}">Khách hàng</span>!</div>
+            <div class="greeting">Hello <span th:text="${customerName}">Customer</span>!</div>
             
             <div class="message">
-                Chúng tôi nhận thấy bạn đã thêm một số sản phẩm vào giỏ hàng nhưng chưa hoàn thành đơn hàng. 
-                Đừng để những món ăn ngon này bị bỏ lỡ!
+                We noticed you added items to your cart but didn't complete the purchase.
+                Don't miss out on these delicious meals!
             </div>
             
             <div class="cart-summary">
-                <h3>📋 Giỏ hàng của bạn</h3>
+                <h3>📋 Your Cart</h3>
                 <div class="cart-items">
                     <div class="cart-item" th:each="item : ${cartItems}">
                         <div class="item-info">
-                            <div class="item-name" th:text="${item.title}">Tên sản phẩm</div>
-                            <div class="item-details">Số lượng: <span th:text="${item.quantity}">0</span> | <span th:text="${item.description}">Mô tả</span></div>
+                            <div class="item-name" th:text="${item.title}">Item name</div>
+                            <div class="item-details">Quantity: <span th:text="${item.quantity}">0</span> | <span th:text="${item.description}">Description</span></div>
                         </div>
-                        <div class="item-price" th:text="${item.totalPrice} + ' VNĐ'">0 VNĐ</div>
+                        <div class="item-price" th:text="${item.totalPrice} + ' VND'">0 VND</div>
                     </div>
                 </div>
             </div>
             
             <div class="total-section">
-                <div class="total-amount" th:text="${totalAmount} + ' VNĐ'">0 VNĐ</div>
-                <div class="total-label">Tổng giá trị giỏ hàng</div>
+                <div class="total-amount" th:text="${totalAmount} + ' VND'">0 VND</div>
+                <div class="total-label">Cart total</div>
             </div>
             
             <div class="cta-buttons">
-                <a th:href="${cartUrl}" class="btn btn-primary">🛒 Xem giỏ hàng</a>
-                <a th:href="${checkoutUrl}" class="btn btn-secondary">💳 Thanh toán ngay</a>
+                <a th:href="${cartUrl}" class="btn btn-primary">🛒 View cart</a>
+                <a th:href="${checkoutUrl}" class="btn btn-secondary">💳 Checkout now</a>
             </div>
             
             <div style="text-align: center; color: #666; font-size: 14px; margin-top: 20px;">
-                <p>⏰ Ưu đãi có thể kết thúc sớm!</p>
-                <p>🚚 Giao hàng miễn phí cho đơn hàng trên 200.000 VNĐ</p>
+                <p>⏰ Offers may end soon!</p>
+                <p>🚚 Free shipping for orders over 200,000 VND</p>
             </div>
         </div>
         
@@ -259,13 +259,13 @@
                 <a th:href="${twitterUrl}" target="_blank">🐦 Twitter</a>
             </div>
             
-            <p>Green Kitchen - Nơi ẩm thực xanh gặp gỡ sức khỏe</p>
-            <p>📍 123 Đường ABC, Quận XYZ, TP.HCM</p>
+            <p>Green Kitchen - Where healthy meets delicious</p>
+            <p>📍 123 ABC Street, XYZ District, Ho Chi Minh City</p>
             <p>📞 1900-xxxx | 📧 info@greenkitchen.com</p>
             
             <div class="unsubscribe">
-                <a th:href="${unsubscribeUrl}">Hủy đăng ký email</a> | 
-                <a th:href="${preferencesUrl}">Cập nhật tùy chọn</a>
+                <a th:href="${unsubscribeUrl}">Unsubscribe</a> | 
+                <a th:href="${preferencesUrl}">Update preferences</a>
             </div>
         </div>
     </div>

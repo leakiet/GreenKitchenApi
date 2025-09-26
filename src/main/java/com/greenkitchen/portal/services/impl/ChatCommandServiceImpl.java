@@ -87,7 +87,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		return switch (senderType) {
 		case CUSTOMER -> handleCustomerMessage(actorId, request, conv);
 		case EMP -> handleEmployeeMessageFromEmployee(actorId, request, conv);
-		default -> throw new IllegalArgumentException("SenderRole không hợp lệ: " + senderType);
+		default -> throw new IllegalArgumentException("SenderRole is not valid: " + senderType);
 		};
 	}
 
@@ -95,7 +95,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	private Conversation createOrGetConversation(Long actorId, SenderType senderType, Long convId) {
 		if (convId != null) {
 			return conversationRepo.findById(convId)
-					.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+					.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 		}
 
 		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
@@ -111,7 +111,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			// Hỗ trợ cả Customer đã đăng nhập và Guest chưa đăng nhập
 			if (senderType == SenderType.CUSTOMER && actorId != null) {
 				Customer customer = customerRepo.findById(actorId)
-						.orElseThrow(() -> new EntityNotFoundException("Customer không tồn tại"));
+						.orElseThrow(() -> new EntityNotFoundException("Customer not found"));
 				conv.setCustomer(customer);
 			}
 
@@ -131,7 +131,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			return txTemplate.execute(status -> {
 				// Kiểm tra trạng thái trước khi update để tránh update trùng
 				Conversation currentConv = conversationRepo.findById(conv.getId())
-						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+						.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 				
 				if (currentConv.getStatus() != ConversationStatus.WAITING_EMP) {
 					currentConv.setStatus(ConversationStatus.WAITING_EMP);
@@ -145,7 +145,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				response.setConversationId(conv.getId());
 				response.setSenderRole(SenderType.SYSTEM.name());
 				response.setSenderName("SYSTEM");
-				response.setContent("Yêu cầu đã gửi, vui lòng chờ nhân viên.");
+				response.setContent("Request sent, please wait for employee.");
 				response.setMenu(null);
 				response.setTimestamp(LocalDateTime.now());
 				response.setStatus(MessageStatus.SENT);
@@ -154,7 +154,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			});
 		} catch (OptimisticLockingFailureException e) {
 			log.warn("Optimistic locking conflict in handleMeetEmpCommand for conversation {}", conv.getId());
-			throw new IllegalStateException("Conversation đang được cập nhật bởi người dùng khác, vui lòng thử lại");
+			throw new IllegalStateException("Conversation have been claim by other employee, please try again");
 		}
 	}
 
@@ -168,7 +168,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			return txTemplate.execute(status -> {
 				// Kiểm tra trạng thái trước khi update để tránh update trùng
 				Conversation currentConv = conversationRepo.findById(conv.getId())
-						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+						.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 				
 				if (currentConv.getStatus() != ConversationStatus.AI) {
 					currentConv.setStatus(ConversationStatus.AI);
@@ -183,7 +183,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				response.setConversationId(conv.getId());
 				response.setSenderRole(SenderType.SYSTEM.name());
 				response.setSenderName("SYSTEM");
-				response.setContent("Chuyển về AI thành công.");
+				response.setContent("Successfully released to AI");
 				response.setMenu(null);
 				response.setTimestamp(LocalDateTime.now());
 				response.setStatus(MessageStatus.SENT);
@@ -192,7 +192,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			});
 		} catch (OptimisticLockingFailureException e) {
 			log.warn("Optimistic locking conflict in handleBackToAICommand for conversation {}", conv.getId());
-			throw new IllegalStateException("Conversation đang được cập nhật bởi người dùng khác, vui lòng thử lại");
+			throw new IllegalStateException("Conversation have been claim by other employee, please try again");
 		}
 	}
 
@@ -401,7 +401,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	                healthInfoJson = objectMapper.writeValueAsString(refs);
 	            }
 	        } catch (JsonProcessingException e) {
-	            log.warn("Không convert được health info sang JSON", e);
+	            log.warn("Cannot convert health info to JSON", e);
 	        }
 	    }
 
@@ -536,11 +536,11 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		
 		return txTemplate.execute(status -> {
 			Employee emp = employeeRepo.findById(actorId)
-					.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
+					.orElseThrow(() -> new EntityNotFoundException("Employee not found"));
 
 			// Kiểm tra trạng thái trước khi update
 			Conversation currentConv = conversationRepo.findById(conv.getId())
-					.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+					.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 			
 			if (currentConv.getStatus() != ConversationStatus.EMP || !emp.equals(currentConv.getEmployee())) {
 				currentConv.setStatus(ConversationStatus.EMP);
@@ -583,13 +583,13 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 
 	private void validateRequest(ChatRequest request) {
 		if (request.getSenderRole() == null || request.getSenderRole().isBlank()) {
-			throw new IllegalArgumentException("SenderRole không được để trống");
+			throw new IllegalArgumentException("SenderRole cannot be empty");
 		}
 		if (!EnumUtils.isValidEnumIgnoreCase(SenderType.class, request.getSenderRole())) {
-			throw new IllegalArgumentException("SenderRole không hợp lệ: " + request.getSenderRole());
+			throw new IllegalArgumentException("SenderRole is not valid: " + request.getSenderRole());
 		}
 		if (request.getContent() == null || request.getContent().isBlank()) {
-			throw new IllegalArgumentException("Nội dung tin nhắn không được để trống");
+			throw new IllegalArgumentException("Message content cannot be empty");
 		}
 	}
 
@@ -599,7 +599,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	    try {
 	        systemPrompt = loadPrompt("PromtAIGreenKitchen.md");
 	    } catch (IOException e) {
-	        log.error("Không thể tải prompt từ file: " + e.getMessage());
+	        log.error("Cannot load prompt from file: " + e.getMessage());
 	        systemPrompt = "Bạn là nhân viên tư vấn dinh dưỡng & CSKH của Green Kitchen...";
 	    }
 
@@ -641,7 +641,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 	@Override
 	public void markCustomerMessagesAsRead(Long conversationId) {
 		Conversation conv = conversationRepo.findById(conversationId)
-				.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+				.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 		chatMessageRepo.markMessagesAsRead(conv, SenderType.CUSTOMER);
 	}
 
@@ -656,7 +656,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 			try {
 				// 1. Load conversation với version check
 				Conversation conv = conversationRepo.findById(conversationId)
-						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+						.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 				
 				// 2. Kiểm tra trạng thái hiện tại
 				if (conv.getStatus() == ConversationStatus.EMP && conv.getEmployee() != null) {
@@ -667,13 +667,13 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 					} else {
 						// Đã được claim bởi EMP khác
 						throw new ResponseStatusException(HttpStatus.CONFLICT, 
-							"Conversation đã được claim bởi nhân viên khác");
+							"Conversation have been claim by other employee");
 					}
 				}
 				
 				// 3. Validate employee
 				Employee emp = employeeRepo.findById(employeeId)
-						.orElseThrow(() -> new EntityNotFoundException("Employee không tồn tại"));
+						.orElseThrow(() -> new EntityNotFoundException("Employee not found"));
 				
 				// 4. Update với optimistic locking
 				conv.setStatus(ConversationStatus.EMP);
@@ -695,7 +695,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				
 				if (retryCount >= maxRetries) {
 					throw new ResponseStatusException(HttpStatus.CONFLICT, 
-						"Không thể claim conversation do xung đột. Vui lòng thử lại.");
+						"Cannot claim conversation due to conflict. Please try again.");
 				}
 				
 				// Exponential backoff: 100ms, 200ms, 400ms
@@ -719,7 +719,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 		while (retryCount < maxRetries) {
 			try {
 				Conversation conv = conversationRepo.findById(conversationId)
-						.orElseThrow(() -> new EntityNotFoundException("Conversation không tồn tại"));
+						.orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
 				
 				// Kiểm tra trạng thái hiện tại
 				if (conv.getStatus() == ConversationStatus.AI && conv.getEmployee() == null) {
@@ -746,7 +746,7 @@ public class ChatCommandServiceImpl implements ChatCommandService {
 				
 				if (retryCount >= maxRetries) {
 					throw new ResponseStatusException(HttpStatus.CONFLICT, 
-						"Không thể release conversation do xung đột. Vui lòng thử lại.");
+						"Cannot release conversation due to conflict. Please try again.");
 				}
 				
 				// Exponential backoff
