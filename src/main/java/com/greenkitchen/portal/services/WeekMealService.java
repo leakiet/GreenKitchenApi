@@ -4,11 +4,10 @@ import com.greenkitchen.portal.dtos.WeekMealDayResponse;
 import com.greenkitchen.portal.dtos.WeekMealDayUpdateRequest;
 import com.greenkitchen.portal.dtos.WeekMealRequest;
 import com.greenkitchen.portal.dtos.WeekMealResponse;
-import com.greenkitchen.portal.entities.WeekMeal;
 import com.greenkitchen.portal.entities.WeekMealDay;
 
 public interface WeekMealService {
-  WeekMeal createWeekMeal(WeekMealRequest request);
+  WeekMealResponse createWeekMeal(WeekMealRequest request);
 
   WeekMealResponse getWeekMealByTypeAndDate(String type, String date);
 

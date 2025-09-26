@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.greenkitchen.portal.dtos.WeekMealDayResponse;
 import com.greenkitchen.portal.dtos.WeekMealDayUpdateRequest;
 import com.greenkitchen.portal.dtos.WeekMealRequest;
-import com.greenkitchen.portal.entities.WeekMeal;
+import com.greenkitchen.portal.dtos.WeekMealResponse;
 import com.greenkitchen.portal.entities.WeekMealDay;
 import com.greenkitchen.portal.services.WeekMealService;
 
@@ -29,7 +29,7 @@ public class WeekMealController {
   @PostMapping
   public ResponseEntity<?> createWeekMeal(@RequestBody WeekMealRequest request) {
     try {
-      WeekMeal created = weekMealService.createWeekMeal(request);
+      WeekMealResponse created = weekMealService.createWeekMeal(request);
       return ResponseEntity.ok(created);
     } catch (Exception e) {
       return ResponseEntity.status(500).body("create week meal failed: " + e.getMessage());
