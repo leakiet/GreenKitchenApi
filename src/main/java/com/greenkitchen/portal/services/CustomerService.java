@@ -31,4 +31,5 @@ public interface CustomerService {
   void unlinkGoogle(String email);
   void linkGoogle(String email, String idToken);
   UpdateAvatarResponse updateAvatar(String email, MultipartFile file);
+  void processExpiredPoints(Customer customer);
 }

@@ -79,6 +79,9 @@ public class CustomerController {
         return ResponseEntity.notFound().build();
       }
 
+      // Kiểm tra và xử lý point history hết hạn
+      customerService.processExpiredPoints(customer);
+
       return ResponseEntity.ok(customer);
     } catch (Exception e) {
       return ResponseEntity.badRequest().build();
