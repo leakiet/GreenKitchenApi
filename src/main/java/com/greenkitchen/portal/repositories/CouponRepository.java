@@ -1,5 +1,6 @@
 package com.greenkitchen.portal.repositories;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +24,14 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     
     // Lấy danh sách coupon có thể đổi (ACTIVE, không bị xóa, và là GENERAL)
     List<Coupon> findByStatusAndIsDeletedFalseAndApplicability(CouponStatus status, CouponApplicability applicability);
+    
+    // Lấy danh sách coupon còn hạn và có thể đổi
+    @Query("SELECT c FROM Coupon c WHERE c.status = :status AND c.isDeleted = false " +
+           "AND c.applicability = :applicability AND c.validUntil > :now " +
+           "AND (c.exchangeLimit IS NULL OR c.exchangeCount < c.exchangeLimit)")
+    List<Coupon> findAvailableCouponsForExchange(@Param("status") CouponStatus status, 
+                                                @Param("applicability") CouponApplicability applicability,
+                                                @Param("now") LocalDateTime now);
     
     // Tìm coupon theo points required range
     @Query("SELECT c FROM Coupon c WHERE c.pointsRequired >= :minPoints " +

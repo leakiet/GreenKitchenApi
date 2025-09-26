@@ -4,18 +4,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.greenkitchen.portal.entities.Customer;
+import com.greenkitchen.portal.entities.CustomerMembership;
 import com.greenkitchen.portal.entities.OtpRecords;
+import com.greenkitchen.portal.entities.PointHistory;
 import com.greenkitchen.portal.dtos.CustomerResponse;
 import com.greenkitchen.portal.dtos.PagedResponse;
 import com.greenkitchen.portal.dtos.UpdateAvatarResponse;
+import com.greenkitchen.portal.enums.MembershipTier;
+import com.greenkitchen.portal.enums.PointTransactionType;
 import com.greenkitchen.portal.services.CustomerService;
 import com.greenkitchen.portal.repositories.CustomerRepository;
 import com.greenkitchen.portal.repositories.OtpRecordsRepository;
+import com.greenkitchen.portal.repositories.PointHistoryRepository;
 import com.greenkitchen.portal.utils.ImageUtils;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +44,9 @@ public class CustomerServiceImpl implements CustomerService {
 
   @Autowired
   private OtpRecordsRepository otpRecordsRepository;
+  
+  @Autowired
+  private PointHistoryRepository pointHistoryRepository;
 
   @Autowired
   private EmailService emailService;
@@ -183,9 +194,10 @@ public class CustomerServiceImpl implements CustomerService {
       throw new IllegalArgumentException("Email already registered: " + customer.getEmail());
     }
     customer.setPassword(encoder.encode(customer.getPassword()));
+    customer.setIsEmailLogin(true);
     String verifyToken = UUID.randomUUID().toString();
     customer.setVerifyToken(verifyToken);
-    customer.setVerifyTokenExpireAt(LocalDateTime.now().plusMinutes(5));
+    customer.setVerifyTokenExpireAt(LocalDateTime.now().plusMinutes(60));
     Customer savedCustomer = customerRepository.save(customer);
     // Send verification email
     emailService.sendVerificationEmail(
@@ -200,19 +212,12 @@ public class CustomerServiceImpl implements CustomerService {
     if (existingCustomer != null) {
       throw new IllegalArgumentException("Email already registered: " + customer.getEmail());
     }
-
-    // Encode password
     customer.setPassword(encoder.encode(customer.getPassword()));
-
-    // Set customer as inactive initially (will be activated after OTP verification)
-    customer.setIsActive(false);
-
+    customer.setIsEmailLogin(true);
     // Save customer
     Customer savedCustomer = customerRepository.save(customer);
-
     // Generate 6-digit random OTP
     String otpCode = generateRandomOtp();
-
     // Set expiration time (5 minutes from now)
     LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5);
 
@@ -433,6 +438,7 @@ public class CustomerServiceImpl implements CustomerService {
       customer.setOauthProvider("google");
       customer.setOauthProviderId(googleUser.getOauthProviderId());
       customer.setIsOauthUser(true);
+      customer.setIsEmailLogin(true);
 
       customerRepository.save(customer);
     } catch (Exception e) {
@@ -472,6 +478,115 @@ public class CustomerServiceImpl implements CustomerService {
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to update avatar: " + e.getMessage());
     }
+  }
+
+  @Override
+  @Transactional
+  public void processExpiredPoints(Customer customer) {
+    LocalDateTime now = LocalDateTime.now();
+
+    // Cập nhật hạng thành viên dựa trên chi tiêu 6 tháng
+    updateMembershipTier(customer);
+    
+    // Tìm tất cả point history đã hết hạn nhưng chưa được đánh dấu là expired
+    List<PointHistory> expiredHistories = pointHistoryRepository
+        .findByCustomerAndExpiresAtBeforeAndIsExpiredFalseAndTransactionType(
+            customer, now, PointTransactionType.EARNED);
+    
+    if (expiredHistories.isEmpty()) {
+      return; // Không có point nào hết hạn
+    }
+    
+    // Đánh dấu tất cả point history hết hạn
+    for (PointHistory history : expiredHistories) {
+      history.setIsExpired(true);
+      history.setUpdatedAt(now);
+    }
+    
+    // Lưu thay đổi
+    pointHistoryRepository.saveAll(expiredHistories);
+    
+    // Tính lại available points dựa trên logic hợp lý
+    recalculateAvailablePoints(customer);
+    
+  }
+  
+  private void recalculateAvailablePoints(Customer customer) {
+    CustomerMembership membership = customer.getMembership();
+    if (membership == null) {
+      return;
+    }
+    
+    LocalDateTime now = LocalDateTime.now();
+    
+    // Lấy tất cả point history của customer (chưa expired)
+    List<PointHistory> allPointHistories = pointHistoryRepository
+        .findByCustomerOrderByEarnedAtDesc(customer);
+    
+    double totalAvailablePoints = 0.0;
+    double totalEarnedPoints = 0.0;
+    double totalUsedPoints = 0.0;
+    
+    // Tính toán lại available points
+    for (PointHistory history : allPointHistories) {
+      if (history.getTransactionType() == PointTransactionType.EARNED) {
+        totalEarnedPoints += history.getPointsEarned();
+        
+        // Chỉ tính điểm còn hạn và chưa expired
+        if (!history.getIsExpired() && history.getExpiresAt().isAfter(now)) {
+          totalAvailablePoints += history.getPointsEarned();
+        }
+      } else if (history.getTransactionType() == PointTransactionType.USED) {
+        totalUsedPoints += Math.abs(history.getPointsEarned()); // pointsEarned là số âm cho USED
+      }
+    }
+    
+    // Trừ đi số điểm đã sử dụng
+    totalAvailablePoints -= totalUsedPoints;
+    
+    // Đảm bảo available points không âm
+    if (totalAvailablePoints < 0) {
+      totalAvailablePoints = 0.0;
+    }
+    
+    // Cập nhật membership
+    membership.setAvailablePoints(totalAvailablePoints);
+    membership.setTotalPointsEarned(totalEarnedPoints);
+    membership.setTotalPointsUsed(totalUsedPoints);
+    membership.setLastUpdatedAt(now);
+  }
+  
+  private void updateMembershipTier(Customer customer) {
+    CustomerMembership membership = customer.getMembership();
+    if (membership == null) {
+      return;
+    }
+    
+    // Tính tổng chi tiêu trong 6 tháng qua
+    LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+    List<PointHistory> recentHistories = pointHistoryRepository
+        .findByCustomerAndEarnedAtAfterAndTransactionType(
+            customer, sixMonthsAgo, PointTransactionType.EARNED);
+    
+    double totalSpentLast6Months = 0.0;
+    for (PointHistory history : recentHistories) {
+      if (history.getSpentAmount() != null) {
+        totalSpentLast6Months += history.getSpentAmount();
+      }
+    }
+    
+    // Cập nhật hạng thành viên
+    membership.setTotalSpentLast6Months(totalSpentLast6Months);
+    
+    if (totalSpentLast6Months >= 5000000) {
+      membership.setCurrentTier(MembershipTier.RADIANCE);
+    } else if (totalSpentLast6Months >= 2000000) {
+      membership.setCurrentTier(MembershipTier.VITALITY);
+    } else {
+      membership.setCurrentTier(MembershipTier.ENERGY);
+    }
+    
+    membership.setLastUpdatedAt(LocalDateTime.now());
   }
 
   private String generateRandomOtp() {

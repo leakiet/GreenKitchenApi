@@ -44,7 +44,8 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public List<Coupon> getAvailableCouponsForExchange() {
-        return couponRepository.findByStatusAndIsDeletedFalseAndApplicability(CouponStatus.ACTIVE, CouponApplicability.GENERAL);
+        LocalDateTime now = LocalDateTime.now();
+        return couponRepository.findAvailableCouponsForExchange(CouponStatus.ACTIVE, CouponApplicability.GENERAL, now);
     }
 
     @Override

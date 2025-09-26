@@ -52,14 +52,16 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
                 customer.setOauthProviderId(googleId);
                 customer.setIsOauthUser(true);
                 customer.setIsActive(true); // OAuth users auto active
-                customer = customerRepository.save(customer);
+                customer.setIsEmailLogin(true);
+                customerRepository.save(customer);
             } else {
                 // Update OAuth info cho existing user (nếu chưa có)
                 if (customer.getOauthProvider() == null) {
                     customer.setOauthProvider("google");
                     customer.setOauthProviderId(googleId);
                     customer.setIsOauthUser(true);
-                    customer = customerRepository.save(customer);
+                    customer.setIsEmailLogin(true);
+                    customerRepository.save(customer);
                 }
             }
 
@@ -87,7 +89,6 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
             String googleId = request.getId();
             String firstName = request.getGivenName();
             String lastName = request.getFamilyName();
-            String name = request.getName();
             String picture = request.getPicture();
 
             // Validate required fields
@@ -119,7 +120,7 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
                 customer.setOauthProviderId(googleId);
                 customer.setIsOauthUser(true);
                 customer.setIsActive(true); // OAuth users auto active
-
+                customer.setIsEmailLogin(true);
                 customer = customerRepository.save(customer);
                 System.out.println("Created new Google user: " + email);
             } else {
