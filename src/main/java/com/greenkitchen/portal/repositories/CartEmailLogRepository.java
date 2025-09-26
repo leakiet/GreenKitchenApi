@@ -1,6 +1,8 @@
 package com.greenkitchen.portal.repositories;
 
 import com.greenkitchen.portal.entities.CartEmailLog;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,4 +29,10 @@ public interface CartEmailLogRepository extends JpaRepository<CartEmailLog, Long
     // Lấy khách hàng chưa nhận email trong X ngày
     @Query("SELECT DISTINCT c.customerId FROM CartEmailLog c WHERE c.emailType = 'CART_ABANDONMENT' AND c.emailSentAt < :since")
     List<Long> findCustomersEligibleForReminder(@Param("since") LocalDateTime since);
+    
+    // Lấy email logs theo customer ID với phân trang
+    Page<CartEmailLog> findByCustomerId(Long customerId, Pageable pageable);
+    
+    // Đếm email theo type
+    long countByEmailType(String emailType);
 }
