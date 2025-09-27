@@ -68,7 +68,6 @@ Hãy tạo nội dung bài viết với thông tin sau:
 - `https://images.unsplash.com/photo-1571770095004-6b61b1cf308a` (fresh herbs)
 - `https://images.unsplash.com/photo-1610832958506-aa56368176cf` (farm fresh)
 - `https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c` (green leafy vegetables)
- - `https://images.unsplash.com/photo-1524593119773-7f6a1b3d0f4b` (market fresh greens)
  - `https://images.unsplash.com/photo-1481349518771-20055b2a7b24` (basket of vegetables)
  - `https://images.unsplash.com/photo-1461354464878-ad92f492a5a0` (farm harvest)
 
@@ -96,7 +95,6 @@ Hãy tạo nội dung bài viết với thông tin sau:
  - https://images.unsplash.com/photo-1543357480-c60d6d7c3d56 (chef plating food)
  - https://images.unsplash.com/photo-1482049016688-2d3e1b311543 (home cooking preparation)
  - https://images.unsplash.com/photo-1473093295043-cdd812d0e601 (kitchen table with ingredients)
- - https://images.unsplash.com/photo-1514517220035-0ec0câa87e66 (chef hands preparing)
  - https://images.unsplash.com/photo-1526318470988-885f7e91b5a0 (cutting vegetables close)
  - https://images.unsplash.com/photo-1498579809087-ef1e558fd1da (mixing bowl)
 
